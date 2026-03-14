@@ -66,7 +66,15 @@ const upload = async (file: File): Promise<string> => {
     headers,
     body: JSON.stringify({ data: base64, type: 'image/jpeg', name: file.name }),
   });
-  const data = await res.json();
+  // Read as text first to get clear error message if server returns HTML
+  const text = await res.text();
+  let data: any;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    // Show first 120 chars of whatever the server actually returned
+    throw new Error(`Server error (${res.status}): ${text.substring(0, 120)}`);
+  }
   if (!res.ok) throw new Error(data.error || 'Upload failed');
   return data.url;
 };

@@ -248,15 +248,21 @@ const ProfileScreen = ({ navigation }: any) => {
         {/* Cache clear — useful when app updates aren't loading */}
         <TouchableOpacity
           style={s.clearCacheBtn}
-          onPress={() => {
+          onPress={async () => {
             if (typeof window !== 'undefined') {
-              // Clear Service Worker caches
-              if ('caches' in window) {
-                (window as any).caches.keys().then((names: string[]) => {
-                  names.forEach((name: string) => (window as any).caches.delete(name));
-                });
+              // 1. Unregister all service workers
+              if ('serviceWorker' in navigator) {
+                const registrations = await (navigator as any).serviceWorker.getRegistrations();
+                for (const reg of registrations) {
+                  await reg.unregister();
+                }
               }
-              // Hard reload with cache buster
+              // 2. Clear all caches (SW cache + browser cache API)
+              if ('caches' in window) {
+                const names: string[] = await (window as any).caches.keys();
+                await Promise.all(names.map((n: string) => (window as any).caches.delete(n)));
+              }
+              // 3. Hard reload with cache buster
               window.location.href = window.location.origin + '/?v=' + Date.now();
             }
           }}
