@@ -193,7 +193,7 @@ const ProfileScreen = ({ navigation }: any) => {
           <Text style={s.menuChevron}>›</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={s.menuItem}>
+        <TouchableOpacity style={s.menuItem} onPress={() => navigation.navigate('MyProgress')}>
           <Text style={s.menuIcon}>📈</Text>
           <Text style={s.menuText}>My Progress</Text>
           <Text style={s.menuChevron}>›</Text>

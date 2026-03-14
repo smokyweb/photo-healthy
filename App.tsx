@@ -19,6 +19,7 @@ import SubscriptionScreen from './src/screens/SubscriptionScreen';
 import AdminScreen from './src/screens/AdminScreen';
 import GalleryScreen from './src/screens/GalleryScreen';
 import EditProfileScreen from './src/screens/EditProfileScreen';
+import MyProgressScreen from './src/screens/MyProgressScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -125,6 +126,7 @@ const ProfileStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="Profile" component={ProfileGuard} />
     <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+    <Stack.Screen name="MyProgress" component={MyProgressScreen} />
   </Stack.Navigator>
 );
 
