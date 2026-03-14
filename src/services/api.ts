@@ -27,14 +27,29 @@ const request = async (path: string, options: RequestInit = {}) => {
 };
 
 const upload = async (file: File): Promise<string> => {
-  const formData = new FormData();
-  formData.append('photo', file);
-  const headers: any = {};
-  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
-  const res = await fetch(`${API_BASE}/api/upload`, { method: 'POST', headers, body: formData });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Upload failed');
-  return data.url;
+  // Use base64 JSON upload — multipart/form-data is blocked by some reverse proxies (LiteSpeed)
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const base64 = reader.result as string; // data:image/jpeg;base64,...
+        const headers: any = { 'Content-Type': 'application/json' };
+        if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+        const res = await fetch(`${API_BASE}/api/upload-base64`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ data: base64, type: file.type, name: file.name }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Upload failed');
+        resolve(data.url);
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
 };
 
 export const api = {

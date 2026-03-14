@@ -367,10 +367,10 @@ app.delete('/api/users/:id', adminAuth, async (req, res) => {
 
 // ==================== FILE UPLOAD ====================
 
+// Multipart upload (kept for compatibility)
 app.post('/api/upload', auth, (req, res, next) => {
   upload.single('photo')(req, res, (err) => {
     if (err) {
-      // Multer errors (file too large, wrong type, etc.) — always return JSON
       if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({ error: 'File too large. Maximum size is 10MB.' });
       }
@@ -380,6 +380,42 @@ app.post('/api/upload', auth, (req, res, next) => {
     const url = `/uploads/${req.file.filename}`;
     res.json({ url });
   });
+});
+
+// Base64 JSON upload (works on all hosts including LiteSpeed)
+app.post('/api/upload-base64', auth, (req, res) => {
+  try {
+    const { data, type, name } = req.body;
+    if (!data) return res.status(400).json({ error: 'No image data provided' });
+
+    // Validate mime type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'];
+    const mimeType = type || 'image/jpeg';
+    if (!allowedTypes.some(t => mimeType.startsWith('image/'))) {
+      return res.status(400).json({ error: 'Only images are allowed' });
+    }
+
+    // Decode base64
+    const base64Data = data.replace(/^data:[^;]+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    // Check size (10MB)
+    if (buffer.length > 10 * 1024 * 1024) {
+      return res.status(400).json({ error: 'File too large. Maximum size is 10MB.' });
+    }
+
+    // Generate filename
+    const ext = name ? path.extname(name) : (mimeType.includes('png') ? '.png' : mimeType.includes('gif') ? '.gif' : mimeType.includes('webp') ? '.webp' : '.jpg');
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+    const filepath = path.join(uploadsDir, filename);
+
+    fs.writeFileSync(filepath, buffer);
+    const url = `/uploads/${filename}`;
+    res.json({ url });
+  } catch (err) {
+    console.error('Base64 upload error:', err);
+    res.status(500).json({ error: 'Upload failed' });
+  }
 });
 
 // ==================== STRIPE SUBSCRIPTION ====================
