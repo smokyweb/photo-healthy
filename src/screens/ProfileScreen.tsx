@@ -250,19 +250,17 @@ const ProfileScreen = ({ navigation }: any) => {
           style={s.clearCacheBtn}
           onPress={async () => {
             if (typeof window !== 'undefined') {
-              // 1. Unregister all service workers
+              // 1. Stop & unregister all service workers
               if ('serviceWorker' in navigator) {
                 const registrations = await (navigator as any).serviceWorker.getRegistrations();
-                for (const reg of registrations) {
-                  await reg.unregister();
-                }
+                await Promise.all(registrations.map((reg: any) => reg.unregister()));
               }
-              // 2. Clear all caches (SW cache + browser cache API)
+              // 2. Clear all caches
               if ('caches' in window) {
                 const names: string[] = await (window as any).caches.keys();
                 await Promise.all(names.map((n: string) => (window as any).caches.delete(n)));
               }
-              // 3. Hard reload with cache buster
+              // 3. Reload — fresh page load re-registers the service worker automatically
               window.location.href = window.location.origin + '/?v=' + Date.now();
             }
           }}
