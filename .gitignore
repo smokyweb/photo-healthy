@@ -1,0 +1,6 @@
+node_modules/
+dist-web/
+*.map
+.env
+server.pid
+server.log
