@@ -56,11 +56,12 @@ const resizeImage = (file: File, maxSize = 500, quality = 0.75): Promise<string>
 };
 
 const upload = async (file: File): Promise<string> => {
-  // Compress/resize image first (profile photos: max 600px, ~50-100KB output)
-  const base64 = await resizeImage(file, 600, 0.82);
+  // Compress/resize image (max 500px, 75% quality → ~40-80KB)
+  const base64 = await resizeImage(file, 500, 0.75);
   const headers: any = { 'Content-Type': 'application/json' };
   if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
-  const res = await fetch(`${API_BASE}/api/upload-base64`, {
+  // Use PHP handler — runs natively in Apache/LiteSpeed, no proxy issues
+  const res = await fetch(`${API_BASE}/upload.php`, {
     method: 'POST',
     headers,
     body: JSON.stringify({ data: base64, type: 'image/jpeg', name: file.name }),
