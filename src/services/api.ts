@@ -21,7 +21,9 @@ const request = async (path: string, options: RequestInit = {}) => {
   const headers: any = { 'Content-Type': 'application/json', ...options.headers };
   if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-  const data = await res.json();
+  const text = await res.text();
+  let data: any;
+  try { data = JSON.parse(text); } catch { throw new Error(`Server error (${res.status}): ${text.substring(0, 80)}`); }
   if (!res.ok) throw new Error(data.error || 'Request failed');
   return data;
 };
@@ -86,8 +88,22 @@ export const api = {
   login: (email: string, password: string) =>
     request('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   getMe: () => request('/api/auth/me'),
-  updateProfile: (data: { name?: string; avatar_url?: string }) =>
-    request('/api/auth/profile', { method: 'PUT', body: JSON.stringify(data) }),
+  updateProfile: (data: { name?: string; avatar_url?: string }) => {
+    // Use PHP proxy — LiteSpeed blocks PUT method on the reverse proxy
+    const headers: any = { 'Content-Type': 'application/json' };
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+    return fetch(`${API_BASE}/profile-update.php`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(data),
+    }).then(async (res) => {
+      const text = await res.text();
+      let d: any;
+      try { d = JSON.parse(text); } catch { throw new Error(`Profile update failed: ${text.substring(0, 80)}`); }
+      if (!res.ok) throw new Error(d.error || 'Profile update failed');
+      return d;
+    });
+  },
 
   // Challenges
   getChallenges: () => request('/api/challenges'),
