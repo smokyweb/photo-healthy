@@ -27,37 +27,31 @@ const request = async (path: string, options: RequestInit = {}) => {
 };
 
 // Resize and compress an image to a max dimension, returning a base64 JPEG data URL
-const resizeImage = (file: File, maxSize = 600, quality = 0.82): Promise<string> => {
+const resizeImage = (file: File, maxSize = 500, quality = 0.75): Promise<string> => {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        // Calculate new dimensions keeping aspect ratio
-        let { width, height } = img;
-        if (width > maxSize || height > maxSize) {
-          if (width > height) {
-            height = Math.round((height * maxSize) / width);
-            width = maxSize;
-          } else {
-            width = Math.round((width * maxSize) / height);
-            height = maxSize;
-          }
-        }
-        // Draw to canvas and compress
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return reject(new Error('Canvas not supported'));
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-      img.onerror = () => reject(new Error('Failed to load image'));
-      img.src = e.target?.result as string;
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      // Use naturalWidth/naturalHeight — critical on Android where img.width can be 0
+      const nw = img.naturalWidth || img.width;
+      const nh = img.naturalHeight || img.height;
+      let w = nw, h = nh;
+      if (w > maxSize || h > maxSize) {
+        if (w > h) { h = Math.round((h * maxSize) / w); w = maxSize; }
+        else { w = Math.round((w * maxSize) / h); h = maxSize; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { URL.revokeObjectURL(objectUrl); return reject(new Error('Canvas not supported')); }
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(objectUrl);
+      const dataUrl = canvas.toDataURL('image/jpeg', quality);
+      resolve(dataUrl);
     };
-    reader.onerror = () => reject(new Error('Failed to read file'));
-    reader.readAsDataURL(file);
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Failed to load image')); };
+    img.src = objectUrl;  // Use object URL instead of data URL — more reliable on mobile
   });
 };
 
