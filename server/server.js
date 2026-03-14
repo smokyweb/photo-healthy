@@ -14,7 +14,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'photohealthy_jwt_secret_2026';
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));  // Allow base64 image uploads
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname, 'dist-web')));
 

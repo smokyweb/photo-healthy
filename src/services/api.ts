@@ -26,30 +26,54 @@ const request = async (path: string, options: RequestInit = {}) => {
   return data;
 };
 
-const upload = async (file: File): Promise<string> => {
-  // Use base64 JSON upload — multipart/form-data is blocked by some reverse proxies (LiteSpeed)
+// Resize and compress an image to a max dimension, returning a base64 JPEG data URL
+const resizeImage = (file: File, maxSize = 600, quality = 0.82): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const base64 = reader.result as string; // data:image/jpeg;base64,...
-        const headers: any = { 'Content-Type': 'application/json' };
-        if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
-        const res = await fetch(`${API_BASE}/api/upload-base64`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ data: base64, type: file.type, name: file.name }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Upload failed');
-        resolve(data.url);
-      } catch (err) {
-        reject(err);
-      }
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        // Calculate new dimensions keeping aspect ratio
+        let { width, height } = img;
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = Math.round((height * maxSize) / width);
+            width = maxSize;
+          } else {
+            width = Math.round((width * maxSize) / height);
+            height = maxSize;
+          }
+        }
+        // Draw to canvas and compress
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return reject(new Error('Canvas not supported'));
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = e.target?.result as string;
     };
     reader.onerror = () => reject(new Error('Failed to read file'));
     reader.readAsDataURL(file);
   });
+};
+
+const upload = async (file: File): Promise<string> => {
+  // Compress/resize image first (profile photos: max 600px, ~50-100KB output)
+  const base64 = await resizeImage(file, 600, 0.82);
+  const headers: any = { 'Content-Type': 'application/json' };
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+  const res = await fetch(`${API_BASE}/api/upload-base64`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ data: base64, type: 'image/jpeg', name: file.name }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Upload failed');
+  return data.url;
 };
 
 export const api = {
