@@ -45,8 +45,15 @@ const GalleryScreen = ({ navigation }: any) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Gallery</Text>
-        <Text style={styles.headerSub}>{submissions.length} photos shared</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.backArrow}>‹</Text>
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Gallery</Text>
+          <Text style={styles.headerSub}>{submissions.length} photos shared</Text>
+        </View>
+        <View style={styles.backBtnSpacer} />
       </View>
       <View style={styles.searchWrap}>
         <TextInput
@@ -74,7 +81,12 @@ const GalleryScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.primaryBg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { backgroundColor: colors.primary, paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.lg },
+  header: { backgroundColor: colors.primary, paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.lg, flexDirection: 'row', alignItems: 'center' },
+  backBtn: { flexDirection: 'row', alignItems: 'center', minWidth: 60 },
+  backArrow: { color: colors.white, fontSize: 28, lineHeight: 30, marginRight: 2, opacity: 0.9 },
+  backText: { color: colors.white, fontSize: 15, fontWeight: '500', opacity: 0.9 },
+  headerCenter: { flex: 1, alignItems: 'center' },
+  backBtnSpacer: { minWidth: 60 },
   headerTitle: { color: colors.white, fontSize: 22, fontWeight: '700' },
   headerSub: { color: colors.primaryLight, fontSize: 13, marginTop: 2 },
   searchWrap: { padding: spacing.md, maxWidth: 600, width: '100%', alignSelf: 'center' },
