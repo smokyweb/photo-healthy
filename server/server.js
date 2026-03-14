@@ -367,10 +367,19 @@ app.delete('/api/users/:id', adminAuth, async (req, res) => {
 
 // ==================== FILE UPLOAD ====================
 
-app.post('/api/upload', auth, upload.single('photo'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  const url = `/uploads/${req.file.filename}`;
-  res.json({ url });
+app.post('/api/upload', auth, (req, res, next) => {
+  upload.single('photo')(req, res, (err) => {
+    if (err) {
+      // Multer errors (file too large, wrong type, etc.) — always return JSON
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: 'File too large. Maximum size is 10MB.' });
+      }
+      return res.status(400).json({ error: err.message || 'Upload failed' });
+    }
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const url = `/uploads/${req.file.filename}`;
+    res.json({ url });
+  });
 });
 
 // ==================== STRIPE SUBSCRIPTION ====================
@@ -395,7 +404,14 @@ app.get('*', (req, res) => {
   }
 });
 
+// Global error handler — always return JSON, never HTML
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Photo Healthy server running on port ${PORT}`);
 });
+
