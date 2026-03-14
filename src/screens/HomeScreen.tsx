@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+﻿import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -64,7 +64,29 @@ const formatDate = (date: Date) => {
 /* ========== LOGGED-IN HOME ========== */
 const CITY_BG = require('../../assets/city-bg.png');
 
-const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navigation, recent }: any) => {
+// Calculate consecutive day streak from submissions
+const calcStreak = (submissions: any[], userId: number): number => {
+  const mine = submissions.filter((s: any) => s.user_id === userId);
+  if (mine.length === 0) return 0;
+  const dates = new Set(
+    mine.map((s: any) => new Date(s.created_at).toISOString().split('T')[0])
+  );
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const cursor = new Date(today);
+  // If nothing submitted today, start checking from yesterday
+  if (!dates.has(today.toISOString().split('T')[0])) {
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  let streak = 0;
+  while (dates.has(cursor.toISOString().split('T')[0])) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+};
+
+const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navigation, recent, streak }: any) => {
   const firstName = (user.name || 'User').split(' ')[0];
   const today = formatDate(new Date());
 
@@ -151,19 +173,19 @@ const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navig
     <View style={li.section}>
       <View style={li.statsRow}>
         <View style={li.statCard}>
-          <Text style={li.statIcon}>🏆</Text>
-          <Text style={li.statNum}>{challenges.length || 24}</Text>
-          <Text style={li.statLabel}>Challenges Complete</Text>
+          <Text style={[li.statIcon, {fontSize:20}]}>{"Photos"}</Text>
+          <Text style={li.statNum}>{submissions.filter((s: any) => s.user_id === user?.id).length}</Text>
+          <Text style={li.statLabel}>Photos Submitted</Text>
         </View>
         <View style={li.statCard}>
-          <Text style={li.statIcon}>⚡</Text>
-          <Text style={[li.statNum, { color: C.TEAL }]}>8</Text>
+          <Text style={[li.statIcon, {fontSize:20}]}>{"Streak"}</Text>
+          <Text style={[li.statNum, { color: streak > 0 ? C.ORANGE : C.TEXT }]}>{streak}</Text>
           <Text style={li.statLabel}>Day Streak</Text>
         </View>
         <View style={li.statCard}>
-          <Text style={li.statIcon}>👟</Text>
-          <Text style={li.statNum}>123</Text>
-          <Text style={li.statLabel}>Miles Tracked</Text>
+          <Text style={[li.statIcon, {fontSize:20}]}>{"Challenges"}</Text>
+          <Text style={li.statNum}>{challenges.length}</Text>
+          <Text style={li.statLabel}>Total Challenges</Text>
         </View>
       </View>
     </View>
@@ -195,12 +217,12 @@ const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navig
 
     {/* Quick Actions Grid (2x2) */}
     <View style={li.section}>
-      <Text style={li.sectionTitle}>Recent Community Submissions</Text>
+      <Text style={li.sectionTitle}>Quick Actions</Text>
       <View style={li.quickGrid}>
         {[
           { icon: '🏆', title: 'Browse Challenges', desc: 'Discover new photography challenges', nav: 'ChallengesTab' },
-          { icon: '🖼️', title: 'View Gallery', desc: 'See all your submitted photos', nav: 'ChallengesTab' },
-          { icon: '💳', title: 'Subscription', desc: 'Update billing preferences', nav: 'ProfileTab' },
+          { icon: '📷', title: 'View Gallery', desc: 'See all your submitted photos', nav: 'Gallery' },
+          { icon: '⭐', title: 'Subscription', desc: 'Update billing preferences', nav: 'Subscription' },
           { icon: '🛍️', title: 'Visit Shop', desc: 'Browse photography gear', nav: 'ChallengesTab' },
         ].map((item, i) => (
           <TouchableOpacity
@@ -337,6 +359,7 @@ const HomeScreen = () => {
           daysLeft={daysLeft}
           navigation={navigation}
           recent={recent}
+          streak={calcStreak(submissions, user?.id || 0)}
         />
       ) : (
         /* ===== PUBLIC CONTENT (hero, stats, challenge, submissions, how-it-works) ===== */
