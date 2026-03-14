@@ -244,6 +244,25 @@ const ProfileScreen = ({ navigation }: any) => {
         </View>
 
         <Text style={s.copyright}>© 2025 Photo Healthy. All rights reserved.</Text>
+
+        {/* Cache clear — useful when app updates aren't loading */}
+        <TouchableOpacity
+          style={s.clearCacheBtn}
+          onPress={() => {
+            if (typeof window !== 'undefined') {
+              // Clear Service Worker caches
+              if ('caches' in window) {
+                (window as any).caches.keys().then((names: string[]) => {
+                  names.forEach((name: string) => (window as any).caches.delete(name));
+                });
+              }
+              // Hard reload with cache buster
+              window.location.href = window.location.origin + '/?v=' + Date.now();
+            }
+          }}
+        >
+          <Text style={s.clearCacheText}>🔄 Clear Cache & Reload</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -476,8 +495,18 @@ const s = StyleSheet.create({
     color: C.TEXT_SECONDARY,
     fontSize: 12,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
     opacity: 0.6,
+  },
+  clearCacheBtn: {
+    alignItems: 'center',
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  clearCacheText: {
+    color: C.TEXT_SECONDARY,
+    fontSize: 12,
+    opacity: 0.5,
   },
 });
 
