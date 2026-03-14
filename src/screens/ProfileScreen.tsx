@@ -134,11 +134,21 @@ const ProfileScreen = ({ navigation }: any) => {
           <>
             <Text style={s.userName}>{user?.name || 'User'}</Text>
             <Text style={s.userHandle}>@{(user?.name || 'user').toLowerCase().replace(/\s+/g, '_')}</Text>
+            {(user as any)?.bio ? (
+              <Text style={s.userBio}>{(user as any).bio}</Text>
+            ) : null}
             <View style={s.contactInfo}>
               <Text style={s.contactItem}>📧 {user?.email}</Text>
-              <Text style={s.contactItem}>📍 Location not set</Text>
+              {(user as any)?.location ? (
+                <Text style={s.contactItem}>📍 {(user as any).location}</Text>
+              ) : (
+                <Text style={[s.contactItem, { opacity: 0.45 }]}>📍 Location not set</Text>
+              )}
+              {(user as any)?.website ? (
+                <Text style={s.contactItem}>🌐 {(user as any).website}</Text>
+              ) : null}
             </View>
-            <TouchableOpacity onPress={() => setEditing(true)}>
+            <TouchableOpacity onPress={() => navigation.navigate('EditProfile')}>
               <Text style={s.editLink}>Edit Profile</Text>
             </TouchableOpacity>
           </>
@@ -168,7 +178,7 @@ const ProfileScreen = ({ navigation }: any) => {
       <View style={s.menuSection}>
         <Text style={s.menuHeader}>More Info</Text>
 
-        <TouchableOpacity style={s.menuItem}>
+        <TouchableOpacity style={s.menuItem} onPress={() => navigation.navigate('EditProfile')}>
           <Text style={s.menuIcon}>👤</Text>
           <Text style={s.menuText}>Basic Info</Text>
           <Text style={s.menuChevron}>›</Text>
@@ -244,6 +254,7 @@ const ProfileScreen = ({ navigation }: any) => {
         </View>
 
         <Text style={s.copyright}>© 2025 Photo Healthy. All rights reserved.</Text>
+        <Text style={s.versionText}>v14 • build c171f</Text>
 
         {/* Cache clear — useful when app updates aren't loading */}
         <TouchableOpacity
@@ -360,6 +371,15 @@ const s = StyleSheet.create({
 
   userName: { color: C.TEXT, fontSize: 22, fontWeight: '700' },
   userHandle: { color: C.TEAL, fontSize: 14, marginTop: 2 },
+  userBio: {
+    color: C.TEXT_SECONDARY,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 10,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    maxWidth: 300,
+  },
   contactInfo: { marginTop: 12, gap: 4, alignItems: 'center' },
   contactItem: { color: C.TEXT_SECONDARY, fontSize: 13 },
   editLink: {
@@ -501,6 +521,13 @@ const s = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 12,
     opacity: 0.6,
+  },
+  versionText: {
+    color: C.TEXT_SECONDARY,
+    fontSize: 10,
+    textAlign: 'center',
+    marginBottom: 4,
+    opacity: 0.35,
   },
   clearCacheBtn: {
     alignItems: 'center',
