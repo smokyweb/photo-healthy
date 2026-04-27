@@ -7,6 +7,7 @@ import { useWindowDimensions } from 'react-native';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { CartProvider } from './src/context/CartContext';
 import { C } from './src/theme';
+import BottomNavBar from './src/components/BottomNavBar';
 
 // Screens
 import HomeScreen from './src/screens/HomeScreen';
@@ -107,6 +108,16 @@ function MainTabs() {
   );
 }
 
+// Wrapper that adds bottom nav to outer screens
+function OuterScreenWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={{ flex: 1 }}>{children}</View>
+      <BottomNavBar />
+    </View>
+  );
+}
+
 function AppNavigator() {
   const { loading } = useAuth();
 
@@ -125,13 +136,13 @@ function AppNavigator() {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-        <Stack.Screen name="ChallengeDetail" component={ChallengeDetailScreen} />
-        <Stack.Screen name="SubmitPhoto" component={SubmitPhotoScreen} />
+        <Stack.Screen name="ChallengeDetail">{(props) => <OuterScreenWrapper><ChallengeDetailScreen {...props} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="SubmitPhoto">{(props) => <OuterScreenWrapper><SubmitPhotoScreen {...props} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="SubmissionDetail" component={SubmissionDetailScreen} />
         <Stack.Screen name="Shop" component={ShopScreen} />
         <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
         <Stack.Screen name="Cart" component={CartScreen} />
-        <Stack.Screen name="CheckoutSuccess" component={CheckoutSuccessScreen} />
+        <Stack.Screen name="CheckoutSuccess">{(props) => <OuterScreenWrapper><CheckoutSuccessScreen {...props} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="Admin" component={AdminScreen} />
         <Stack.Screen name="Gallery" component={GalleryScreen} />
         <Stack.Screen name="Subscription" component={SubscriptionScreen} />
@@ -142,7 +153,7 @@ function AppNavigator() {
         <Stack.Screen name="HowItWorks" component={HowItWorksScreen} />
         <Stack.Screen name="FAQ" component={FAQScreen} />
         <Stack.Screen name="Legal" component={LegalScreen} />
-        <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        <Stack.Screen name="EditProfile">{(props) => <OuterScreenWrapper><EditProfileScreen {...props} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="MyProgress" component={MyProgressScreen} />
       </Stack.Navigator>
     </NavigationContainer>

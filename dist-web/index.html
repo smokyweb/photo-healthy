@@ -1,8 +1,41 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/><meta name="theme-color" content="#202333"/><title>Photo Healthy — Capture, Share, Thrive</title><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/><link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet"/><style>*, *::before, *::after { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; height: 100%; overscroll-behavior: none; background: #202333; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
-    #root {
-      display: flex; flex-direction: column; width: 100%; min-width: 0;
-      height: 100vh; height: -webkit-fill-available; height: 100dvh;
-      overflow: hidden; position: relative;
+<!doctype html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes"/><meta name="theme-color" content="#202333"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/><title>Photo Healthy — Capture, Share, Thrive</title><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/><link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet"/><style>*, *::before, *::after { box-sizing: border-box; }
+    html {
+      height: 100%;
+      /* Prevent bounce/elastic scroll on desktop */
+      overscroll-behavior: none;
     }
-    * { -webkit-tap-highlight-color: transparent; }</style><script defer="defer" src="/595b28862a92b43aa7bb.bundle.js"></script></head><body><div id="root"></div></body></html>
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overscroll-behavior: none;
+      background: #202333;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      /* Prevent horizontal scroll */
+      overflow-x: hidden;
+    }
+    #root {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      min-width: 0;
+      /* Progressive height: fallback → iOS fill → modern dvh */
+      height: 100vh;
+      height: -webkit-fill-available;
+      height: 100dvh;
+      overflow: hidden;
+      position: relative;
+    }
+    /* Prevent tap highlight on mobile */
+    * { -webkit-tap-highlight-color: transparent; }
+    /* Ensure text doesn't get too small on mobile */
+    @media (max-width: 480px) {
+      html { font-size: 16px; }
+    }
+    /* Scrollable horizontal lists look better on touch */
+    [data-horizontal-scroll] {
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+    }</style><script defer="defer" src="/3d6212b063408dc341eb.bundle.js"></script></head><body><noscript><p style="color:#fff;padding:20px;text-align:center">Please enable JavaScript to use Photo Healthy.</p></noscript><div id="root"></div></body></html>

@@ -2167,13 +2167,25 @@ app.patch('/api/admin/partner-inquiries/:id', adminAuth, async (req, res) => {
 app.get('/api/settings/public', async (req, res) => {
   try {
     const [rows] = await pool.query(
-      `SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('motivational_quote')`
+      `SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('motivational_quote','quotes_list','partner_notes_list','free_submission_limit')`
     );
     const settings = {};
     rows.forEach(r => { settings[r.setting_key] = r.setting_value; });
-    // Seed default if not set
+    // Defaults
     if (!settings.motivational_quote) {
       settings.motivational_quote = 'Every photo tells a story. Make yours worth telling.';
+    }
+    if (!settings.quotes_list) {
+      settings.quotes_list = JSON.stringify([
+        'Every photo tells a story. Make yours worth telling.',
+        'Movement is medicine. Capture yours.',
+        'Wellness is not a destination, it is a journey. Keep moving.',
+        'Small steps every day lead to big changes.',
+        'Your wellness journey is uniquely yours. Celebrate every step.',
+      ]);
+    }
+    if (!settings.partner_notes_list) {
+      settings.partner_notes_list = JSON.stringify([]);
     }
     res.json({ settings });
   } catch (e) {
