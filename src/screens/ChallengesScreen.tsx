@@ -229,7 +229,7 @@ export default function ChallengesScreen() {
           rows.map((row, rowIdx) => (
             <View key={rowIdx} style={numCols > 1 ? styles.colWrapper : undefined}>
               {row.map(item => (
-                <View key={item.id} style={[styles.cardWrap, numCols > 1 && { width: `${100 / numCols - 1}%` as any }]}>
+                <View key={item.id} style={{ flex: 1, minWidth: 0 }}>
                   <ChallengeCard
                     challenge={item}
                     onPress={() => navigation.navigate('ChallengeDetail', { challengeId: item.id })}
@@ -238,7 +238,7 @@ export default function ChallengesScreen() {
               ))}
               {/* Pad last row if uneven */}
               {row.length < numCols && Array(numCols - row.length).fill(0).map((_, i) => (
-                <View key={`pad-${i}`} style={[styles.cardWrap, { width: `${100 / numCols - 1}%` as any }]} />
+                <View key={`pad-${i}`} style={{ flex: 1, minWidth: 0 }} />
               ))}
             </View>
           ))
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
   // List/Grid
   list: { padding: 12, paddingTop: 4 },
   listGrid: { paddingHorizontal: 12 },
-  colWrapper: { justifyContent: 'space-between', gap: 10 },
+  colWrapper: { flexDirection: 'row', justifyContent: 'space-between', gap: 16, marginBottom: 16 },
   cardWrap: { flex: 1 },
 
   // Empty

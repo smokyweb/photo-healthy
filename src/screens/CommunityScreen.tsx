@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Image,
   TouchableOpacity, ScrollView, RefreshControl, useWindowDimensions,
@@ -82,7 +82,7 @@ export default function CommunityScreen() {
       <View style={styles.grid}>
         {submissions.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={{ fontSize: 48, marginBottom: 12 }}>📷</Text>
+            <Text style={{ fontSize: 48, marginBottom: 12 }}>ðŸ“·</Text>
             <Text style={styles.emptyTitle}>No photos yet</Text>
             <Text style={styles.emptyBody}>Be the first to submit a photo!</Text>
           </View>
@@ -90,7 +90,7 @@ export default function CommunityScreen() {
           rows.map((row, rowIdx) => (
             <View key={rowIdx} style={styles.row}>
               {row.map(item => {
-                const imgUri = fullUrl(item.image_url);
+                const imgUri = fullUrl(item.photo1_url || item.image_url || item.photo_url);
                 return (
                   <TouchableOpacity
                     key={item.id}
@@ -102,7 +102,7 @@ export default function CommunityScreen() {
                       <Image source={{ uri: imgUri }} style={styles.img} resizeMode="cover" />
                     ) : (
                       <View style={[styles.img, styles.placeholder]}>
-                        <Text style={{ fontSize: 32 }}>📷</Text>
+                        <Text style={{ fontSize: 32 }}>ðŸ“·</Text>
                       </View>
                     )}
                     <View style={styles.cardInfo}>
@@ -110,7 +110,7 @@ export default function CommunityScreen() {
                       <View style={styles.cardMeta}>
                         <Text style={styles.cardUser} numberOfLines={1}>@{item.user_name || 'user'}</Text>
                         {item.like_count > 0 && (
-                          <Text style={styles.cardLikes}>❤️ {item.like_count}</Text>
+                          <Text style={styles.cardLikes}>â¤ï¸ {item.like_count}</Text>
                         )}
                       </View>
                     </View>
@@ -194,3 +194,4 @@ const styles = StyleSheet.create({
   emptyTitle: { color: C.TEXT, fontSize: 18, fontWeight: '700', marginBottom: 6 },
   emptyBody: { color: C.TEXT_MUTED, fontSize: 14 },
 });
+

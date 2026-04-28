@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Image,
   TouchableOpacity, ScrollView, RefreshControl, useWindowDimensions,
@@ -56,14 +56,14 @@ export default function GalleryScreen() {
       <View style={styles.grid}>
         {submissions.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={{ fontSize: 48, marginBottom: 12 }}>📷</Text>
+            <Text style={{ fontSize: 48, marginBottom: 12 }}>ðŸ“·</Text>
             <Text style={styles.emptyText}>No photos yet</Text>
           </View>
         ) : (
           rows.map((row, rowIdx) => (
             <View key={rowIdx} style={styles.row}>
               {row.map(item => {
-                const imgUri = fullUrl(item.image_url);
+                const imgUri = fullUrl(item.photo1_url || item.image_url || item.photo_url);
                 return (
                   <TouchableOpacity
                     key={item.id}
@@ -75,7 +75,7 @@ export default function GalleryScreen() {
                       <Image source={{ uri: imgUri }} style={styles.img} resizeMode="cover" />
                     ) : (
                       <View style={[styles.img, styles.placeholder]}>
-                        <Text style={{ fontSize: 28 }}>📷</Text>
+                        <Text style={{ fontSize: 28 }}>ðŸ“·</Text>
                       </View>
                     )}
                   </TouchableOpacity>
@@ -114,3 +114,4 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', paddingTop: 60, paddingBottom: 40 },
   emptyText: { color: C.TEXT_MUTED, fontSize: 16 },
 });
+
