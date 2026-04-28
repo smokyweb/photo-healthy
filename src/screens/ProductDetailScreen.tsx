@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Alert, useWindowDimensions,
 } from 'react-native';
@@ -17,7 +17,7 @@ const fullUrl = (u?: string) => u ? (u.startsWith('http') ? u : BASE + u) : null
 export default function ProductDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { productId } = route.params || {};
+  const { productId, id } = route.params || {}; const resolvedId = productId || id;
   const { user } = useAuth();
   const { addItem, itemCount } = useCart();
   const { width } = useWindowDimensions();
@@ -31,7 +31,7 @@ export default function ProductDetailScreen() {
     getProducts()
       .then((data: any) => {
         const list = data?.products || data || [];
-        setProduct(list.find((p: any) => p.id === productId || p.id === Number(productId)) || null);
+        setProduct(list.find((p: any) => p.id === resolvedId || p.id === Number(resolvedId)) || null);
       })
       .finally(() => setLoading(false));
   }, [productId]);
@@ -71,7 +71,7 @@ export default function ProductDetailScreen() {
       <ScrollView style={styles.screen} contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
         <Text style={{ color: C.TEXT_MUTED, fontSize: 16 }}>Product not found</Text>
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: 16 }}>
-          <Text style={{ color: C.ORANGE }}>← Back to Shop</Text>
+          <Text style={{ color: C.ORANGE }}>â† Back to Shop</Text>
         </TouchableOpacity>
       </ScrollView>
     );
@@ -85,7 +85,7 @@ export default function ProductDetailScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={{ flexGrow: 1 }}>
       {/* Back button */}
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-        <Text style={styles.backText}>← Back to Shop</Text>
+        <Text style={styles.backText}>â† Back to Shop</Text>
       </TouchableOpacity>
 
       <View style={[styles.productLayout, isDesktop && styles.productLayoutDesktop]}>
@@ -164,7 +164,7 @@ export default function ProductDetailScreen() {
               onPress={() => navigation.navigate('Cart')}
               style={styles.cartHint}
             >
-              <Text style={styles.cartHintText}>\uD83D\uDED2 {itemCount} item{itemCount !== 1 ? 's' : ''} in cart — View Cart →</Text>
+              <Text style={styles.cartHintText}>\uD83D\uDED2 {itemCount} item{itemCount !== 1 ? 's' : ''} in cart â€” View Cart â†’</Text>
             </TouchableOpacity>
           )}
 

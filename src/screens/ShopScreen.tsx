@@ -178,7 +178,7 @@ export default function ShopScreen() {
                   <TouchableOpacity
                     key={item.id}
                     style={[styles.card, { flex: 1 }]}
-                    onPress={() => navigation.navigate('ProductDetail' as never, { productId: item.id } as never)}
+                    onPress={() => navigation.navigate('ProductDetail' as never, { productId: item.id, id: item.id } as never)}
                     activeOpacity={0.85}
                   >
                     <View style={styles.imgWrap}>
@@ -238,7 +238,7 @@ export default function ShopScreen() {
                   <TouchableOpacity
                     key={item.id}
                     style={[styles.card, { flex: 1 }]}
-                    onPress={() => navigation.navigate('ProductDetail' as never, { productId: item.id } as never)}
+                    onPress={() => navigation.navigate('ProductDetail' as never, { productId: item.id, id: item.id } as never)}
                     activeOpacity={0.85}
                   >
                     <View style={styles.imgWrap}>
