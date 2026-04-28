@@ -64,7 +64,7 @@ export default function PartnersScreen() {
     setSending(true);
     try {
       await submitPartnerInquiry({ name: name.trim(), company: company.trim(), email: email.trim(), tier, message: message.trim() });
-      Alert.alert('Thank You!', "We'll be in touch within 1â€“2 business days.");
+      Alert.alert('Thank You!', "We'll be in touch within 1–2 business days.");
       setName(''); setCompany(''); setEmail(''); setTier(''); setMessage('');
     } catch (e: any) {
       Alert.alert('Error', e.message);
@@ -95,30 +95,13 @@ export default function PartnersScreen() {
               <Text style={[styles.tierPrice, { color: t.color }]}>{t.price}</Text>
             </View>
             {t.perks.map(p => (
-              <Text key={p} style={styles.perk}>âœ“ {p}</Text>
+              <Text key={p} style={styles.perk}>✓ {p}</Text>
             ))}
           </View>
         ))}
       </View>
 
-      {/* Inquiry Form */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Get in Touch</Text>
-        <Input label="Your Name *" value={name} onChangeText={setName} autoCapitalize="words" />
-        <Input label="Company *" value={company} onChangeText={setCompany} autoCapitalize="words" />
-        <Input label="Email *" value={email} onChangeText={setEmail} keyboardType="email-address" />
-        <Input label="Interested Tier (optional)" value={tier} onChangeText={setTier} placeholder="e.g. Gold Partner" />
-        <Input
-          label="Message"
-          value={message}
-          onChangeText={setMessage}
-          placeholder="Tell us about your company and goals..."
-          multiline
-          numberOfLines={4}
-          autoCapitalize="sentences"
-        />
-        <GradientButton label="Send Inquiry" onPress={handleSubmit} loading={sending} />
-      </View>
+
 
       {/* ── NEW LAYOUT FROM PDF ── */}
       <NewPartnerSections />

@@ -60,9 +60,9 @@ export default function ContactScreen() {
       {/* Success Banner */}
       {sent && (
         <View style={styles.successBanner}>
-          <Text style={styles.successTitle}>âœ“ Message Sent!</Text>
+          <Text style={styles.successTitle}>✓ Message Sent!</Text>
           <Text style={styles.successSubtext}>
-            We'll get back to you within 1â€“2 business days.
+            We'll get back to you within 1–2 business days.
           </Text>
         </View>
       )}
@@ -141,10 +141,10 @@ export default function ContactScreen() {
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoIcon}>â°</Text>
-              <Text style={styles.infoText}>Monâ€“Fri, 9amâ€“5pm EST</Text>
+              <Text style={styles.infoText}>Mon–Fri, 9am–5pm EST</Text>
             </View>
             <Text style={styles.infoNote}>
-              We typically respond within 1â€“2 business days.
+              We typically respond within 1–2 business days.
             </Text>
           </View>
 

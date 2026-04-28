@@ -17,7 +17,7 @@ const FAQS = [
   },
   {
     q: 'What types of photos are allowed?',
-    a: 'Photos should relate to healthy living â€” meals, fitness activities, mindfulness practices, nature, and wellness routines. Please keep all content appropriate and positive.',
+    a: 'Photos should relate to healthy living — meals, fitness activities, mindfulness practices, nature, and wellness routines. Please keep all content appropriate and positive.',
   },
   {
     q: 'How does the Pro subscription work?',
@@ -37,7 +37,7 @@ const FAQS = [
   },
   {
     q: 'What payment methods do you accept?',
-    a: 'We accept all major credit and debit cards via Stripe. We do not store your payment information â€” all transactions are handled securely by Stripe.',
+    a: 'We accept all major credit and debit cards via Stripe. We do not store your payment information — all transactions are handled securely by Stripe.',
   },
 ];
 
@@ -107,7 +107,7 @@ export default function FAQScreen() {
       <View style={styles.contactRow}>
         <Text style={styles.contactText}>Still have questions? </Text>
         <TouchableOpacity onPress={() => navigation.navigate('Contact' as never)}>
-          <Text style={styles.contactLink}>Contact us â†’</Text>
+          <Text style={styles.contactLink}>Contact us →</Text>
         </TouchableOpacity>
       </View>
 

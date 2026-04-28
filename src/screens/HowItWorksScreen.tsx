@@ -27,7 +27,7 @@ const STEPS = [
     color: '#A78BFA',
     title: 'Engage with the Community & Track Progress',
     desc: "Like and comment on others' submissions, receive encouragement, and use your progress dashboard to track your wellness journey over time.",
-    imageEmoji: 'ðŸ“ˆ',
+    imageEmoji: '📈',
   },
 ];
 
@@ -52,7 +52,7 @@ const FEATURES = [
     desc: 'Capture and share your healthy moments visually with the community.',
   },
   {
-    icon: 'ðŸ“Š',
+    icon: '📊',
     title: 'Engage & Grow',
     desc: 'Connect with community members and track your wellness progress over time.',
   },
@@ -110,7 +110,7 @@ export default function HowItWorksScreen() {
       {/* Pro Benefits */}
       <View style={styles.proSection}>
         <View style={[styles.proInner, isDesktop && styles.proInnerDesktop]}>
-          <Text style={styles.proLabel}>â­ PRO MEMBERSHIP</Text>
+          <Text style={styles.proLabel}>⭐ PRO MEMBERSHIP</Text>
           <Text style={styles.proTitle}>Take It to the Next Level</Text>
           <Text style={styles.proSubtitle}>
             Unlock the full Photo Healthy experience with a Pro membership
@@ -118,13 +118,13 @@ export default function HowItWorksScreen() {
           <View style={styles.proBenefitsList}>
             {PRO_BENEFITS.map(b => (
               <View key={b} style={styles.proBenefitRow}>
-                <Text style={styles.proBenefitCheck}>âœ“</Text>
+                <Text style={styles.proBenefitCheck}>✓</Text>
                 <Text style={styles.proBenefitText}>{b}</Text>
               </View>
             ))}
           </View>
           <GradientButton
-            label="Go Pro â€” $9.99/month"
+            label="Go Pro — $9.99/month"
             onPress={() => navigation.navigate('Subscription' as never)}
             size="lg"
           />
@@ -153,7 +153,7 @@ export default function HowItWorksScreen() {
             Join thousands of members already living healthier lives
           </Text>
           <GradientButton
-            label="Get Started Free â†’"
+            label="Get Started Free →"
             onPress={() => navigation.navigate('Register' as never)}
             size="lg"
             style={styles.ctaBtn}

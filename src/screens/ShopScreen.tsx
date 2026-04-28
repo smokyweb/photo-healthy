@@ -112,7 +112,7 @@ export default function ShopScreen() {
               style={styles.cartBtn}
               onPress={() => navigation.navigate('Cart' as never)}
             >
-              <Text style={styles.cartBtnText}>ðŸ›’ Cart ({itemCount})</Text>
+              <Text style={styles.cartBtnText}>🛒 Cart ({itemCount})</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -194,7 +194,7 @@ export default function ShopScreen() {
                       </View>
                       {item.is_pro_only && (
                         <View style={styles.proBadge}>
-                          <Text style={styles.proBadgeText}>â­ Pro Only</Text>
+                          <Text style={styles.proBadgeText}>⭐ Pro Only</Text>
                         </View>
                       )}
                     </View>
@@ -202,7 +202,7 @@ export default function ShopScreen() {
                       <Text style={styles.productName} numberOfLines={2}>{item.title}</Text>
                       <Text style={styles.price}>${Number(item.price).toFixed(2)}</Text>
                       <GradientButton
-                        label={isPro ? 'â­ Pro Only' : 'Add to Cart'}
+                        label={isPro ? '⭐ Pro Only' : 'Add to Cart'}
                         onPress={() => handleAddToCart(item)}
                         disabled={isPro}
                         style={styles.addBtn}
@@ -251,7 +251,7 @@ export default function ShopScreen() {
                       )}
                       {item.is_pro_only && (
                         <View style={styles.proBadge}>
-                          <Text style={styles.proBadgeText}>â­ Pro Only</Text>
+                          <Text style={styles.proBadgeText}>⭐ Pro Only</Text>
                         </View>
                       )}
                     </View>
@@ -259,7 +259,7 @@ export default function ShopScreen() {
                       <Text style={styles.productName} numberOfLines={2}>{item.title}</Text>
                       <Text style={styles.price}>${Number(item.price).toFixed(2)}</Text>
                       <GradientButton
-                        label={isPro ? 'â­ Pro Only' : 'Add to Cart'}
+                        label={isPro ? '⭐ Pro Only' : 'Add to Cart'}
                         onPress={() => handleAddToCart(item)}
                         disabled={isPro}
                         variant="outline"
