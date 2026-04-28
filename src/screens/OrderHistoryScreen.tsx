@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { getMyOrders } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { C, borderRadius } from '../theme';
+import AppFooter from '../components/AppFooter';
 
 export default function OrderHistoryScreen() {
   const navigation = useNavigation<any>();

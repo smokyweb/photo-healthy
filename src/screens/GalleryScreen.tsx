@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Image,
   TouchableOpacity, RefreshControl,
@@ -7,6 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import { getSubmissions } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { C, borderRadius } from '../theme';
+import AppFooter from '../components/AppFooter';
 
 export default function GalleryScreen() {
   const navigation = useNavigation<any>();

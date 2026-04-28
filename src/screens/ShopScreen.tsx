@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Image,
   TouchableOpacity, RefreshControl, Alert,
@@ -10,6 +10,7 @@ import { getProducts } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { C, borderRadius } from '../theme';
+import AppFooter from '../components/AppFooter';
 
 export default function ShopScreen() {
   const navigation = useNavigation<any>();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Alert,
 } from 'react-native';
@@ -9,6 +9,7 @@ import { getProducts } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { C, borderRadius } from '../theme';
+import AppFooter from '../components/AppFooter';
 
 export default function ProductDetailScreen() {
   const navigation = useNavigation<any>();
@@ -77,7 +78,8 @@ export default function ProductDetailScreen() {
           style={{ marginTop: 24 }}
         />
       </View>
-    </ScrollView>
+          <AppFooter />
+      </ScrollView>
   );
 }
 

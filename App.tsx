@@ -142,23 +142,23 @@ function AppNavigator() {
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         <Stack.Screen name="ChallengeDetail">{(props) => <OuterScreenWrapper><ChallengeDetailScreen {...props} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="SubmitPhoto">{(props) => <OuterScreenWrapper><SubmitPhotoScreen {...props} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="SubmissionDetail" component={SubmissionDetailScreen} />
-        <Stack.Screen name="Shop" component={ShopScreen} />
-        <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
-        <Stack.Screen name="Cart" component={CartScreen} />
-        <Stack.Screen name="CheckoutSuccess">{(props) => <OuterScreenWrapper><CheckoutSuccessScreen {...props} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="SubmissionDetail">{(p) => <OuterScreenWrapper><SubmissionDetailScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="Shop">{(p) => <OuterScreenWrapper><ShopScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="ProductDetail">{(p) => <OuterScreenWrapper><ProductDetailScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="Cart">{(p) => <OuterScreenWrapper><CartScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="CheckoutSuccess">{(p) => <OuterScreenWrapper><CheckoutSuccessScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="Admin" component={AdminScreen} />
-        <Stack.Screen name="Gallery" component={GalleryScreen} />
-        <Stack.Screen name="Subscription" component={SubscriptionScreen} />
-        <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
-        <Stack.Screen name="Partners" component={PartnersScreen} />
-        <Stack.Screen name="Contact" component={ContactScreen} />
-        <Stack.Screen name="About" component={AboutScreen} />
-        <Stack.Screen name="HowItWorks" component={HowItWorksScreen} />
-        <Stack.Screen name="FAQ" component={FAQScreen} />
-        <Stack.Screen name="Legal" component={LegalScreen} />
-        <Stack.Screen name="EditProfile">{(props) => <OuterScreenWrapper><EditProfileScreen {...props} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="MyProgress" component={MyProgressScreen} />
+        <Stack.Screen name="Gallery">{(p) => <OuterScreenWrapper><GalleryScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="Subscription">{(p) => <OuterScreenWrapper><SubscriptionScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="OrderHistory">{(p) => <OuterScreenWrapper><OrderHistoryScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="Partners">{(p) => <OuterScreenWrapper><PartnersScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="Contact">{(p) => <OuterScreenWrapper><ContactScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="About">{(p) => <OuterScreenWrapper><AboutScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="HowItWorks">{(p) => <OuterScreenWrapper><HowItWorksScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="FAQ">{(p) => <OuterScreenWrapper><FAQScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="Legal">{(p) => <OuterScreenWrapper><LegalScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="EditProfile">{(p) => <OuterScreenWrapper><EditProfileScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="MyProgress">{(p) => <OuterScreenWrapper><MyProgressScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
   );

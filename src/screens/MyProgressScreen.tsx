@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { getSubmissions, getUserStats } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { C, borderRadius } from '../theme';
+import AppFooter from '../components/AppFooter';
 
 export default function MyProgressScreen() {
   const navigation = useNavigation<any>();
@@ -83,7 +84,8 @@ export default function MyProgressScreen() {
           <Text style={styles.emptyText}>No photos yet. Start submitting to track your progress!</Text>
         )}
       </View>
-    </ScrollView>
+          <AppFooter />
+      </ScrollView>
   );
 }
 

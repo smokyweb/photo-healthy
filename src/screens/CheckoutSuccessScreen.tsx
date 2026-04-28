@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+﻿import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useCart } from '../context/CartContext';
 import GradientButton from '../components/GradientButton';
 import { C } from '../theme';
+import AppFooter from '../components/AppFooter';
 
 export default function CheckoutSuccessScreen() {
   const navigation = useNavigation<any>();

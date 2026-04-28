@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { C, borderRadius } from '../theme';
+import AppFooter from '../components/AppFooter';
 
 const FAQS = [
   { q: 'Is PhotoHealthy free to use?', a: 'Yes! Basic membership is completely free. You can browse challenges, submit photos, and engage with the community. Pro membership unlocks additional features.' },
@@ -45,7 +46,8 @@ export default function FAQScreen() {
           </TouchableOpacity>
         ))}
       </View>
-    </ScrollView>
+          <AppFooter />
+      </ScrollView>
   );
 }
 

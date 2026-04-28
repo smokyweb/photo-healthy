@@ -8,6 +8,7 @@ import { createSubmission, uploadPhoto } from '../services/api';
 import Input from '../components/Input';
 import GradientButton from '../components/GradientButton';
 import { C, borderRadius } from '../theme';
+import AppFooter from '../components/AppFooter';
 
 export default function SubmitPhotoScreen() {
   const navigation = useNavigation<any>();
@@ -149,7 +150,8 @@ export default function SubmitPhotoScreen() {
 
         <View style={{ height: 32 }} />
       </View>
-    </ScrollView>
+          <AppFooter />
+      </ScrollView>
   );
 }
 

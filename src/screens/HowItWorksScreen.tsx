@@ -1,8 +1,9 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import GradientButton from '../components/GradientButton';
 import { C, borderRadius } from '../theme';
+import AppFooter from '../components/AppFooter';
 
 const STEPS = [
   { num: '1', icon: '📝', title: 'Create an Account', body: 'Sign up for free in seconds. Just your name, email, and password.' },
@@ -44,7 +45,8 @@ export default function HowItWorksScreen() {
           style={{ marginTop: 24 }}
         />
       </View>
-    </ScrollView>
+          <AppFooter />
+      </ScrollView>
   );
 }
 

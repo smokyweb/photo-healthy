@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { C, borderRadius } from '../theme';
+import AppFooter from '../components/AppFooter';
 
 const TABS = ['Terms', 'Privacy', 'Guidelines'];
 
@@ -76,7 +77,8 @@ export default function LegalScreen() {
           </View>
         )}
       </View>
-    </ScrollView>
+          <AppFooter />
+      </ScrollView>
   );
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Image, ScrollView,
   TouchableOpacity, TextInput, FlatList, Alert, RefreshControl,
@@ -9,6 +9,7 @@ import { getSubmission, getComments, createComment, likeSubmission, deleteCommen
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { C, borderRadius } from '../theme';
+import AppFooter from '../components/AppFooter';
 
 export default function SubmissionDetailScreen() {
   const navigation = useNavigation<any>();
@@ -184,7 +185,8 @@ export default function SubmissionDetailScreen() {
       </View>
 
       <View style={{ height: 32 }} />
-    </ScrollView>
+          <AppFooter />
+      </ScrollView>
   );
 }
 

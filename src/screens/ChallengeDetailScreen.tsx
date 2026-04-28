@@ -9,6 +9,7 @@ import { getChallenge, getSubmissions, getUserAccess } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { C, borderRadius } from '../theme';
+import AppFooter from '../components/AppFooter';
 
 export default function ChallengeDetailScreen() {
   const navigation = useNavigation<any>();
@@ -161,7 +162,8 @@ export default function ChallengeDetailScreen() {
       )}
 
       <View style={{ height: 32 }} />
-    </ScrollView>
+          <AppFooter />
+      </ScrollView>
   );
 }
 

@@ -1,8 +1,9 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import GradientButton from '../components/GradientButton';
 import { C, borderRadius } from '../theme';
+import AppFooter from '../components/AppFooter';
 
 export default function AboutScreen() {
   const navigation = useNavigation<any>();
@@ -60,7 +61,8 @@ export default function AboutScreen() {
           ))}
         </View>
       </View>
-    </ScrollView>
+          <AppFooter />
+      </ScrollView>
   );
 }
 

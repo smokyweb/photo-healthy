@@ -6,6 +6,7 @@ import { updateProfile, changePassword } from '../services/api';
 import Input from '../components/Input';
 import GradientButton from '../components/GradientButton';
 import { C } from '../theme';
+import AppFooter from '../components/AppFooter';
 
 export default function EditProfileScreen() {
   const navigation = useNavigation<any>();
@@ -86,7 +87,8 @@ export default function EditProfileScreen() {
 
         <View style={{ height: 40 }} />
       </View>
-    </ScrollView>
+          <AppFooter />
+      </ScrollView>
   );
 }
 

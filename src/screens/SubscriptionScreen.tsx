@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, Alert,
@@ -9,6 +9,7 @@ import { subscribe, getSubscriptionStatus, cancelSubscription } from '../service
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { C, borderRadius } from '../theme';
+import AppFooter from '../components/AppFooter';
 
 const FEATURES = [
   '✅ Submit unlimited photos',
@@ -133,7 +134,8 @@ export default function SubscriptionScreen() {
       )}
 
       <View style={{ height: 40 }} />
-    </ScrollView>
+          <AppFooter />
+      </ScrollView>
   );
 }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Image,
   TouchableOpacity, Alert,
@@ -9,6 +9,7 @@ import { useCart } from '../context/CartContext';
 import { createCheckoutSession } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import { C, borderRadius } from '../theme';
+import AppFooter from '../components/AppFooter';
 
 export default function CartScreen() {
   const navigation = useNavigation<any>();

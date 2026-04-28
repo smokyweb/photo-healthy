@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { submitContact } from '../services/api';
 import Input from '../components/Input';
 import GradientButton from '../components/GradientButton';
 import { C, borderRadius } from '../theme';
+import AppFooter from '../components/AppFooter';
 
 export default function ContactScreen() {
   const navigation = useNavigation<any>();
@@ -63,7 +64,8 @@ export default function ContactScreen() {
           </>
         )}
       </View>
-    </ScrollView>
+          <AppFooter />
+      </ScrollView>
   );
 }
 

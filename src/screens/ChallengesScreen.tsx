@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput,
   TouchableOpacity, ScrollView, RefreshControl, useWindowDimensions,
@@ -8,6 +8,7 @@ import { getChallenges } from '../services/api';
 import ChallengeCard from '../components/ChallengeCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { C, borderRadius } from '../theme';
+import AppFooter from '../components/AppFooter';
 
 const CATEGORIES = [
   'All', 'Nutrition', 'Fitness', 'Mindfulness', 'Nature', 'Cooking',
@@ -141,6 +142,7 @@ export default function ChallengesScreen() {
             <Text style={[styles.catText, category === cat && styles.catTextActive]}>{cat}</Text>
           </TouchableOpacity>
         ))}
+            <AppFooter />
       </ScrollView>
 
       {/* Results Count */}
