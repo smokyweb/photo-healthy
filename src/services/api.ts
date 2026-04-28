@@ -1,4 +1,4 @@
-const BASE_URL =
+﻿const BASE_URL =
   typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'http://localhost:3001'
     : '';
@@ -59,7 +59,7 @@ async function request<T = any>(
   return text ? JSON.parse(text) : ({} as T);
 }
 
-// ── Admin proxy (bypasses LiteSpeed WAF) ──────────────────────────────────
+// â”€â”€ Admin proxy (bypasses LiteSpeed WAF) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function adminGet<T = any>(path: string): Promise<T> {
   const proxyPath = `/admin-api-proxy.php?path=${encodeURIComponent(path)}`;
   const res = await fetch(`${BASE_URL}${proxyPath}`, {
@@ -76,7 +76,7 @@ async function adminGet<T = any>(path: string): Promise<T> {
   return res.json();
 }
 
-// ── Auth ──────────────────────────────────────────────────────────────────
+// â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const login = (email: string, password: string) =>
   request('POST', '/api/auth/login', { email, password });
 
@@ -91,7 +91,7 @@ export const resetPassword = (email: string) =>
 export const changePassword = (currentPassword: string, newPassword: string) =>
   request('PATCH', '/api/auth/change-password', { currentPassword, newPassword });
 
-// ── Users ─────────────────────────────────────────────────────────────────
+// â”€â”€ Users â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const getUsers = () => adminGet('/api/users');
 
 export const updateUser = (id: number, data: any) =>
@@ -107,7 +107,7 @@ export const getUserAccess = () => request('GET', '/api/users/me/access');
 export const updateProfile = (data: any) =>
   request('PATCH', '/api/auth/me', data);
 
-// ── Challenges ────────────────────────────────────────────────────────────
+// â”€â”€ Challenges â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const getChallenges = (params?: Record<string, string>) => {
   const qs = params ? '?' + new URLSearchParams(params).toString() : '';
   return request('GET', `/api/challenges${qs}`);
@@ -125,7 +125,7 @@ export const updateChallenge = (id: number, data: any) =>
 export const deleteChallenge = (id: number) =>
   request('POST', `/api/challenges/${id}/delete`);
 
-// ── Submissions ───────────────────────────────────────────────────────────
+// â”€â”€ Submissions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const getSubmissions = (params?: Record<string, string>) => {
   const qs = params ? '?' + new URLSearchParams(params).toString() : '';
   return request('GET', `/api/submissions${qs}`);
@@ -146,9 +146,9 @@ export const deleteSubmission = (id: number) =>
 export const likeSubmission = (id: number) =>
   request('POST', `/api/submissions/${id}/like`);
 
-// ── Comments ──────────────────────────────────────────────────────────────
+// â”€â”€ Comments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const getComments = (submissionId: number) =>
-  request('GET', `/api/comments?submissionId=${submissionId}`);
+  request('GET', `/api/comments?submission_id=${submissionId}`);
 
 export const createComment = (data: any) =>
   request('POST', '/api/comments', data);
@@ -156,11 +156,11 @@ export const createComment = (data: any) =>
 export const deleteComment = (id: number) =>
   request('POST', `/api/comments/${id}/delete`);
 
-// ── Reports ───────────────────────────────────────────────────────────────
+// â”€â”€ Reports â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const createReport = (data: any) =>
   request('POST', '/api/reports', data);
 
-// ── Products / Shop ───────────────────────────────────────────────────────
+// â”€â”€ Products / Shop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const getProducts = () => request('GET', '/api/products');
 
 export const adminGetProducts = () => adminGet('/api/admin/products');
@@ -174,7 +174,7 @@ export const updateProduct = (id: number, data: any) =>
 export const deleteProduct = (id: number) =>
   request('DELETE', `/api/admin/products/${id}`);
 
-// ── Cart / Orders ─────────────────────────────────────────────────────────
+// â”€â”€ Cart / Orders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const createCheckoutSession = (items: any[]) =>
   request('POST', '/api/checkout/create-session', { items });
 
@@ -185,7 +185,7 @@ export const createBundleOrder = (data: any) =>
 
 export const adminGetOrders = () => adminGet('/api/admin/orders');
 
-// ── Subscription ──────────────────────────────────────────────────────────
+// â”€â”€ Subscription â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const getSubscriptionStatus = () =>
   request('GET', '/api/subscription/status');
 
@@ -197,7 +197,7 @@ export const cancelSubscription = () =>
 export const getSubscriptionPortal = () =>
   request('GET', '/api/subscription/portal');
 
-// ── Admin ─────────────────────────────────────────────────────────────────
+// â”€â”€ Admin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const adminGetDashboardStats = () =>
   adminGet('/api/admin/dashboard-stats');
 
@@ -214,17 +214,17 @@ export const adminGetContactSubmissions = () =>
 export const adminGetPartnerInquiries = () =>
   adminGet('/api/admin/partner-inquiries');
 
-// ── Settings (public) ─────────────────────────────────────────────────────
+// â”€â”€ Settings (public) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const getPublicSettings = () => request('GET', '/api/settings/public');
 
-// ── Contact / Partners ────────────────────────────────────────────────────
+// â”€â”€ Contact / Partners â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const submitContact = (data: any) =>
   request('POST', '/api/contact', data);
 
 export const submitPartnerInquiry = (data: any) =>
   request('POST', '/api/partner-inquiries', data);
 
-// ── Photo upload ──────────────────────────────────────────────────────────
+// â”€â”€ Photo upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function uploadPhoto(file: File): Promise<{ url: string }> {
   const dataUrl = await resizeImage(file, 1200, 0.82);
   const res = await fetch(`${BASE_URL}/upload.php`, {
