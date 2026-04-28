@@ -63,7 +63,7 @@ export default function ShopScreen() {
   const allProducts = filteredProducts;
 
   const handleAddToCart = (product: any) => {
-    if (product.is_pro_only && !user?.subscription_status === 'active') {
+    if (product.is_pro_only && user?.subscription_status !== 'active') {
       Alert.alert(
         'Pro Members Only',
         'This item is available for Pro members. Upgrade to access exclusive products.',
