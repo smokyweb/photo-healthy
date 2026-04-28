@@ -11,8 +11,17 @@ import { C, borderRadius } from '../theme';
 import AppFooter from '../components/AppFooter';
 
 const CATEGORIES = [
-  'All', 'Nutrition', 'Fitness', 'Mindfulness', 'Nature', 'Cooking',
-  'Sleep', 'Hydration', 'Strength', 'Community', 'Outdoor',
+  'All',
+  '🧘 Calm & Presence',
+  '🏋️ Movement & Energy',
+  '🌳 Nature & Outdoors',
+  '🏡 Home & Everyday Life',
+  '😄 Joy & Gratitude',
+  '🤝 Partner Connection & Community',
+  '🎨 Creativity & Seeing Differently',
+  '💪 Strength & Resilience',
+  '🧐 Reflection & Awareness',
+  '🏕️ Place & Exploration',
 ];
 
 const STATUS_TABS = [
@@ -126,9 +135,11 @@ export default function ChallengesScreen() {
       </View>
 
       {/* Category Filter Pills */}
+      <Text style={{ color: C.TEXT_MUTED, fontSize: 11, paddingHorizontal: 14, marginTop: 2 }}>Swipe for categories ›</Text>
       <ScrollView
         horizontal
-        showsHorizontalScrollIndicator={false}
+        showsHorizontalScrollIndicator={true}
+        persistentScrollbar
         style={styles.categoryScroll}
         contentContainerStyle={styles.categoryContent}
       >
@@ -225,12 +236,15 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#fff', fontWeight: '700' },
 
   // Category Pills
-  categoryScroll: { flexGrow: 0, marginBottom: 4 },
+  categoryScroll: { flexGrow: 0, marginBottom: 4, marginTop: 4 },
   categoryContent: {
     paddingHorizontal: 12,
-    paddingBottom: 8,
+    paddingRight: 32,
+    paddingBottom: 10,
+    paddingTop: 4,
     flexDirection: 'row',
-    gap: 6,
+    gap: 8,
+    alignItems: 'center',
   },
   catChip: {
     paddingHorizontal: 14,

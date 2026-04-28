@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image, TouchableOpacity,
   TextInput, Alert, useWindowDimensions, RefreshControl,
@@ -63,7 +63,7 @@ export default function ShopScreen() {
   const allProducts = filteredProducts;
 
   const handleAddToCart = (product: any) => {
-    if (product.is_pro_only && !user?.is_pro) {
+    if (product.is_pro_only && !user?.subscription_status === 'active') {
       Alert.alert(
         'Pro Members Only',
         'This item is available for Pro members. Upgrade to access exclusive products.',
@@ -76,11 +76,11 @@ export default function ShopScreen() {
     }
     addItem({
       id: product.id,
-      name: product.name,
+      name: product.title || product.name,
       price: product.price,
       image: fullUrl(product.image_url) || product.image_url,
     });
-    Alert.alert('Added!', `${product.name} added to cart.`);
+    Alert.alert('Added!', `${product.title} added to cart.`);
   };
 
   const numFeaturedCols = isDesktop ? 4 : isTablet ? 2 : 1;
@@ -112,7 +112,7 @@ export default function ShopScreen() {
               style={styles.cartBtn}
               onPress={() => navigation.navigate('Cart' as never)}
             >
-              <Text style={styles.cartBtnText}>🛒 Cart ({itemCount})</Text>
+              <Text style={styles.cartBtnText}>ðŸ›’ Cart ({itemCount})</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -127,7 +127,7 @@ export default function ShopScreen() {
               style={styles.dropdownBtn}
               onPress={() => setCategoryOpen(o => !o)}
             >
-              <Text style={styles.dropdownText}>{selectedCategory} ▼</Text>
+              <Text style={styles.dropdownText}>{selectedCategory} â–¼</Text>
             </TouchableOpacity>
             {categoryOpen && (
               <View style={styles.dropdownMenu}>
@@ -150,7 +150,7 @@ export default function ShopScreen() {
           </View>
           {/* Price Filter */}
           <TouchableOpacity style={styles.dropdownBtn}>
-            <Text style={styles.dropdownText}>Filter by Price ▼</Text>
+            <Text style={styles.dropdownText}>Filter by Price â–¼</Text>
           </TouchableOpacity>
         </View>
         {/* Search */}
@@ -173,7 +173,7 @@ export default function ShopScreen() {
             <View key={rowIdx} style={styles.productRow}>
               {row.map((item: any) => {
                 const imgUri = fullUrl(item.image_url);
-                const isPro = item.is_pro_only && !user?.is_pro;
+                const isPro = item.is_pro_only && !user?.subscription_status === 'active';
                 return (
                   <TouchableOpacity
                     key={item.id}
@@ -186,7 +186,7 @@ export default function ShopScreen() {
                         <Image source={{ uri: imgUri }} style={styles.productImg} resizeMode="cover" />
                       ) : (
                         <View style={[styles.productImg, styles.imgPlaceholder]}>
-                          <Text style={{ fontSize: 36 }}>🛍️</Text>
+                          <Text style={{ fontSize: 36 }}>ðŸ›ï¸</Text>
                         </View>
                       )}
                       <View style={styles.featuredBadge}>
@@ -194,15 +194,15 @@ export default function ShopScreen() {
                       </View>
                       {item.is_pro_only && (
                         <View style={styles.proBadge}>
-                          <Text style={styles.proBadgeText}>⭐ Pro Only</Text>
+                          <Text style={styles.proBadgeText}>â­ Pro Only</Text>
                         </View>
                       )}
                     </View>
                     <View style={styles.cardInfo}>
-                      <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+                      <Text style={styles.productName} numberOfLines={2}>{item.title}</Text>
                       <Text style={styles.price}>${Number(item.price).toFixed(2)}</Text>
                       <GradientButton
-                        label={isPro ? '⭐ Pro Only' : 'Add to Cart'}
+                        label={isPro ? 'â­ Pro Only' : 'Add to Cart'}
                         onPress={() => handleAddToCart(item)}
                         disabled={isPro}
                         style={styles.addBtn}
@@ -233,7 +233,7 @@ export default function ShopScreen() {
             <View key={rowIdx} style={styles.productRow}>
               {row.map((item: any) => {
                 const imgUri = fullUrl(item.image_url);
-                const isPro = item.is_pro_only && !user?.is_pro;
+                const isPro = item.is_pro_only && !user?.subscription_status === 'active';
                 return (
                   <TouchableOpacity
                     key={item.id}
@@ -246,20 +246,20 @@ export default function ShopScreen() {
                         <Image source={{ uri: imgUri }} style={styles.productImg} resizeMode="cover" />
                       ) : (
                         <View style={[styles.productImg, styles.imgPlaceholder]}>
-                          <Text style={{ fontSize: 32 }}>🛍️</Text>
+                          <Text style={{ fontSize: 32 }}>ðŸ›ï¸</Text>
                         </View>
                       )}
                       {item.is_pro_only && (
                         <View style={styles.proBadge}>
-                          <Text style={styles.proBadgeText}>⭐ Pro Only</Text>
+                          <Text style={styles.proBadgeText}>â­ Pro Only</Text>
                         </View>
                       )}
                     </View>
                     <View style={styles.cardInfo}>
-                      <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+                      <Text style={styles.productName} numberOfLines={2}>{item.title}</Text>
                       <Text style={styles.price}>${Number(item.price).toFixed(2)}</Text>
                       <GradientButton
-                        label={isPro ? '⭐ Pro Only' : 'Add to Cart'}
+                        label={isPro ? 'â­ Pro Only' : 'Add to Cart'}
                         onPress={() => handleAddToCart(item)}
                         disabled={isPro}
                         variant="outline"
