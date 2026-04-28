@@ -619,6 +619,7 @@ const s = StyleSheet.create({
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
     aspectRatio: 16 / 9,
+    maxHeight: 320,
     backgroundColor: C.CARD_BG,
   },
   heroImg: { width: '100%', height: '100%' },
@@ -839,7 +840,7 @@ const s = StyleSheet.create({
   } as any,
 
   // Public hero
-  hero: { height: 400 },
+  hero: { height: 260 },
   heroOverlay: {
     flex: 1,
     backgroundColor: 'rgba(32,35,51,0.65)',
