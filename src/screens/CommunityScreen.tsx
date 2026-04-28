@@ -82,7 +82,7 @@ export default function CommunityScreen() {
       <View style={styles.grid}>
         {submissions.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={{ fontSize: 48, marginBottom: 12 }}>ðŸ“·</Text>
+            <Text style={{ fontSize: 48, marginBottom: 12 }}>📷</Text>
             <Text style={styles.emptyTitle}>No photos yet</Text>
             <Text style={styles.emptyBody}>Be the first to submit a photo!</Text>
           </View>
@@ -102,7 +102,7 @@ export default function CommunityScreen() {
                       <Image source={{ uri: imgUri }} style={styles.img} resizeMode="cover" />
                     ) : (
                       <View style={[styles.img, styles.placeholder]}>
-                        <Text style={{ fontSize: 32 }}>ðŸ“·</Text>
+                        <Text style={{ fontSize: 32 }}>📷</Text>
                       </View>
                     )}
                     <View style={styles.cardInfo}>
@@ -110,7 +110,7 @@ export default function CommunityScreen() {
                       <View style={styles.cardMeta}>
                         <Text style={styles.cardUser} numberOfLines={1}>@{item.user_name || 'user'}</Text>
                         {item.like_count > 0 && (
-                          <Text style={styles.cardLikes}>â¤ï¸ {item.like_count}</Text>
+                          <Text style={styles.cardLikes}>❤️ {item.like_count}</Text>
                         )}
                       </View>
                     </View>

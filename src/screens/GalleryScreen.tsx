@@ -56,7 +56,7 @@ export default function GalleryScreen() {
       <View style={styles.grid}>
         {submissions.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={{ fontSize: 48, marginBottom: 12 }}>ðŸ“·</Text>
+            <Text style={{ fontSize: 48, marginBottom: 12 }}>📷</Text>
             <Text style={styles.emptyText}>No photos yet</Text>
           </View>
         ) : (
@@ -75,7 +75,7 @@ export default function GalleryScreen() {
                       <Image source={{ uri: imgUri }} style={styles.img} resizeMode="cover" />
                     ) : (
                       <View style={[styles.img, styles.placeholder]}>
-                        <Text style={{ fontSize: 28 }}>ðŸ“·</Text>
+                        <Text style={{ fontSize: 28 }}>📷</Text>
                       </View>
                     )}
                   </TouchableOpacity>
