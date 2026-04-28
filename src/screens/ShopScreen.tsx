@@ -127,7 +127,7 @@ export default function ShopScreen() {
               style={styles.dropdownBtn}
               onPress={() => setCategoryOpen(o => !o)}
             >
-              <Text style={styles.dropdownText}>{selectedCategory} â–¼</Text>
+              <Text style={styles.dropdownText}>{selectedCategory} ▼</Text>
             </TouchableOpacity>
             {categoryOpen && (
               <View style={styles.dropdownMenu}>
@@ -150,7 +150,7 @@ export default function ShopScreen() {
           </View>
           {/* Price Filter */}
           <TouchableOpacity style={styles.dropdownBtn}>
-            <Text style={styles.dropdownText}>Filter by Price â–¼</Text>
+            <Text style={styles.dropdownText}>Filter by Price ▼</Text>
           </TouchableOpacity>
         </View>
         {/* Search */}
@@ -186,7 +186,7 @@ export default function ShopScreen() {
                         <Image source={{ uri: imgUri }} style={styles.productImg} resizeMode="cover" />
                       ) : (
                         <View style={[styles.productImg, styles.imgPlaceholder]}>
-                          <Text style={{ fontSize: 36 }}>ðŸ›ï¸</Text>
+                          <Text style={{ fontSize: 36 }}>🛒️</Text>
                         </View>
                       )}
                       <View style={styles.featuredBadge}>
@@ -246,7 +246,7 @@ export default function ShopScreen() {
                         <Image source={{ uri: imgUri }} style={styles.productImg} resizeMode="cover" />
                       ) : (
                         <View style={[styles.productImg, styles.imgPlaceholder]}>
-                          <Text style={{ fontSize: 32 }}>ðŸ›ï¸</Text>
+                          <Text style={{ fontSize: 32 }}>🛒️</Text>
                         </View>
                       )}
                       {item.is_pro_only && (

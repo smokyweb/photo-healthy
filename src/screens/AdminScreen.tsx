@@ -86,12 +86,12 @@ export default function AdminScreen() {
       <Text style={styles.sectionTitle}>Overview</Text>
       <View style={styles.statsGrid}>
         {[
-          { label: 'Total Users', value: stats.total_users || 0, icon: 'ðŸ‘¥' },
-          { label: 'Total Submissions', value: stats.total_submissions || 0, icon: 'ðŸ“·' },
-          { label: 'Active Challenges', value: stats.active_challenges || 0, icon: 'ðŸ†' },
+          { label: 'Total Users', value: stats.total_users || 0, icon: '👥' },
+          { label: 'Total Submissions', value: stats.total_submissions || 0, icon: '📷' },
+          { label: 'Active Challenges', value: stats.active_challenges || 0, icon: '🏆' },
           { label: 'Pro Members', value: stats.pro_members || 0, icon: '⭐' },
           { label: 'Orders Today', value: stats.orders_today || 0, icon: '🛒' },
-          { label: 'Revenue (Month)', value: stats.monthly_revenue ? `$${stats.monthly_revenue}` : '$0', icon: 'ðŸ’°' },
+          { label: 'Revenue (Month)', value: stats.monthly_revenue ? `$${stats.monthly_revenue}` : '$0', icon: '💰' },
         ].map(s => (
           <View key={s.label} style={styles.statCard}>
             <Text style={styles.statIcon}>{s.icon}</Text>
@@ -124,7 +124,7 @@ export default function AdminScreen() {
               { text: 'Delete', style: 'destructive', onPress: () => deleteUser(item.id).then(() => setUsers(u => u.filter(x => x.id !== item.id))) },
             ])}
           >
-            <Text style={styles.deleteBtn}>ðŸ—‘ï¸</Text>
+            <Text style={styles.deleteBtn}>🗑️</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -183,9 +183,9 @@ export default function AdminScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>â† Back</Text>
+          <Text style={styles.back}>→ Back</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>ðŸ›¡ï¸ Admin Panel</Text>
+        <Text style={styles.title}>🛡️ Admin Panel</Text>
       </View>
 
       {/* Tab Bar */}

@@ -9,13 +9,13 @@ import { C, borderRadius } from '../theme';
 
 const VALUES = [
   {
-    icon: 'ðŸ¤',
+    icon: '🤝',
     color: C.TEAL,
     title: 'Community First',
     desc: "We believe in the power of community. Every member's journey matters and inspires others around them.",
   },
   {
-    icon: 'ðŸŒ±',
+    icon: '🌱',
     color: C.ORANGE,
     title: 'Authentic Wellness',
     desc: 'Real progress over perfection. We celebrate honest, everyday wellness moments big and small.',

@@ -33,7 +33,7 @@ const FAQS = [
   },
   {
     q: 'How do I report inappropriate content?',
-    a: "Tap the flag icon ðŸš© on any submission or comment to report it. Our moderation team reviews all reports promptly.",
+    a: "Tap the flag icon 🚩 on any submission or comment to report it. Our moderation team reviews all reports promptly.",
   },
   {
     q: 'What payment methods do you accept?',
@@ -92,7 +92,7 @@ export default function FAQScreen() {
               >
                 <View style={styles.questionRow}>
                   <Text style={styles.question}>{faq.q}</Text>
-                  <Text style={styles.chevron}>{isOpen ? 'â–²' : 'â–¼'}</Text>
+                  <Text style={styles.chevron}>{isOpen ? '▲' : '▼'}</Text>
                 </View>
                 {isOpen && (
                   <Text style={styles.answer}>{faq.a}</Text>

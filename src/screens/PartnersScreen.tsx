@@ -77,7 +77,7 @@ export default function PartnersScreen() {
       {/* Hero */}
       <View style={styles.hero}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-          <Text style={styles.backText}>â† Back</Text>
+          <Text style={styles.backText}>→ Back</Text>
         </TouchableOpacity>
         <Text style={styles.heroTitle}>Partner With Us</Text>
         <Text style={styles.heroSubtitle}>

@@ -158,7 +158,7 @@ export default function LegalScreen() {
             <Text style={styles.subheading}>Reporting</Text>
             <Text style={styles.body}>
               If you see content that violates these guidelines, please report it using the flag
-              icon ðŸš© on any submission or comment. Our moderation team reviews all reports.
+              icon 🚩 on any submission or comment. Our moderation team reviews all reports.
             </Text>
           </View>
         )}

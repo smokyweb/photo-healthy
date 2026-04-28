@@ -13,14 +13,14 @@ const STEPS = [
     color: C.ORANGE,
     title: 'Sign Up & Create Your Profile',
     desc: 'Join for free in seconds. Create your profile, set your wellness goals, and introduce yourself to the community. No credit card required.',
-    imageEmoji: 'ðŸ“±',
+    imageEmoji: '📱',
   },
   {
     num: '2',
     color: C.TEAL,
     title: 'Join Challenges & Submit Photos',
     desc: 'Browse active challenges across nutrition, fitness, mindfulness, and more. Submit photos to document your journey and inspire others.',
-    imageEmoji: 'ðŸ“·',
+    imageEmoji: '📷',
   },
   {
     num: '3',
@@ -42,12 +42,12 @@ const PRO_BENEFITS = [
 
 const FEATURES = [
   {
-    icon: 'ðŸ†',
+    icon: '🏆',
     title: 'Join Challenges',
     desc: 'Browse and join themed wellness challenges across nutrition, fitness, and mindfulness.',
   },
   {
-    icon: 'ðŸ“¸',
+    icon: '📸',
     title: 'Submit Photos',
     desc: 'Capture and share your healthy moments visually with the community.',
   },

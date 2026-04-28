@@ -136,11 +136,11 @@ export default function ContactScreen() {
           <View style={styles.infoCard}>
             <Text style={styles.infoCardTitle}>Get in Touch</Text>
             <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>ðŸ“§</Text>
+              <Text style={styles.infoIcon}>📧</Text>
               <Text style={styles.infoText}>support@photohealthy.com</Text>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>â°</Text>
+              <Text style={styles.infoIcon}>⏰</Text>
               <Text style={styles.infoText}>Mon–Fri, 9am–5pm EST</Text>
             </View>
             <Text style={styles.infoNote}>
