@@ -137,7 +137,7 @@ export default function ContactScreen() {
             <Text style={styles.infoCardTitle}>Get in Touch</Text>
             <View style={styles.infoRow}>
               <Text style={styles.infoIcon}>📧</Text>
-              <Text style={styles.infoText}>support@photohealthy.com</Text>
+              <Text style={styles.infoText}>hello@photohealthy.com</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoIcon}>⏰</Text>

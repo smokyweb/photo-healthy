@@ -20,6 +20,11 @@ interface Challenge {
   start_date?: string;
   end_date?: string;
   is_pro_only?: boolean;
+  user_challenge?: {
+    personal_end_date?: string;
+    days_remaining?: number;
+    status?: string;
+  } | null;
 }
 
 interface Props {
@@ -82,6 +87,15 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
         {daysLeft !== null && !isEnded && (
           <View style={styles.daysLeftBadge}>
             <Text style={styles.daysLeftText}>{daysLeft}d left</Text>
+          </View>
+        )}
+        {challenge.user_challenge && (
+          <View style={styles.enrolledBadge}>
+            <Text style={styles.enrolledBadgeText}>
+              {(challenge.user_challenge.days_remaining ?? 0) >= 0
+                ? `📅 ${Math.max(0, challenge.user_challenge.days_remaining ?? 0)}d personal`
+                : '⏰ Expired'}
+            </Text>
           </View>
         )}
       </View>
@@ -181,6 +195,16 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   daysLeftText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  enrolledBadge: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    backgroundColor: C.TEAL + 'cc',
+    borderRadius: borderRadius.pill,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+  },
+  enrolledBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
 
   // Body
   body: { padding: 14 },

@@ -41,13 +41,7 @@ export default function AppFooter() {
               <Text style={styles.link}>{l.label}</Text>
             </TouchableOpacity>
           ))}
-          {/* Sitemap and robots open in new tab — they're XML/text files */}
-          <TouchableOpacity onPress={() => openLink('/sitemap.xml')}>
-            <Text style={styles.link}>Sitemap</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => openLink('/robots.txt')}>
-            <Text style={styles.link}>Robots.txt</Text>
-          </TouchableOpacity>
+
         </View>
         <View style={styles.col}>
           <Text style={styles.colTitle}>Connect</Text>

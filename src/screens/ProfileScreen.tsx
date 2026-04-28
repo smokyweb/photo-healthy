@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Image, TouchableOpacity,
   ScrollView, Alert, RefreshControl, useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { getUserStats, getSubscriptionStatus, getSubmissions } from '../services/api';
+import { getUserStats, getSubscriptionStatus, getSubmissions, getMyChallenges } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
@@ -31,21 +31,27 @@ export default function ProfileScreen() {
   const [stats, setStats] = useState<any>({});
   const [subscription, setSubscription] = useState<any>(null);
   const [recentSubmissions, setRecentSubmissions] = useState<any[]>([]);
+  const [myChallenges, setMyChallenges] = useState<{ active: any[]; past: any[] }>({ active: [], past: [] });
+  const [challengesTab, setChallengesTab] = useState<'active' | 'past'>('active');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = async () => {
     if (!user) { setLoading(false); return; }
     try {
-      const [sData, subData, submissionsData] = await Promise.allSettled([
+      const [sData, subData, submissionsData, myChallengesData] = await Promise.allSettled([
         getUserStats(),
         getSubscriptionStatus(),
         getSubmissions({ limit: '6', userId: String(user.id) }),
+        getMyChallenges(),
       ]);
       if (sData.status === 'fulfilled') setStats(sData.value || {});
       if (subData.status === 'fulfilled') setSubscription(subData.value);
       if (submissionsData.status === 'fulfilled') {
         setRecentSubmissions(submissionsData.value?.submissions || submissionsData.value || []);
+      }
+      if (myChallengesData.status === 'fulfilled') {
+        setMyChallenges(myChallengesData.value || { active: [], past: [] });
       }
     } catch {}
     setLoading(false);
@@ -148,6 +154,64 @@ export default function ProfileScreen() {
         <StatBlock label="Plan"       value={planLabel} highlight={isPro} />
       </View>
 
+      {/* My Challenges Section */}
+      {(myChallenges.active.length > 0 || myChallenges.past.length > 0) && (
+        <View style={styles.myChallengesSection}>
+          <Text style={styles.sectionTitle}>🏅 My Challenges</Text>
+          <View style={styles.challengeTabRow}>
+            <TouchableOpacity
+              style={[styles.challengeTab, challengesTab === 'active' && styles.challengeTabActive]}
+              onPress={() => setChallengesTab('active')}
+            >
+              <Text style={[styles.challengeTabText, challengesTab === 'active' && styles.challengeTabTextActive]}>
+                Active ({myChallenges.active.length})
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.challengeTab, challengesTab === 'past' && styles.challengeTabActive]}
+              onPress={() => setChallengesTab('past')}
+            >
+              <Text style={[styles.challengeTabText, challengesTab === 'past' && styles.challengeTabTextActive]}>
+                Past ({myChallenges.past.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
+          {(challengesTab === 'active' ? myChallenges.active : myChallenges.past).length === 0 ? (
+            <Text style={styles.noChallengesText}>
+              {challengesTab === 'active' ? 'No active challenges. Enter a challenge to get started!' : 'No past challenges yet.'}
+            </Text>
+          ) : (
+            (challengesTab === 'active' ? myChallenges.active : myChallenges.past).map((item: any) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[styles.challengeItem, challengesTab === 'past' && styles.challengeItemPast]}
+                onPress={() => navigation.navigate('ChallengeDetail' as never, { challengeId: item.challenge_id } as never)}
+                activeOpacity={0.85}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.challengeItemTitle} numberOfLines={1}>{item.title}</Text>
+                  <Text style={styles.challengeItemMeta}>
+                    {challengesTab === 'active'
+                      ? `🗓 ${Math.max(0, item.days_remaining ?? 0)} day${item.days_remaining !== 1 ? 's' : ''} left`
+                      : item.has_submitted ? '✅ Completed' : '⏰ Expired'}
+                  </Text>
+                </View>
+                {challengesTab === 'active' && (
+                  <View style={styles.daysLeftPill}>
+                    <Text style={styles.daysLeftPillText}>{Math.max(0, item.days_remaining ?? 0)}d</Text>
+                  </View>
+                )}
+                {challengesTab === 'past' && (
+                  <View style={[styles.daysLeftPill, item.has_submitted ? styles.completedPill : styles.expiredPill]}>
+                    <Text style={styles.daysLeftPillText}>{item.has_submitted ? '✅' : '⏰'}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+      )}
+
       {/* Action Buttons */}
       <View style={styles.actionsSection}>
         <Text style={styles.sectionTitle}>My Account</Text>
@@ -163,7 +227,7 @@ export default function ProfileScreen() {
                 <Text style={styles.actionIcon}>{btn.icon}</Text>
               </View>
               <Text style={styles.actionLabel}>{btn.label}</Text>
-              <Text style={styles.actionArrow}>›</Text>
+              <Text style={styles.actionArrow}>â€º</Text>
             </TouchableOpacity>
           ))}
           {(user.role === 'admin' || user.is_admin) && (
@@ -176,7 +240,7 @@ export default function ProfileScreen() {
                 <Text style={styles.actionIcon}>{'\uD83D\uDEE1\uFE0F'}</Text>
               </View>
               <Text style={styles.actionLabel}>Admin Panel</Text>
-              <Text style={styles.actionArrow}>›</Text>
+              <Text style={styles.actionArrow}>â€º</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -188,7 +252,7 @@ export default function ProfileScreen() {
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>My Recent Photos</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Gallery' as never)}>
-              <Text style={styles.seeAll}>See all →</Text>
+              <Text style={styles.seeAll}>See all â†’</Text>
             </TouchableOpacity>
           </View>
           <View style={[styles.submissionsGrid, isDesktop && { gap: 10 }]}>
@@ -263,7 +327,7 @@ const statStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: C.BG },
+  screen: { flex: 1, backgroundColor: C.BG },
 
   guestContainer: {
     flex: 1,
@@ -331,6 +395,34 @@ const styles = StyleSheet.create({
   submissionPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: C.CARD_BG2 },
   submissionOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end', padding: 5, backgroundColor: 'rgba(0,0,0,0.15)' },
   submissionLikes: { color: '#fff', fontSize: 11, fontWeight: '600' },
+
+  myChallengesSection: { marginHorizontal: 16, marginTop: 24 },
+  challengeTabRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  challengeTab: {
+    flex: 1, paddingVertical: 8, alignItems: 'center',
+    borderRadius: 10, backgroundColor: C.CARD_BG,
+    borderWidth: 1, borderColor: C.CARD_BORDER,
+  },
+  challengeTabActive: { backgroundColor: C.ORANGE + '22', borderColor: C.ORANGE },
+  challengeTabText: { color: C.TEXT_MUTED, fontSize: 13, fontWeight: '600' },
+  challengeTabTextActive: { color: C.ORANGE },
+  noChallengesText: { color: C.TEXT_MUTED, fontSize: 14, textAlign: 'center', paddingVertical: 16 },
+  challengeItem: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: C.CARD_BG, borderRadius: 12,
+    padding: 14, marginBottom: 8,
+    borderWidth: 1, borderColor: C.CARD_BORDER, gap: 10,
+  },
+  challengeItemPast: { opacity: 0.65 },
+  challengeItemTitle: { color: C.TEXT, fontSize: 14, fontWeight: '700', marginBottom: 3 },
+  challengeItemMeta: { color: C.TEXT_MUTED, fontSize: 12 },
+  daysLeftPill: {
+    backgroundColor: C.TEAL + '22', borderRadius: 20,
+    paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: C.TEAL + '55',
+  },
+  completedPill: { backgroundColor: '#22c55e22', borderColor: '#22c55e55' },
+  expiredPill: { backgroundColor: C.TEXT_MUTED + '22', borderColor: C.TEXT_MUTED + '55' },
+  daysLeftPillText: { color: C.TEAL, fontSize: 12, fontWeight: '700' },
 
   signOutSection: { marginHorizontal: 16, marginTop: 20, marginBottom: 24 },
   signOutBtn: {

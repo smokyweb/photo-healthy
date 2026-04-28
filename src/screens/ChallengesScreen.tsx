@@ -250,7 +250,7 @@ export default function ChallengesScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: C.BG },
+  screen: { flex: 1, backgroundColor: C.BG },
 
   // Featured Banner
   featuredBanner: {
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#fff', fontWeight: '700' },
 
   // Category Pills
-  categoryScroll: { flexGrow: 0, marginBottom: 4, marginTop: 4 },
+  categoryScroll: { flexGrow: 0, marginBottom: 4, marginTop: 4, minHeight: 44 },
   categoryContent: {
     paddingHorizontal: 12,
     paddingRight: 32,

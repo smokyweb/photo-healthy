@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { getChallenge, getSubmissions, getUserAccess } from '../services/api';
+import { getChallenge, getSubmissions, getUserAccess, getChallengeEnrollment, enterChallenge } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
@@ -34,6 +34,8 @@ export default function ChallengeDetailScreen() {
   const [challenge, setChallenge] = useState<any>(null);
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [access, setAccess] = useState<any>({});
+  const [enrollment, setEnrollment] = useState<any>(null); // { enrolled, user_challenge }
+  const [enrolling, setEnrolling] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [subSearch, setSubSearch] = useState('');
@@ -48,8 +50,12 @@ export default function ChallengeDetailScreen() {
       setSubmissions(sData?.submissions || sData || []);
 
       if (user) {
-        const a = await getUserAccess().catch(() => ({}));
+        const [a, e] = await Promise.all([
+          getUserAccess().catch(() => ({})),
+          getChallengeEnrollment(challengeId).catch(() => ({ enrolled: false, user_challenge: null })),
+        ]);
         setAccess(a);
+        setEnrollment(e);
       }
     } catch (e: any) {
       Alert.alert('Error', e.message || 'Failed to load challenge');
@@ -62,8 +68,44 @@ export default function ChallengeDetailScreen() {
 
   const onRefresh = () => { setRefreshing(true); load(); };
 
+  const handleEnterChallenge = async () => {
+    if (!user) { navigation.navigate('Login'); return; }
+    if (challenge?.is_pro_only && !isPro) {
+      Alert.alert(
+        'Pro Members Only',
+        'This challenge is exclusive to Pro members. Upgrade to access all Pro challenges.',
+        [
+          { text: 'Maybe Later' },
+          { text: 'Go Pro ⭐', onPress: () => navigation.navigate('Subscription') },
+        ]
+      );
+      return;
+    }
+    setEnrolling(true);
+    try {
+      const result = await enterChallenge(challengeId);
+      const e = await getChallengeEnrollment(challengeId).catch(() => null);
+      setEnrollment(e || { enrolled: true, user_challenge: result.user_challenge });
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to enter challenge');
+    }
+    setEnrolling(false);
+  };
+
   const handleSubmit = () => {
     if (!user) { navigation.navigate('Login'); return; }
+    // Block if monthly limit reached
+    if (remainingSubmissions !== undefined && remainingSubmissions <= 0) {
+      Alert.alert(
+        'Monthly Limit Reached',
+        'You have used all your free submissions this month. Upgrade to Pro for unlimited submissions.',
+        [
+          { text: 'Maybe Later' },
+          { text: 'Go Pro ⭐', onPress: () => navigation.navigate('Subscription') },
+        ]
+      );
+      return;
+    }
     navigation.navigate('SubmitPhoto', { challengeId });
   };
 
@@ -85,6 +127,10 @@ export default function ChallengeDetailScreen() {
   const isPro = access?.isPro;
   const remainingSubmissions = access?.remainingSubmissions;
   const hasPartner = !!challenge.partner_url;
+  const isEnrolled = !!enrollment?.enrolled;
+  const userChallenge = enrollment?.user_challenge;
+  const personalDaysLeft = userChallenge ? Math.max(0, userChallenge.days_remaining ?? 0) : null;
+  const personalDeadlineExpired = isEnrolled && userChallenge && userChallenge.days_remaining < 0;
 
   const filteredSubs = subSearch.trim()
     ? submissions.filter(
@@ -170,20 +216,41 @@ export default function ChallengeDetailScreen() {
             </Text>
           )}
 
-          {/* Submit Photos (primary) */}
-          {isActive && (
+          {/* Enrollment / Submit flow */}
+          {isActive && !isEnrolled && (
             <GradientButton
-              label="Submit Photos"
-              variant="primary"
-              onPress={handleSubmit}
+              label={enrolling ? 'Joining...' : challenge?.is_pro_only && !isPro ? '⭐ Pro Members Only' : '🏁 Enter Challenge'}
+              variant={challenge?.is_pro_only && !isPro ? 'outline' : 'primary'}
+              onPress={handleEnterChallenge}
               style={styles.actionBtn}
             />
           )}
-
-          {/* Become a PRO (outline orange) */}
-          {!isPro && user && (
+          {isActive && isEnrolled && !personalDeadlineExpired && (
+            <>
+              <View style={styles.daysLeftBadge}>
+                <Text style={styles.daysLeftText}>🗓 {personalDaysLeft} day{personalDaysLeft !== 1 ? 's' : ''} left to complete</Text>
+              </View>
+              <GradientButton
+                label={remainingSubmissions === 0 ? 'Monthly Limit Reached' : 'Submit Photos'}
+                variant="primary"
+                onPress={handleSubmit}
+                style={styles.actionBtn}
+              />
+            </>
+          )}
+          {isActive && isEnrolled && personalDeadlineExpired && (
             <GradientButton
-              label="Become a PRO ⭐"
+              label="Challenge Expired"
+              variant="outline"
+              onPress={() => {}}
+              style={[styles.actionBtn, { opacity: 0.5 }]}
+            />
+          )}
+
+          {/* Become a PRO - only show for pro-only challenges */}
+          {!!challenge?.is_pro_only && !isPro && user && (
+            <GradientButton
+              label="Upgrade to Pro ⭐"
               variant="outline"
               onPress={() => navigation.navigate('Subscription')}
               style={styles.actionBtn}
@@ -395,6 +462,21 @@ const styles = StyleSheet.create({
   } as any,
 
   actionBtn: { marginBottom: 10 },
+  daysLeftBadge: {
+    backgroundColor: C.TEAL + '22',
+    borderWidth: 1,
+    borderColor: C.TEAL + '55',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  daysLeftText: {
+    color: C.TEAL,
+    fontSize: 14,
+    fontWeight: '700',
+  } as any,
 
   remainingText: {
     color: C.TEXT_MUTED,

@@ -41,6 +41,7 @@ export default function AdminScreen() {
   const [challengeForm, setChallengeForm] = useState({
     title: '', description: '', start_date: '', end_date: '',
     category: '', feeling_category: '', movement_category: '', is_pro_only: false,
+    duration_days: '30', global_end_date: '',
   });
 
   // Product form state
@@ -146,21 +147,28 @@ export default function AdminScreen() {
         feeling_category: ch.feeling_category || '',
         movement_category: ch.movement_category || '',
         is_pro_only: !!ch.is_pro_only,
+        duration_days: String(ch.duration_days || 30),
+        global_end_date: ch.global_end_date || '',
       });
     } else {
       setEditingChallenge(null);
-      setChallengeForm({ title: '', description: '', start_date: '', end_date: '', category: '', feeling_category: '', movement_category: '', is_pro_only: false });
+      setChallengeForm({ title: '', description: '', start_date: '', end_date: '', category: '', feeling_category: '', movement_category: '', is_pro_only: false, duration_days: '30', global_end_date: '' });
     }
     setShowChallengeForm(true);
   };
 
   const saveChallenge = async () => {
     try {
+      const payload = {
+        ...challengeForm,
+        duration_days: parseInt(challengeForm.duration_days) || 30,
+        global_end_date: challengeForm.global_end_date || null,
+      };
       if (editingChallenge) {
-        const updated = await updateChallenge(editingChallenge.id, challengeForm);
-        setChallenges(cs => cs.map(c => c.id === editingChallenge.id ? { ...c, ...challengeForm } : c));
+        await updateChallenge(editingChallenge.id, payload);
+        setChallenges(cs => cs.map(c => c.id === editingChallenge.id ? { ...c, ...payload } : c));
       } else {
-        const created = await createChallenge(challengeForm);
+        const created = await createChallenge(payload);
         setChallenges(cs => [...cs, created?.challenge || created]);
       }
       setShowChallengeForm(false);
@@ -202,6 +210,8 @@ export default function AdminScreen() {
           <Input label="Category" value={challengeForm.category} onChangeText={v => setChallengeForm(f => ({ ...f, category: v }))} />
           <Input label="Feeling Category" value={challengeForm.feeling_category} onChangeText={v => setChallengeForm(f => ({ ...f, feeling_category: v }))} />
           <Input label="Movement Category" value={challengeForm.movement_category} onChangeText={v => setChallengeForm(f => ({ ...f, movement_category: v }))} />
+          <Input label="Duration (days)" value={challengeForm.duration_days} onChangeText={v => setChallengeForm(f => ({ ...f, duration_days: v }))} keyboardType="numeric" />
+          <Input label="Global End Date (optional, YYYY-MM-DD)" value={challengeForm.global_end_date} onChangeText={v => setChallengeForm(f => ({ ...f, global_end_date: v }))} placeholder="Leave blank if no expiry" />
           <View style={styles.switchRow}>
             <Text style={styles.switchLabel}>Pro Only</Text>
             <Switch value={challengeForm.is_pro_only} onValueChange={v => setChallengeForm(f => ({ ...f, is_pro_only: v }))} trackColor={{ true: C.ORANGE }} />

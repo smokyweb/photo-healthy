@@ -569,7 +569,7 @@ export default function HomeScreen() {
 
 // ── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  screen: { backgroundColor: C.BG },
+  screen: { flex: 1, backgroundColor: C.BG },
 
   // Welcome Banner
   welcomeBanner: { height: 120, justifyContent: 'flex-end' },

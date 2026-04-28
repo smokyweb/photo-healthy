@@ -18,12 +18,18 @@ function injectScrollFix() {
   cssInjected = true;
   const style = document.createElement('style');
   style.textContent = `
-    /* Allow React Navigation screens to scroll naturally in the browser */
-    #root > div, [data-testid="rnw-root"] { height: auto !important; min-height: 100vh; }
-    /* RN Web stack card containers */
-    .css-view-175oi2r { overflow: visible !important; }
-    /* Make the top-level app container fill viewport but not clip */
-    html, body { height: auto !important; min-height: 100%; overflow-x: hidden; }
+    /* ===== iOS SCROLL FIX for React Native Web ===== */
+    /* Enable momentum scrolling on all scrollable containers */
+    * { -webkit-overflow-scrolling: touch; }
+    /* Ensure RN ScrollView renders correctly on iOS Safari */
+    [role="scrollbar"] { display: none; }
+    /* The actual scroll container RN Web creates */
+    .css-scrollbars-h { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+    .css-scrollbars-v { overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; }
+    /* Prevent tap delay on touch devices */
+    a, button, [role="button"] { touch-action: manipulation; }
+    /* Safe area insets for iPhone notch/home indicator */
+    body { padding-bottom: env(safe-area-inset-bottom, 0px); }
   `;
   document.head.appendChild(style);
 }
@@ -43,14 +49,10 @@ export default function ScreenWithNav({ children }: Props) {
 
 const s = StyleSheet.create({
   root: {
+    flex: 1,
     backgroundColor: C.BG,
-    ...(Platform.OS === 'web' ? {
-      minHeight: '100vh' as any,
-    } : { flex: 1 }),
   },
   content: {
-    ...(Platform.OS === 'web' ? {
-      flex: 'unset' as any,
-    } : { flex: 1 }),
+    flex: 1,
   },
 });

@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Platform, View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -85,7 +85,7 @@ function MainTabs() {
   const isDesktop = Platform.OS === 'web' && width >= 768;
 
   return (
-    <View style={Platform.OS === 'web' ? { minHeight: '100vh' as any } : { flex: 1 }}>
+    <View style={{ flex: 1 }}>
       {Platform.OS === 'web' && <TopNavBar />}
     <Tab.Navigator
       screenOptions={{
@@ -117,7 +117,7 @@ function MainTabs() {
 function OuterScreenWrapper({ children }: { children: React.ReactNode }) {
   return (
     <ScreenWithNav>
-      <View style={Platform.OS === 'web' ? { minHeight: '100vh' as any } : { flex: 1 }}>{children}</View>
+      <View style={{ flex: 1 }}>{children}</View>
     </ScreenWithNav>
   );
 }
@@ -139,7 +139,7 @@ function AppNavigator() {
           headerShown: false,
           // On web: allow each screen to scroll naturally via the browser
           ...(Platform.OS === 'web' ? {
-            cardStyle: { flex: 'unset' as any, overflowY: 'auto' as any, minHeight: '100vh' as any },
+            cardStyle: { flex: 1 as any, overflow: 'hidden' as any },
             cardOverlayEnabled: false,
           } : {}),
         }}>

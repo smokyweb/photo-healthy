@@ -110,6 +110,13 @@ export default function RegisterScreen() {
             style={{ marginTop: 8, marginBottom: 20 }}
           />
 
+          <Text style={{ color: C.TEXT_MUTED, fontSize: 12, textAlign: 'center', marginBottom: 16, lineHeight: 18 }}>
+            By creating an account, you agree to our{' '}
+            <Text style={{ color: C.ORANGE, textDecorationLine: 'underline' }} onPress={() => navigation.navigate('Legal', { section: 'terms' })}>Terms of Service</Text>
+            {' '}and{' '}
+            <Text style={{ color: C.ORANGE, textDecorationLine: 'underline' }} onPress={() => navigation.navigate('Legal', { section: 'privacy' })}>Privacy Policy</Text>
+          </Text>
+
           <View style={styles.loginRow}>
             <Text style={styles.loginText}>Already have an account? </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Login')}>

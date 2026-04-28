@@ -125,6 +125,15 @@ export const updateChallenge = (id: number, data: any) =>
 export const deleteChallenge = (id: number) =>
   request('POST', `/api/challenges/${id}/delete`);
 
+export const enterChallenge = (challengeId: number) =>
+  request('POST', `/api/challenges/${challengeId}/enter`);
+
+export const getMyChallenges = () =>
+  request('GET', '/api/users/me/challenges');
+
+export const getChallengeEnrollment = (challengeId: number) =>
+  request('GET', `/api/challenges/${challengeId}/enrollment`);
+
 // â”€â”€ Submissions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const getSubmissions = (params?: Record<string, string>) => {
   const qs = params ? '?' + new URLSearchParams(params).toString() : '';
