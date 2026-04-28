@@ -8,6 +8,8 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { CartProvider } from './src/context/CartContext';
 import { C } from './src/theme';
 import BottomNavBar from './src/components/BottomNavBar';
+import TopNavBar from './src/components/TopNavBar';
+import ScreenWithNav from './src/components/ScreenWithNav';
 
 // Screens
 import HomeScreen from './src/screens/HomeScreen';
@@ -83,6 +85,8 @@ function MainTabs() {
   const isDesktop = Platform.OS === 'web' && width >= 768;
 
   return (
+    <View style={{ flex: 1 }}>
+      {Platform.OS === 'web' && <TopNavBar />}
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
@@ -105,16 +109,16 @@ function MainTabs() {
       <Tab.Screen name="CommunityTab" component={CommunityScreen} options={{ title: 'Community', tabBarLabel: 'Community' }} />
       <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: 'Profile', tabBarLabel: 'Profile' }} />
     </Tab.Navigator>
+    </View>
   );
 }
 
-// Wrapper that adds bottom nav to outer screens
+// Wrapper for outer stack screens - adds TopNavBar + bottom nav
 function OuterScreenWrapper({ children }: { children: React.ReactNode }) {
   return (
-    <View style={{ flex: 1 }}>
+    <ScreenWithNav>
       <View style={{ flex: 1 }}>{children}</View>
-      <BottomNavBar />
-    </View>
+    </ScreenWithNav>
   );
 }
 

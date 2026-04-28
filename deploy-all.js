@@ -44,5 +44,17 @@ async function main() {
   await new Promise(r => setTimeout(r, 3000));
   const status = await execSSH(`curl -s http://127.0.0.1:3001/api/challenges | head -c 20`);
   console.log('Server:', status.includes('[') || status.includes('{') ? 'ALIVE' : 'CHECK LOGS');
+
+  // Auto-commit and push to GitHub on every deploy
+  const { execSync } = require('child_process');
+  try {
+    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
+    execSync('git add -A', { cwd: __dirname, stdio: 'pipe' });
+    execSync(`git commit -m "Auto-deploy: ${timestamp}" --allow-empty`, { cwd: __dirname, stdio: 'pipe' });
+    execSync('git push origin master', { cwd: __dirname, stdio: 'pipe' });
+    console.log('GitHub: pushed to smokyweb/photo-healthy master');
+  } catch (e) {
+    console.log('GitHub push skipped (no changes or auth issue):', e.message.substring(0, 80));
+  }
 }
 main().catch(e => { console.error(e.message); process.exit(1); });
