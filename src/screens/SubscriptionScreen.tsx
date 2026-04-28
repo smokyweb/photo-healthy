@@ -1,24 +1,27 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { subscribe, getSubscriptionStatus, cancelSubscription } from '../services/api';
+import {
+  getSubscriptionStatus,
+  subscribe,
+  cancelSubscription,
+  getSubscriptionPortal,
+} from '../services/api';
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { C, borderRadius } from '../theme';
 import AppFooter from '../components/AppFooter';
+import { C, borderRadius } from '../theme';
 
-const FEATURES = [
-  '✅ Submit unlimited photos',
-  '✅ Access exclusive Pro challenges',
-  '✅ Shop Pro-only products',
-  '✅ Priority community feed placement',
-  '✅ Advanced progress analytics',
-  '✅ Remove watermarks from your photos',
-  '✅ Cancel anytime',
+const BENEFITS = [
+  'Unlimited monthly challenge submissions',
+  'Access to Pro-only exclusive challenges',
+  'Download your original unwatermarked photos',
+  'Pro badge on your profile',
+  'Access to Pro-only shop items',
+  'Priority support',
 ];
 
 export default function SubscriptionScreen() {
@@ -31,41 +34,54 @@ export default function SubscriptionScreen() {
   useEffect(() => {
     if (!user) { setLoading(false); return; }
     getSubscriptionStatus()
-      .then(data => setSubscription(data))
+      .then(d => setSubscription(d))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [user]);
 
   const handleSubscribe = async () => {
-    if (!user) { navigation.navigate('Login'); return; }
+    if (!user) { navigation.navigate('Login' as never); return; }
     setSubscribing(true);
     try {
       const data = await subscribe({ plan: 'pro' });
-      if (data.url) {
-        window.location.href = data.url;
+      if (data?.url) {
+        (window as any).location.href = data.url;
       } else {
         Alert.alert('Success', 'Welcome to Pro!');
         navigation.goBack();
       }
     } catch (e: any) {
-      Alert.alert('Error', e.message || 'Subscription failed.');
+      Alert.alert('Error', e.message || 'Subscription failed. Please try again.');
     }
     setSubscribing(false);
+  };
+
+  const handleManageBilling = async () => {
+    try {
+      const data = await getSubscriptionPortal();
+      if (data?.url) { (window as any).location.href = data.url; }
+    } catch (e: any) {
+      Alert.alert('Error', 'Could not open billing portal. Please try again.');
+    }
   };
 
   const handleCancel = () => {
     Alert.alert(
       'Cancel Subscription',
-      'Are you sure you want to cancel? You\'ll keep Pro access until the end of your billing period.',
+      "Are you sure you want to cancel? You'll keep Pro access until the end of your billing period.",
       [
         { text: 'Keep Pro' },
         {
           text: 'Cancel Subscription',
           style: 'destructive',
           onPress: async () => {
-            await cancelSubscription();
-            setSubscription((s: any) => ({ ...s, cancel_at_period_end: true }));
-            Alert.alert('Cancelled', 'Your subscription will end at the billing period end.');
+            try {
+              await cancelSubscription();
+              setSubscription((s: any) => ({ ...s, cancel_at_period_end: true }));
+              Alert.alert('Cancelled', 'Your subscription will end at the billing period end.');
+            } catch (e: any) {
+              Alert.alert('Error', e.message || 'Failed to cancel subscription.');
+            }
           },
         },
       ]
@@ -74,111 +90,216 @@ export default function SubscriptionScreen() {
 
   if (loading) return <LoadingSpinner fullScreen />;
 
-  const isPro = subscription?.is_pro || subscription?.status === 'active';
+  const isPro = subscription?.is_pro || subscription?.status === 'active' || user?.is_pro;
 
   return (
-    <ScrollView style={styles.screen}>
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-        <Text style={styles.backText}>← Back</Text>
-      </TouchableOpacity>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      {/* Page Header */}
+      <View style={styles.pageHeader}>
+        <Text style={styles.pageTitle}>Go Pro</Text>
+        <Text style={styles.pageSubtitle}>
+          Unlock the full Photo Healthy experience with a Pro membership
+        </Text>
+      </View>
 
       {isPro ? (
-        <View style={styles.container}>
-          <Text style={styles.proIcon}>⭐</Text>
-          <Text style={styles.title}>You're a Pro Member!</Text>
-          <Text style={styles.subtitle}>
-            Your subscription is {subscription?.cancel_at_period_end ? 'cancelling at period end' : 'active'}.
-          </Text>
-          {subscription?.current_period_end && (
-            <Text style={styles.periodText}>
-              {subscription.cancel_at_period_end ? 'Access ends' : 'Next billing date'}:{' '}
-              {new Date(subscription.current_period_end).toLocaleDateString()}
-            </Text>
-          )}
-          {!subscription?.cancel_at_period_end && (
-            <TouchableOpacity onPress={handleCancel} style={styles.cancelBtn}>
-              <Text style={styles.cancelText}>Cancel Subscription</Text>
-            </TouchableOpacity>
-          )}
+        /* ── Pro Member State ── */
+        <View style={styles.centered}>
+          <View style={styles.proBanner}>
+            <Text style={styles.proBannerText}>✓ You're a Pro Member!</Text>
+            {subscription?.cancel_at_period_end && (
+              <Text style={styles.proBannerSub}>
+                Your subscription is set to cancel at period end.
+              </Text>
+            )}
+            {subscription?.current_period_end && (
+              <Text style={styles.proBannerSub}>
+                {subscription.cancel_at_period_end ? 'Access ends: ' : 'Next billing: '}
+                {new Date(subscription.current_period_end).toLocaleDateString()}
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.proActionsRow}>
+            <GradientButton
+              label="Manage Billing"
+              onPress={handleManageBilling}
+              variant="teal"
+              style={styles.actionBtn}
+            />
+            {!subscription?.cancel_at_period_end && (
+              <GradientButton
+                label="Cancel Subscription"
+                onPress={handleCancel}
+                variant="danger"
+                style={styles.actionBtn}
+              />
+            )}
+          </View>
         </View>
       ) : (
-        <View style={styles.container}>
-          <Text style={styles.badge}>🚀 GO PRO</Text>
-          <Text style={styles.title}>Unlock Everything</Text>
-          <Text style={styles.subtitle}>Take your healthy journey to the next level</Text>
-
-          {/* Pricing Card */}
+        /* ── Pricing Card ── */
+        <View style={styles.centered}>
           <View style={styles.pricingCard}>
-            <Text style={styles.planName}>Pro Plan</Text>
+            <Text style={styles.cardTitle}>Photo Healthy Pro</Text>
+
             <View style={styles.priceRow}>
-              <Text style={styles.price}>$9</Text>
+              <Text style={styles.priceMain}>$9.99</Text>
               <Text style={styles.priceUnit}>/month</Text>
             </View>
-            <Text style={styles.priceAnnual}>or $79/year — save 27%</Text>
+            <Text style={styles.cancelAnytime}>Cancel anytime</Text>
 
-            <View style={styles.featureList}>
-              {FEATURES.map(f => (
-                <Text key={f} style={styles.feature}>{f}</Text>
+            <View style={styles.divider} />
+
+            <View style={styles.benefitsList}>
+              {BENEFITS.map(b => (
+                <View key={b} style={styles.benefitRow}>
+                  <Text style={styles.checkmark}>✓</Text>
+                  <Text style={styles.benefitText}>{b}</Text>
+                </View>
               ))}
             </View>
 
             <GradientButton
-              label="Get Pro Now"
+              label="Upgrade to Pro"
               onPress={handleSubscribe}
               loading={subscribing}
-              style={styles.ctaBtn}
+              size="lg"
+              style={styles.upgradeBtn}
             />
-            <Text style={styles.guarantee}>30-day money-back guarantee</Text>
+
+            <TouchableOpacity onPress={handleManageBilling} style={styles.manageBillingRow}>
+              <Text style={styles.manageBillingLink}>Already subscribed? Manage billing</Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}
 
-      <View style={{ height: 40 }} />
-          <AppFooter />
-      </ScrollView>
+      <AppFooter />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.BG },
-  back: { padding: 16 },
-  backText: { color: C.ORANGE, fontSize: 15 },
-  container: { alignItems: 'center', padding: 20 },
-  proIcon: { fontSize: 64, marginBottom: 12 },
-  badge: {
-    backgroundColor: C.ORANGE + '22',
-    color: C.ORANGE,
-    fontSize: 13,
-    fontWeight: '800',
-    paddingHorizontal: 14,
-    paddingVertical: 5,
-    borderRadius: borderRadius.pill,
-    overflow: 'hidden',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: C.ORANGE,
-  },
-  title: { color: C.TEXT, fontSize: 28, fontWeight: '800', marginBottom: 8, textAlign: 'center' },
-  subtitle: { color: C.TEXT_SECONDARY, fontSize: 15, textAlign: 'center', marginBottom: 24 },
-  periodText: { color: C.TEXT_MUTED, fontSize: 14, marginBottom: 24 },
-  cancelBtn: { marginTop: 24 },
-  cancelText: { color: C.DANGER, fontSize: 14 },
-  pricingCard: {
-    width: '100%',
-    backgroundColor: C.CARD_BG,
-    borderRadius: borderRadius.xl,
-    padding: 24,
-    borderWidth: 2,
-    borderColor: C.ORANGE,
+  content: { paddingBottom: 0 },
+
+  pageHeader: {
+    paddingHorizontal: 24,
+    paddingTop: 48,
+    paddingBottom: 36,
     alignItems: 'center',
   },
-  planName: { color: C.TEXT, fontSize: 18, fontWeight: '700', marginBottom: 12 },
-  priceRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 4 },
-  price: { color: C.ORANGE, fontSize: 52, fontWeight: '900', lineHeight: 60 },
-  priceUnit: { color: C.TEXT_MUTED, fontSize: 18, marginBottom: 8 },
-  priceAnnual: { color: C.TEAL, fontSize: 13, marginBottom: 20 },
-  featureList: { alignSelf: 'stretch', marginBottom: 24 },
-  feature: { color: C.TEXT_SECONDARY, fontSize: 14, marginBottom: 8, lineHeight: 20 },
-  ctaBtn: { width: '100%', height: 52 },
-  guarantee: { color: C.TEXT_MUTED, fontSize: 12, marginTop: 12 },
+  pageTitle: {
+    color: C.TEXT,
+    fontSize: 42,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  pageSubtitle: {
+    color: C.TEXT_SECONDARY,
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+    maxWidth: 480,
+  },
+
+  centered: {
+    paddingHorizontal: 24,
+    paddingBottom: 48,
+    alignItems: 'center',
+  },
+
+  // Pro member state
+  proBanner: {
+    backgroundColor: '#022B1F',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: C.TEAL,
+    paddingVertical: 20,
+    paddingHorizontal: 28,
+    marginBottom: 24,
+    width: '100%',
+    maxWidth: 480,
+    alignItems: 'center',
+  },
+  proBannerText: {
+    color: C.TEAL,
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  proBannerSub: {
+    color: C.TEXT_SECONDARY,
+    fontSize: 14,
+    marginTop: 2,
+  },
+  proActionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+    maxWidth: 480,
+    flexWrap: 'wrap',
+  },
+  actionBtn: { flex: 1, minWidth: 140 },
+
+  // Pricing card
+  pricingCard: {
+    backgroundColor: C.CARD_BG,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: C.ORANGE,
+    padding: 32,
+    width: '100%',
+    maxWidth: 480,
+    alignItems: 'center',
+  },
+  cardTitle: {
+    color: C.TEXT,
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  priceRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 6 },
+  priceMain: {
+    color: C.ORANGE,
+    fontSize: 60,
+    fontWeight: '900',
+    lineHeight: 68,
+  },
+  priceUnit: { color: C.TEXT_MUTED, fontSize: 20, marginBottom: 12 },
+  cancelAnytime: {
+    color: C.TEXT_MUTED,
+    fontSize: 13,
+    marginBottom: 24,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: C.CARD_BORDER,
+    alignSelf: 'stretch',
+    marginBottom: 24,
+  },
+  benefitsList: { alignSelf: 'stretch', marginBottom: 28 },
+  benefitRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+    gap: 12,
+  },
+  checkmark: { color: C.TEAL, fontSize: 16, fontWeight: '800', marginTop: 2 },
+  benefitText: {
+    color: C.TEXT_SECONDARY,
+    fontSize: 15,
+    flex: 1,
+    lineHeight: 22,
+  },
+  upgradeBtn: { width: '100%' },
+  manageBillingRow: { marginTop: 18 },
+  manageBillingLink: {
+    color: C.TEAL,
+    fontSize: 14,
+    textDecorationLine: 'underline',
+  },
 });

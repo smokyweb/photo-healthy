@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { submitPartnerInquiry } from '../services/api';
 import Input from '../components/Input';
 import GradientButton from '../components/GradientButton';
+import AppFooter from '../components/AppFooter';
 import { C, borderRadius } from '../theme';
 
 const TIERS = [
@@ -118,7 +119,7 @@ export default function PartnersScreen() {
         <GradientButton label="Send Inquiry" onPress={handleSubmit} loading={sending} />
       </View>
 
-      <View style={{ height: 40 }} />
+      <AppFooter />
     </ScrollView>
   );
 }
