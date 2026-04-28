@@ -8,10 +8,11 @@ import { useAuth } from '../context/AuthContext';
 import { getUserStats, getSubscriptionStatus, getSubmissions } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
+import AppFooter from '../components/AppFooter';
 import { C, borderRadius } from '../theme';
 
 const BASE = 'https://photoai.betaplanets.com';
-const fullUrl = (url: string) => (!url ? '' : url.startsWith('http') ? url : BASE + url);
+const fullUrl = (url?: string) => (!url ? '' : url.startsWith('http') ? url : BASE + url);
 
 const ACTION_BUTTONS = [
   { icon: '✏️', label: 'Edit Profile', screen: 'EditProfile', color: C.TEAL },
@@ -103,8 +104,8 @@ export default function ProfileScreen() {
       <View style={styles.profileHeader}>
         {/* Avatar */}
         <View style={styles.avatarRing}>
-          {user.avatar ? (
-            <Image source={{ uri: fullUrl(user.avatar) }} style={styles.avatar} />
+          {(user.avatar_url || user.avatar) ? (
+            <Image source={{ uri: fullUrl(user.avatar_url || user.avatar) }} style={styles.avatar} />
           ) : (
             <View style={styles.avatarFallback}>
               <Text style={styles.avatarInitials}>{initials}</Text>
@@ -122,6 +123,15 @@ export default function ProfileScreen() {
             <Text style={styles.proBadgeText}>⭐ PRO Member</Text>
           </View>
         )}
+
+        {/* Edit Profile button */}
+        <GradientButton
+          label="Edit Profile"
+          variant="outline"
+          onPress={() => navigation.navigate('EditProfile')}
+          style={{ marginTop: 14, paddingHorizontal: 28 } as any}
+          size="sm"
+        />
       </View>
 
       {/* Stats Grid */}
@@ -213,7 +223,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={{ height: 40 }} />
+      <AppFooter />
     </ScrollView>
   );
 }
@@ -295,9 +305,9 @@ const styles = StyleSheet.create({
     borderBottomColor: C.CARD_BORDER,
   },
   avatarRing: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     borderWidth: 3,
     borderColor: C.ORANGE,
     overflow: 'hidden',

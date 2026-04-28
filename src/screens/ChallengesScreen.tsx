@@ -142,7 +142,6 @@ export default function ChallengesScreen() {
             <Text style={[styles.catText, category === cat && styles.catTextActive]}>{cat}</Text>
           </TouchableOpacity>
         ))}
-            <AppFooter />
       </ScrollView>
 
       {/* Results Count */}
@@ -172,6 +171,7 @@ export default function ChallengesScreen() {
             <Text style={styles.emptyBody}>Try adjusting your filters or search term.</Text>
           </View>
         }
+        ListFooterComponent={<AppFooter />}
         showsVerticalScrollIndicator={false}
       />
     </View>
