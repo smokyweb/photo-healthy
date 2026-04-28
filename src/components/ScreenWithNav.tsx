@@ -23,6 +23,15 @@ export default function ScreenWithNav({ children }: Props) {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.BG },
-  content: { flex: 1 },
+  root: {
+    flex: 1,
+    backgroundColor: C.BG,
+    // On web, allow content to grow and let browser scroll
+    ...(Platform.OS === 'web' ? { minHeight: '100vh' as any, display: 'flex' as any, flexDirection: 'column' as any } : {}),
+  },
+  content: {
+    flex: 1,
+    // On web, allow the content area to grow naturally
+    ...(Platform.OS === 'web' ? { flexGrow: 1 as any } : {}),
+  },
 });

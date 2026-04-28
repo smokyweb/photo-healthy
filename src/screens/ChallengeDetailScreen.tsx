@@ -97,7 +97,7 @@ export default function ChallengeDetailScreen() {
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={{ paddingBottom: 0 }}
+      contentContainerStyle={{ flexGrow: 1, paddingBottom: 0 }}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.ORANGE} />
       }
@@ -286,7 +286,7 @@ export default function ChallengeDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { backgroundColor: C.BG },
   center: {
     flex: 1,
     alignItems: 'center',

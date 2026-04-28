@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TextInput,
+  View, Text, StyleSheet, TextInput,
   TouchableOpacity, ScrollView, RefreshControl, useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -88,18 +88,20 @@ export default function ChallengesScreen() {
 
   if (loading) return <LoadingSpinner fullScreen />;
 
-  // For multi-column on desktop, group items into rows
-  const renderItem = ({ item }: { item: any }) => (
-    <View style={[styles.cardWrap, numCols > 1 && { width: `${100 / numCols - 1.5}%` as any }]}>
-      <ChallengeCard
-        challenge={item}
-        onPress={() => navigation.navigate('ChallengeDetail', { challengeId: item.id })}
-      />
-    </View>
-  );
+  // Group items into rows for manual grid
+  function chunkArray<T>(arr: T[], size: number): T[][] {
+    const out: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+    return out;
+  }
+  const rows = chunkArray(filtered, numCols);
 
   return (
-    <View style={styles.screen}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={{ flexGrow: 1 }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.ORANGE} />}
+    >
       {/* Search Bar */}
       <View style={styles.searchWrap}>
         <Text style={styles.searchIcon}>🔍</Text>
@@ -162,35 +164,40 @@ export default function ChallengesScreen() {
         </Text>
       </View>
 
-      {/* Challenge List / Grid */}
-      <FlatList
-        data={filtered}
-        keyExtractor={i => String(i.id)}
-        numColumns={numCols}
-        key={`cols-${numCols}`}
-        contentContainerStyle={[
-          styles.list,
-          numCols > 1 && styles.listGrid,
-        ]}
-        columnWrapperStyle={numCols > 1 ? styles.colWrapper : undefined}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.ORANGE} />}
-        renderItem={renderItem}
-        ListEmptyComponent={
+      {/* Challenge Grid */}
+      <View style={[styles.list, numCols > 1 && styles.listGrid]}>
+        {filtered.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyIcon}>🔍</Text>
             <Text style={styles.emptyTitle}>No challenges found</Text>
             <Text style={styles.emptyBody}>Try adjusting your filters or search term.</Text>
           </View>
-        }
-        ListFooterComponent={<AppFooter />}
-        showsVerticalScrollIndicator={false}
-      />
-    </View>
+        ) : (
+          rows.map((row, rowIdx) => (
+            <View key={rowIdx} style={numCols > 1 ? styles.colWrapper : undefined}>
+              {row.map(item => (
+                <View key={item.id} style={[styles.cardWrap, numCols > 1 && { width: `${100 / numCols - 1}%` as any }]}>
+                  <ChallengeCard
+                    challenge={item}
+                    onPress={() => navigation.navigate('ChallengeDetail', { challengeId: item.id })}
+                  />
+                </View>
+              ))}
+              {/* Pad last row if uneven */}
+              {row.length < numCols && Array(numCols - row.length).fill(0).map((_, i) => (
+                <View key={`pad-${i}`} style={[styles.cardWrap, { width: `${100 / numCols - 1}%` as any }]} />
+              ))}
+            </View>
+          ))
+        )}
+      </View>
+      <AppFooter />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { backgroundColor: C.BG },
 
   // Search
   searchWrap: {
