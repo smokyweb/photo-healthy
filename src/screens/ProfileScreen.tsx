@@ -1,30 +1,51 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Image, TouchableOpacity,
-  ScrollView, Alert, RefreshControl,
+  ScrollView, Alert, RefreshControl, useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { getUserStats, getMyOrders, getSubscriptionStatus } from '../services/api';
+import { getUserStats, getSubscriptionStatus, getSubmissions } from '../services/api';
 import GradientButton from '../components/GradientButton';
-import Card from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { C, borderRadius } from '../theme';
+
+const BASE = 'https://photoai.betaplanets.com';
+const fullUrl = (url: string) => (!url ? '' : url.startsWith('http') ? url : BASE + url);
+
+const ACTION_BUTTONS = [
+  { icon: '✏️', label: 'Edit Profile', screen: 'EditProfile', color: C.TEAL },
+  { icon: '📊', label: 'My Progress', screen: 'MyProgress', color: C.TEAL_DARK },
+  { icon: '🖼️', label: 'My Gallery', screen: 'Gallery', color: C.ORANGE_MID },
+  { icon: '🛍️', label: 'My Orders', screen: 'OrderHistory', color: C.WARNING },
+  { icon: '⭐', label: 'Subscription', screen: 'Subscription', color: C.ORANGE },
+];
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const { user, logout } = useAuth();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
+
   const [stats, setStats] = useState<any>({});
   const [subscription, setSubscription] = useState<any>(null);
+  const [recentSubmissions, setRecentSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = async () => {
     if (!user) { setLoading(false); return; }
     try {
-      const [sData, subData] = await Promise.allSettled([getUserStats(), getSubscriptionStatus()]);
+      const [sData, subData, submissionsData] = await Promise.allSettled([
+        getUserStats(),
+        getSubscriptionStatus(),
+        getSubmissions({ limit: '6', userId: String(user.id) }),
+      ]);
       if (sData.status === 'fulfilled') setStats(sData.value || {});
       if (subData.status === 'fulfilled') setSubscription(subData.value);
+      if (submissionsData.status === 'fulfilled') {
+        setRecentSubmissions(submissionsData.value?.submissions || submissionsData.value || []);
+      }
     } catch {}
     setLoading(false);
     setRefreshing(false);
@@ -34,20 +55,35 @@ export default function ProfileScreen() {
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel' },
+      { text: 'Cancel', style: 'cancel' },
       { text: 'Sign Out', style: 'destructive', onPress: logout },
     ]);
   };
 
+  const initials = user?.name
+    ? user.name.split(' ').map((n: string) => n.charAt(0).toUpperCase()).slice(0, 2).join('')
+    : '?';
+
+  const isPro = subscription?.is_pro || subscription?.isPro || user?.role === 'pro';
+  const planLabel = isPro ? 'Pro' : 'Free';
+
   if (!user) {
     return (
       <View style={styles.guestContainer}>
-        <Text style={styles.guestIcon}>👤</Text>
-        <Text style={styles.guestTitle}>Create an Account</Text>
-        <Text style={styles.guestBody}>Join the community to track your progress and participate in challenges.</Text>
-        <GradientButton label="Sign Up Free" onPress={() => navigation.navigate('Register')} style={{ marginTop: 20 }} />
-        <TouchableOpacity onPress={() => navigation.navigate('Login')} style={{ marginTop: 12 }}>
-          <Text style={{ color: C.TEXT_MUTED, fontSize: 14 }}>Already have an account? Sign In</Text>
+        <View style={styles.guestIconWrap}>
+          <Text style={styles.guestIcon}>👤</Text>
+        </View>
+        <Text style={styles.guestTitle}>Join the Community</Text>
+        <Text style={styles.guestBody}>
+          Create an account to track your progress, join challenges, and connect with others.
+        </Text>
+        <GradientButton
+          label="Sign Up Free"
+          onPress={() => navigation.navigate('Register')}
+          style={{ marginTop: 24, paddingHorizontal: 40 }}
+        />
+        <TouchableOpacity onPress={() => navigation.navigate('Login')} style={{ marginTop: 14 }}>
+          <Text style={{ color: C.TEXT_MUTED, fontSize: 14 }}>Already a member? Sign In</Text>
         </TouchableOpacity>
       </View>
     );
@@ -58,79 +94,162 @@ export default function ProfileScreen() {
   return (
     <ScrollView
       style={styles.screen}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={C.ORANGE} />}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={C.ORANGE} />
+      }
+      showsVerticalScrollIndicator={false}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.avatarWrap}>
+      {/* Profile Header */}
+      <View style={styles.profileHeader}>
+        {/* Avatar */}
+        <View style={styles.avatarRing}>
           {user.avatar ? (
-            <Image source={{ uri: user.avatar }} style={styles.avatar} />
+            <Image source={{ uri: fullUrl(user.avatar) }} style={styles.avatar} />
           ) : (
-            <View style={[styles.avatar, styles.avatarFallback]}>
-              <Text style={styles.avatarLetter}>{user.name.charAt(0).toUpperCase()}</Text>
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarInitials}>{initials}</Text>
             </View>
           )}
         </View>
-        <Text style={styles.name}>{user.name}</Text>
-        <Text style={styles.email}>{user.email}</Text>
-        {subscription?.is_pro && (
+
+        {/* Name & Email */}
+        <Text style={styles.profileName}>{user.name}</Text>
+        <Text style={styles.profileEmail}>{user.email}</Text>
+
+        {/* Pro Badge */}
+        {isPro && (
           <View style={styles.proBadge}>
             <Text style={styles.proBadgeText}>⭐ PRO Member</Text>
           </View>
         )}
       </View>
 
-      {/* Stats */}
-      <View style={styles.statsRow}>
-        <View style={styles.stat}>
-          <Text style={styles.statNum}>{stats.submission_count || 0}</Text>
-          <Text style={styles.statLabel}>Photos</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.stat}>
-          <Text style={styles.statNum}>{stats.challenge_count || 0}</Text>
-          <Text style={styles.statLabel}>Challenges</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.stat}>
-          <Text style={styles.statNum}>{stats.total_likes || 0}</Text>
-          <Text style={styles.statLabel}>Likes</Text>
+      {/* Stats Grid */}
+      <View style={styles.statsGrid}>
+        <StatBlock label="Photos" value={stats.submissions || stats.submission_count || 0} />
+        <StatBlock label="Challenges" value={stats.challenges || stats.challenge_count || 0} icon="🏅" />
+        <StatBlock label="Streak" value={`${stats.streak || 0}🔥`} />
+        <StatBlock label="Miles" value={(stats.totalMiles || 0).toFixed(1)} />
+        <StatBlock label="Likes" value={stats.likesReceived || stats.total_likes || 0} icon="❤️" />
+        <StatBlock label="Plan" value={planLabel} highlight={isPro} />
+      </View>
+
+      {/* Action Buttons */}
+      <View style={styles.actionsSection}>
+        <Text style={styles.sectionTitle}>My Account</Text>
+        <View style={[styles.actionsGrid, isDesktop && styles.actionsGridDesktop]}>
+          {ACTION_BUTTONS.map(btn => (
+            <TouchableOpacity
+              key={btn.screen}
+              style={styles.actionBtn}
+              onPress={() => navigation.navigate(btn.screen)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.actionIconWrap, { backgroundColor: btn.color + '22' }]}>
+                <Text style={styles.actionIcon}>{btn.icon}</Text>
+              </View>
+              <Text style={styles.actionLabel}>{btn.label}</Text>
+              <Text style={styles.actionArrow}>›</Text>
+            </TouchableOpacity>
+          ))}
+          {user.role === 'admin' && (
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => navigation.navigate('Admin')}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.actionIconWrap, { backgroundColor: C.DANGER + '22' }]}>
+                <Text style={styles.actionIcon}>🛡️</Text>
+              </View>
+              <Text style={styles.actionLabel}>Admin Panel</Text>
+              <Text style={styles.actionArrow}>›</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
-      {/* Menu */}
-      <View style={styles.menu}>
-        {[
-          { icon: '✏️', label: 'Edit Profile', screen: 'EditProfile' },
-          { icon: '📊', label: 'My Progress', screen: 'MyProgress' },
-          { icon: '🛒', label: 'Order History', screen: 'OrderHistory' },
-          { icon: '⭐', label: 'Subscription', screen: 'Subscription' },
-          ...(user.role === 'admin' ? [{ icon: '🛡️', label: 'Admin Panel', screen: 'Admin' }] : []),
-        ].map(item => (
-          <TouchableOpacity
-            key={item.screen}
-            style={styles.menuItem}
-            onPress={() => navigation.navigate(item.screen)}
-          >
-            <Text style={styles.menuIcon}>{item.icon}</Text>
-            <Text style={styles.menuLabel}>{item.label}</Text>
-            <Text style={styles.menuArrow}>→</Text>
-          </TouchableOpacity>
-        ))}
+      {/* Recent Submissions */}
+      {recentSubmissions.length > 0 && (
+        <View style={styles.submissionsSection}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>My Recent Photos</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Gallery')}>
+              <Text style={styles.seeAll}>See all →</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.submissionsGrid}>
+            {recentSubmissions.slice(0, 6).map((s: any) => (
+              <TouchableOpacity
+                key={s.id}
+                style={styles.submissionThumb}
+                onPress={() => navigation.navigate('SubmissionDetail', { submissionId: s.id })}
+                activeOpacity={0.85}
+              >
+                {s.image_url || s.photo_url ? (
+                  <Image
+                    source={{ uri: fullUrl(s.image_url || s.photo_url) }}
+                    style={styles.submissionImg}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={[styles.submissionImg, styles.submissionPlaceholder]}>
+                    <Text style={{ fontSize: 20 }}>📷</Text>
+                  </View>
+                )}
+                <View style={styles.submissionOverlay}>
+                  <Text style={styles.submissionLikes}>❤️ {s.like_count || s.likes || 0}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
 
-        <TouchableOpacity style={[styles.menuItem, styles.menuDanger]} onPress={handleLogout}>
-          <Text style={styles.menuIcon}>🚪</Text>
-          <Text style={[styles.menuLabel, { color: C.DANGER }]}>Sign Out</Text>
+      {/* Sign Out */}
+      <View style={styles.signOutSection}>
+        <TouchableOpacity style={styles.signOutBtn} onPress={handleLogout} activeOpacity={0.8}>
+          <Text style={styles.signOutIcon}>🚪</Text>
+          <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={{ height: 32 }} />
+      <View style={{ height: 40 }} />
     </ScrollView>
   );
 }
 
+function StatBlock({ label, value, icon, highlight }: { label: string; value: any; icon?: string; highlight?: boolean }) {
+  return (
+    <View style={statStyles.block}>
+      <Text style={[statStyles.value, highlight && statStyles.highlight]}>{value}</Text>
+      <Text style={statStyles.label}>{label}</Text>
+    </View>
+  );
+}
+
+const statStyles = StyleSheet.create({
+  block: {
+    flex: 1,
+    minWidth: '30%',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 6,
+  },
+  value: {
+    color: C.ORANGE,
+    fontSize: 20,
+    fontWeight: '800',
+    fontFamily: "'Lexend', sans-serif",
+    marginBottom: 3,
+  },
+  highlight: { color: C.ORANGE_MID },
+  label: { color: C.TEXT_MUTED, fontSize: 11, textAlign: 'center', fontFamily: "'Inter', sans-serif" },
+});
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.BG },
+
+  // Guest
   guestContainer: {
     flex: 1,
     backgroundColor: C.BG,
@@ -138,56 +257,171 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 32,
   },
-  guestIcon: { fontSize: 60, marginBottom: 16 },
-  guestTitle: { color: C.TEXT, fontSize: 22, fontWeight: '800', marginBottom: 8 },
-  guestBody: { color: C.TEXT_SECONDARY, fontSize: 15, textAlign: 'center', lineHeight: 22 },
-  header: { alignItems: 'center', paddingTop: 24, paddingBottom: 20 },
-  avatarWrap: { marginBottom: 12 },
-  avatar: { width: 80, height: 80, borderRadius: 40 },
+  guestIconWrap: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: C.CARD_BG,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: C.CARD_BORDER,
+  },
+  guestIcon: { fontSize: 40 },
+  guestTitle: {
+    color: C.TEXT,
+    fontSize: 24,
+    fontWeight: '800',
+    fontFamily: "'Lexend', sans-serif",
+    marginBottom: 10,
+  },
+  guestBody: {
+    color: C.TEXT_SECONDARY,
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 24,
+    fontFamily: "'Inter', sans-serif",
+  },
+
+  // Profile Header
+  profileHeader: {
+    alignItems: 'center',
+    paddingTop: 32,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+    backgroundColor: C.CARD_BG2,
+    borderBottomWidth: 1,
+    borderBottomColor: C.CARD_BORDER,
+  },
+  avatarRing: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 3,
+    borderColor: C.ORANGE,
+    overflow: 'hidden',
+    marginBottom: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: C.CARD_BG,
+  },
+  avatar: { width: '100%', height: '100%' },
   avatarFallback: {
+    width: '100%',
+    height: '100%',
     backgroundColor: C.ORANGE,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarLetter: { color: C.WHITE, fontSize: 32, fontWeight: '800' },
-  name: { color: C.TEXT, fontSize: 22, fontWeight: '800', marginBottom: 4 },
-  email: { color: C.TEXT_MUTED, fontSize: 14, marginBottom: 8 },
+  avatarInitials: { color: '#fff', fontSize: 34, fontWeight: '800' },
+  profileName: {
+    color: C.TEXT,
+    fontSize: 22,
+    fontWeight: '800',
+    fontFamily: "'Lexend', sans-serif",
+    marginBottom: 4,
+  },
+  profileEmail: { color: C.TEXT_MUTED, fontSize: 14, marginBottom: 10 },
   proBadge: {
-    backgroundColor: C.ORANGE_MID + '33',
-    borderRadius: borderRadius.pill,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    backgroundColor: C.ORANGE + '22',
     borderWidth: 1,
-    borderColor: C.ORANGE_MID,
+    borderColor: C.ORANGE + '66',
+    borderRadius: borderRadius.pill,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
   },
   proBadgeText: { color: C.ORANGE_MID, fontSize: 13, fontWeight: '700' },
-  statsRow: {
+
+  // Stats Grid
+  statsGrid: {
     flexDirection: 'row',
-    backgroundColor: C.CARD_BG,
+    flexWrap: 'wrap',
     marginHorizontal: 16,
-    borderRadius: borderRadius.lg,
-    paddingVertical: 16,
+    marginTop: 16,
+    backgroundColor: C.CARD_BG,
+    borderRadius: borderRadius.xl,
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
-    marginBottom: 20,
+    overflow: 'hidden',
   },
-  stat: { flex: 1, alignItems: 'center' },
-  statNum: { color: C.ORANGE, fontSize: 22, fontWeight: '800' },
-  statLabel: { color: C.TEXT_MUTED, fontSize: 12, marginTop: 2 },
-  statDivider: { width: 1, backgroundColor: C.DIVIDER },
-  menu: { marginHorizontal: 16 },
-  menuItem: {
+
+  // Actions
+  actionsSection: { marginHorizontal: 16, marginTop: 24 },
+  sectionTitle: {
+    color: C.TEXT,
+    fontSize: 17,
+    fontWeight: '700',
+    fontFamily: "'Lexend', sans-serif",
+    marginBottom: 12,
+  },
+  actionsGrid: { gap: 8 },
+  actionsGridDesktop: {},
+  actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: C.CARD_BG,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xl,
     padding: 14,
-    marginBottom: 8,
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
+    gap: 12,
   },
-  menuDanger: { borderColor: C.DANGER + '44', backgroundColor: C.DANGER + '11' },
-  menuIcon: { fontSize: 18, marginRight: 12 },
-  menuLabel: { flex: 1, color: C.TEXT, fontSize: 15, fontWeight: '600' },
-  menuArrow: { color: C.TEXT_MUTED, fontSize: 16 },
+  actionIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionIcon: { fontSize: 20 },
+  actionLabel: { flex: 1, color: C.TEXT, fontSize: 15, fontWeight: '600', fontFamily: "'Inter', sans-serif" },
+  actionArrow: { color: C.TEXT_MUTED, fontSize: 20 },
+
+  // Submissions
+  submissionsSection: { marginHorizontal: 16, marginTop: 24 },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  seeAll: { color: C.ORANGE, fontSize: 13 },
+  submissionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  submissionThumb: {
+    width: '31%',
+    aspectRatio: 1,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    backgroundColor: C.CARD_BG,
+  },
+  submissionImg: { width: '100%', height: '100%' },
+  submissionPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: C.CARD_BG2 },
+  submissionOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+    padding: 5,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+  },
+  submissionLikes: { color: '#fff', fontSize: 11, fontWeight: '600' },
+
+  // Sign Out
+  signOutSection: { marginHorizontal: 16, marginTop: 20 },
+  signOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: C.DANGER + '15',
+    borderRadius: borderRadius.xl,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: C.DANGER + '44',
+    gap: 10,
+  },
+  signOutIcon: { fontSize: 18 },
+  signOutText: { color: C.DANGER, fontSize: 15, fontWeight: '700' },
 });

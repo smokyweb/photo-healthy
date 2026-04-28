@@ -1,42 +1,92 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle, ActivityIndicator } from 'react-native';
-import { C, borderRadius, fonts } from '../theme';
+import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle, ActivityIndicator, Platform } from 'react-native';
+import { C, borderRadius } from '../theme';
 
 interface Props {
   label: string;
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
-  variant?: 'primary' | 'secondary' | 'outline' | 'danger';
+  style?: ViewStyle | any;
+  textStyle?: TextStyle | any;
+  variant?: 'primary' | 'secondary' | 'teal' | 'outline' | 'outline-teal' | 'danger';
+  pill?: boolean; // fully rounded (default true for primary)
+  size?: 'sm' | 'md' | 'lg';
 }
 
-export default function GradientButton({ label, onPress, loading, disabled, style, textStyle, variant = 'primary' }: Props) {
-  const bg =
-    variant === 'secondary' ? C.CARD_BG :
-    variant === 'outline' ? 'transparent' :
-    variant === 'danger' ? C.DANGER :
-    C.ORANGE;
+// Gradient configurations
+const GRADIENTS = {
+  primary: 'linear-gradient(90deg, #F55B09, #FFD000)',   // orange → yellow
+  secondary: 'linear-gradient(90deg, #FFD000, #29B6E0)', // yellow → cyan
+  teal: 'linear-gradient(90deg, #54DFB6, #29B6E0)',      // teal → cyan
+  danger: 'none',
+  outline: 'none',
+  'outline-teal': 'none',
+};
 
-  const border = variant === 'outline' ? { borderWidth: 1.5, borderColor: C.ORANGE } : {};
+const BG_COLORS = {
+  primary: '#F55B09',
+  secondary: '#FFD000',
+  teal: '#54DFB6',
+  danger: C.DANGER,
+  outline: 'transparent',
+  'outline-teal': 'transparent',
+};
+
+export default function GradientButton({
+  label,
+  onPress,
+  loading,
+  disabled,
+  style,
+  textStyle,
+  variant = 'primary',
+  pill = true,
+  size = 'md',
+}: Props) {
+  const isOutline = variant === 'outline' || variant === 'outline-teal';
+  const gradient = GRADIENTS[variant];
+  const bgColor = BG_COLORS[variant];
+
+  const heights = { sm: 38, md: 48, lg: 56 };
+  const fontSizes = { sm: 13, md: 15, lg: 17 };
+
+  const btnStyle: any = {
+    backgroundColor: bgColor,
+    height: heights[size],
+    borderRadius: pill ? 999 : borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: size === 'sm' ? 16 : size === 'lg' ? 36 : 24,
+    opacity: (disabled || loading) ? 0.6 : 1,
+    // Gradient via CSS backgroundImage (React Native Web only)
+    ...(Platform.OS === 'web' && gradient !== 'none' ? { backgroundImage: gradient } : {}),
+    // Outline styles
+    ...(variant === 'outline' ? { borderWidth: 1.5, borderColor: C.ORANGE } : {}),
+    ...(variant === 'outline-teal' ? { borderWidth: 1.5, borderColor: C.TEAL } : {}),
+  };
+
+  const labelColor =
+    variant === 'outline' ? C.ORANGE :
+    variant === 'outline-teal' ? C.TEAL :
+    variant === 'secondary' ? '#1A1A2E' : // dark text on light gradient
+    '#FFFFFF';
 
   return (
     <TouchableOpacity
       onPress={onPress}
       disabled={disabled || loading}
-      style={[
-        styles.btn,
-        { backgroundColor: bg, opacity: disabled || loading ? 0.6 : 1 },
-        border,
-        style,
-      ]}
-      activeOpacity={0.8}
+      style={[btnStyle, style]}
+      activeOpacity={0.85}
     >
       {loading ? (
-        <ActivityIndicator color="#fff" size="small" />
+        <ActivityIndicator color={labelColor} size="small" />
       ) : (
-        <Text style={[styles.text, variant === 'outline' && { color: C.ORANGE }, textStyle]}>
+        <Text style={[
+          styles.text,
+          { fontSize: fontSizes[size], color: labelColor },
+          textStyle,
+        ]}>
           {label}
         </Text>
       )}
@@ -45,16 +95,9 @@ export default function GradientButton({ label, onPress, loading, disabled, styl
 }
 
 const styles = StyleSheet.create({
-  btn: {
-    height: 48,
-    borderRadius: borderRadius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
   text: {
-    ...fonts.bodyLG,
-    color: C.WHITE,
-    fontWeight: '700',
-  },
+    fontWeight: '800',
+    fontFamily: "'Lexend', sans-serif",
+    letterSpacing: 0.2,
+  } as any,
 });
