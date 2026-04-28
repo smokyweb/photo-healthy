@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AppFooter from '../components/AppFooter';
@@ -158,7 +158,7 @@ export default function LegalScreen() {
             <Text style={styles.subheading}>Reporting</Text>
             <Text style={styles.body}>
               If you see content that violates these guidelines, please report it using the flag
-              icon 🚩 on any submission or comment. Our moderation team reviews all reports.
+              icon ðŸš© on any submission or comment. Our moderation team reviews all reports.
             </Text>
           </View>
         )}
@@ -170,7 +170,7 @@ export default function LegalScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { backgroundColor: C.BG },
   content: { paddingBottom: 0 },
 
   pageHeader: {

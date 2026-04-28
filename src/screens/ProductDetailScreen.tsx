@@ -84,7 +84,7 @@ export default function ProductDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { backgroundColor: C.BG },
   center: { flex: 1, backgroundColor: C.BG, alignItems: 'center', justifyContent: 'center' },
   back: { padding: 16 },
   backText: { color: C.ORANGE, fontSize: 15 },

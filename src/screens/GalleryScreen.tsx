@@ -1,23 +1,35 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, Image,
-  TouchableOpacity, RefreshControl,
+  View, Text, StyleSheet, Image,
+  TouchableOpacity, ScrollView, RefreshControl, useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { getSubmissions } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { C, borderRadius } from '../theme';
 import AppFooter from '../components/AppFooter';
+import { C, borderRadius } from '../theme';
+
+const BASE_URL = 'https://photoai.betaplanets.com';
+const fullUrl = (u?: string) => u ? (u.startsWith('http') ? u : BASE_URL + u) : undefined;
+
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
 
 export default function GalleryScreen() {
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
+  const numCols = width >= 900 ? 4 : width >= 600 ? 3 : 2;
+
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = async () => {
     try {
-      const data = await getSubmissions({ limit: '50' });
+      const data = await getSubmissions({ limit: '60' });
       setSubmissions(data?.submissions || data || []);
     } catch {}
     setLoading(false);
@@ -28,55 +40,77 @@ export default function GalleryScreen() {
 
   if (loading) return <LoadingSpinner fullScreen />;
 
+  const rows = chunkArray(submissions, numCols);
+
   return (
-    <View style={styles.screen}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={{ flexGrow: 1 }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={C.ORANGE} />}
+    >
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Gallery</Text>
+        <Text style={styles.title}>My Gallery</Text>
+        <Text style={styles.count}>{submissions.length} photos</Text>
       </View>
 
-      <FlatList
-        data={submissions}
-        keyExtractor={i => String(i.id)}
-        numColumns={3}
-        contentContainerStyle={styles.grid}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={C.ORANGE} />}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.item}
-            onPress={() => navigation.navigate('SubmissionDetail', { submissionId: item.id })}
-          >
-            {item.image_url ? (
-              <Image source={{ uri: item.image_url }} style={styles.img} />
-            ) : (
-              <View style={[styles.img, styles.placeholder]}>
-                <Text>📷</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+      <View style={styles.grid}>
+        {submissions.length === 0 ? (
+          <View style={styles.empty}>
+            <Text style={{ fontSize: 48, marginBottom: 12 }}>📷</Text>
+            <Text style={styles.emptyText}>No photos yet</Text>
+          </View>
+        ) : (
+          rows.map((row, rowIdx) => (
+            <View key={rowIdx} style={styles.row}>
+              {row.map(item => {
+                const imgUri = fullUrl(item.image_url);
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[styles.item, { width: `${100 / numCols - 0.5}%` as any }]}
+                    onPress={() => navigation.navigate('SubmissionDetail', { submissionId: item.id })}
+                    activeOpacity={0.85}
+                  >
+                    {imgUri ? (
+                      <Image source={{ uri: imgUri }} style={styles.img} resizeMode="cover" />
+                    ) : (
+                      <View style={[styles.img, styles.placeholder]}>
+                        <Text style={{ fontSize: 28 }}>📷</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+              {row.length < numCols && Array(numCols - row.length).fill(0).map((_, i) => (
+                <View key={`pad-${i}`} style={[styles.item, { width: `${100 / numCols - 0.5}%` as any, backgroundColor: 'transparent' }]} />
+              ))}
+            </View>
+          ))
         )}
-        ListEmptyComponent={
-          <View style={styles.empty}><Text style={styles.emptyText}>No photos yet</Text></View>
-        }
-      />
-    </View>
+      </View>
+
+      <AppFooter />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { backgroundColor: C.BG },
   header: {
-    flexDirection: 'row', alignItems: 'center', gap: 16,
-    padding: 16, borderBottomWidth: 1, borderBottomColor: C.DIVIDER,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: C.DIVIDER,
   },
-  back: { color: C.ORANGE, fontSize: 15 },
-  title: { color: C.TEXT, fontSize: 20, fontWeight: '700' },
-  grid: { padding: 2 },
-  item: { width: '33.33%', padding: 2 },
+  title: { color: C.TEXT, fontSize: 22, fontWeight: '800', fontFamily: "'Lexend', sans-serif" },
+  count: { color: C.TEXT_MUTED, fontSize: 14 },
+  grid: { padding: 4 },
+  row: { flexDirection: 'row', gap: 4, marginBottom: 4 },
+  item: { overflow: 'hidden', borderRadius: borderRadius.md },
   img: { width: '100%', aspectRatio: 1 },
-  placeholder: { backgroundColor: C.CARD_BG, alignItems: 'center', justifyContent: 'center' },
-  empty: { alignItems: 'center', paddingTop: 60 },
+  placeholder: { backgroundColor: C.CARD_BG2, alignItems: 'center', justifyContent: 'center', minHeight: 100 },
+  empty: { alignItems: 'center', paddingTop: 60, paddingBottom: 40 },
   emptyText: { color: C.TEXT_MUTED, fontSize: 16 },
 });

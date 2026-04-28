@@ -85,7 +85,7 @@ function MainTabs() {
   const isDesktop = Platform.OS === 'web' && width >= 768;
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={Platform.OS === 'web' ? { minHeight: '100vh' as any } : { flex: 1 }}>
       {Platform.OS === 'web' && <TopNavBar />}
     <Tab.Navigator
       screenOptions={{
@@ -117,7 +117,7 @@ function MainTabs() {
 function OuterScreenWrapper({ children }: { children: React.ReactNode }) {
   return (
     <ScreenWithNav>
-      <View style={{ flex: 1 }}>{children}</View>
+      <View style={Platform.OS === 'web' ? { minHeight: '100vh' as any } : { flex: 1 }}>{children}</View>
     </ScreenWithNav>
   );
 }
@@ -135,7 +135,14 @@ function AppNavigator() {
 
   return (
     <NavigationContainer linking={linking} fallback={<ActivityIndicator color={C.ORANGE} />}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={{
+          headerShown: false,
+          // On web: allow each screen to scroll naturally via the browser
+          ...(Platform.OS === 'web' ? {
+            cardStyle: { flex: 'unset' as any, overflowY: 'auto' as any, minHeight: '100vh' as any },
+            cardOverlayEnabled: false,
+          } : {}),
+        }}>
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />

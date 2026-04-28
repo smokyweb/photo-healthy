@@ -72,7 +72,7 @@ export default function OrderHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { backgroundColor: C.BG },
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 16,
     padding: 16, borderBottomWidth: 1, borderBottomColor: C.DIVIDER,

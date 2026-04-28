@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   View, Text, StyleSheet, ScrollView, useWindowDimensions, Platform,
 } from 'react-native';
@@ -13,21 +13,21 @@ const STEPS = [
     color: C.ORANGE,
     title: 'Sign Up & Create Your Profile',
     desc: 'Join for free in seconds. Create your profile, set your wellness goals, and introduce yourself to the community. No credit card required.',
-    imageEmoji: '📱',
+    imageEmoji: 'ðŸ“±',
   },
   {
     num: '2',
     color: C.TEAL,
     title: 'Join Challenges & Submit Photos',
     desc: 'Browse active challenges across nutrition, fitness, mindfulness, and more. Submit photos to document your journey and inspire others.',
-    imageEmoji: '📷',
+    imageEmoji: 'ðŸ“·',
   },
   {
     num: '3',
     color: '#A78BFA',
     title: 'Engage with the Community & Track Progress',
     desc: "Like and comment on others' submissions, receive encouragement, and use your progress dashboard to track your wellness journey over time.",
-    imageEmoji: '📈',
+    imageEmoji: 'ðŸ“ˆ',
   },
 ];
 
@@ -42,17 +42,17 @@ const PRO_BENEFITS = [
 
 const FEATURES = [
   {
-    icon: '🏆',
+    icon: 'ðŸ†',
     title: 'Join Challenges',
     desc: 'Browse and join themed wellness challenges across nutrition, fitness, and mindfulness.',
   },
   {
-    icon: '📸',
+    icon: 'ðŸ“¸',
     title: 'Submit Photos',
     desc: 'Capture and share your healthy moments visually with the community.',
   },
   {
-    icon: '📊',
+    icon: 'ðŸ“Š',
     title: 'Engage & Grow',
     desc: 'Connect with community members and track your wellness progress over time.',
   },
@@ -110,7 +110,7 @@ export default function HowItWorksScreen() {
       {/* Pro Benefits */}
       <View style={styles.proSection}>
         <View style={[styles.proInner, isDesktop && styles.proInnerDesktop]}>
-          <Text style={styles.proLabel}>⭐ PRO MEMBERSHIP</Text>
+          <Text style={styles.proLabel}>â­ PRO MEMBERSHIP</Text>
           <Text style={styles.proTitle}>Take It to the Next Level</Text>
           <Text style={styles.proSubtitle}>
             Unlock the full Photo Healthy experience with a Pro membership
@@ -118,13 +118,13 @@ export default function HowItWorksScreen() {
           <View style={styles.proBenefitsList}>
             {PRO_BENEFITS.map(b => (
               <View key={b} style={styles.proBenefitRow}>
-                <Text style={styles.proBenefitCheck}>✓</Text>
+                <Text style={styles.proBenefitCheck}>âœ“</Text>
                 <Text style={styles.proBenefitText}>{b}</Text>
               </View>
             ))}
           </View>
           <GradientButton
-            label="Go Pro — $9.99/month"
+            label="Go Pro â€” $9.99/month"
             onPress={() => navigation.navigate('Subscription' as never)}
             size="lg"
           />
@@ -153,7 +153,7 @@ export default function HowItWorksScreen() {
             Join thousands of members already living healthier lives
           </Text>
           <GradientButton
-            label="Get Started Free →"
+            label="Get Started Free â†’"
             onPress={() => navigation.navigate('Register' as never)}
             size="lg"
             style={styles.ctaBtn}
@@ -167,7 +167,7 @@ export default function HowItWorksScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { backgroundColor: C.BG },
   content: { paddingBottom: 0 },
 
   heroWrapper: { padding: 24, paddingTop: 32 },

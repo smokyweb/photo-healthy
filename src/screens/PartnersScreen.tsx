@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
 } from 'react-native';
@@ -63,7 +63,7 @@ export default function PartnersScreen() {
     setSending(true);
     try {
       await submitPartnerInquiry({ name: name.trim(), company: company.trim(), email: email.trim(), tier, message: message.trim() });
-      Alert.alert('Thank You!', "We'll be in touch within 1–2 business days.");
+      Alert.alert('Thank You!', "We'll be in touch within 1â€“2 business days.");
       setName(''); setCompany(''); setEmail(''); setTier(''); setMessage('');
     } catch (e: any) {
       Alert.alert('Error', e.message);
@@ -76,7 +76,7 @@ export default function PartnersScreen() {
       {/* Hero */}
       <View style={styles.hero}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>â† Back</Text>
         </TouchableOpacity>
         <Text style={styles.heroTitle}>Partner With Us</Text>
         <Text style={styles.heroSubtitle}>
@@ -94,7 +94,7 @@ export default function PartnersScreen() {
               <Text style={[styles.tierPrice, { color: t.color }]}>{t.price}</Text>
             </View>
             {t.perks.map(p => (
-              <Text key={p} style={styles.perk}>✓ {p}</Text>
+              <Text key={p} style={styles.perk}>âœ“ {p}</Text>
             ))}
           </View>
         ))}
@@ -125,7 +125,7 @@ export default function PartnersScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#0D1117' },
+  screen: { backgroundColor: '#0D1117' },
   hero: {
     backgroundColor: '#0D1117',
     padding: 24,

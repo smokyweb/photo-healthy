@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   FlatList, Alert, RefreshControl, TextInput,
@@ -86,12 +86,12 @@ export default function AdminScreen() {
       <Text style={styles.sectionTitle}>Overview</Text>
       <View style={styles.statsGrid}>
         {[
-          { label: 'Total Users', value: stats.total_users || 0, icon: '👥' },
-          { label: 'Total Submissions', value: stats.total_submissions || 0, icon: '📷' },
-          { label: 'Active Challenges', value: stats.active_challenges || 0, icon: '🏆' },
-          { label: 'Pro Members', value: stats.pro_members || 0, icon: '⭐' },
-          { label: 'Orders Today', value: stats.orders_today || 0, icon: '🛒' },
-          { label: 'Revenue (Month)', value: stats.monthly_revenue ? `$${stats.monthly_revenue}` : '$0', icon: '💰' },
+          { label: 'Total Users', value: stats.total_users || 0, icon: 'ðŸ‘¥' },
+          { label: 'Total Submissions', value: stats.total_submissions || 0, icon: 'ðŸ“·' },
+          { label: 'Active Challenges', value: stats.active_challenges || 0, icon: 'ðŸ†' },
+          { label: 'Pro Members', value: stats.pro_members || 0, icon: 'â­' },
+          { label: 'Orders Today', value: stats.orders_today || 0, icon: 'ðŸ›’' },
+          { label: 'Revenue (Month)', value: stats.monthly_revenue ? `$${stats.monthly_revenue}` : '$0', icon: 'ðŸ’°' },
         ].map(s => (
           <View key={s.label} style={styles.statCard}>
             <Text style={styles.statIcon}>{s.icon}</Text>
@@ -115,7 +115,7 @@ export default function AdminScreen() {
             <Text style={styles.listItemTitle}>{item.name}</Text>
             <Text style={styles.listItemSub}>{item.email}</Text>
             <Text style={styles.listItemMeta}>
-              Role: {item.role} | {item.is_pro ? '⭐ Pro' : 'Free'} | Joined: {new Date(item.created_at).toLocaleDateString()}
+              Role: {item.role} | {item.is_pro ? 'â­ Pro' : 'Free'} | Joined: {new Date(item.created_at).toLocaleDateString()}
             </Text>
           </View>
           <TouchableOpacity
@@ -124,7 +124,7 @@ export default function AdminScreen() {
               { text: 'Delete', style: 'destructive', onPress: () => deleteUser(item.id).then(() => setUsers(u => u.filter(x => x.id !== item.id))) },
             ])}
           >
-            <Text style={styles.deleteBtn}>🗑️</Text>
+            <Text style={styles.deleteBtn}>ðŸ—‘ï¸</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -140,8 +140,8 @@ export default function AdminScreen() {
       renderItem={({ item }) => (
         <View style={styles.listItem}>
           <View style={styles.listItemInfo}>
-            <Text style={styles.listItemTitle}>Order #{item.id} — {item.user_name || 'Unknown'}</Text>
-            <Text style={styles.listItemSub}>${Number(item.total || 0).toFixed(2)} · {item.status}</Text>
+            <Text style={styles.listItemTitle}>Order #{item.id} â€” {item.user_name || 'Unknown'}</Text>
+            <Text style={styles.listItemSub}>${Number(item.total || 0).toFixed(2)} Â· {item.status}</Text>
             <Text style={styles.listItemMeta}>{new Date(item.created_at).toLocaleDateString()}</Text>
           </View>
         </View>
@@ -183,9 +183,9 @@ export default function AdminScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>← Back</Text>
+          <Text style={styles.back}>â† Back</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>🛡️ Admin Panel</Text>
+        <Text style={styles.title}>ðŸ›¡ï¸ Admin Panel</Text>
       </View>
 
       {/* Tab Bar */}
@@ -228,7 +228,7 @@ export default function AdminScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { backgroundColor: C.BG },
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 16,
     padding: 16, borderBottomWidth: 1, borderBottomColor: C.DIVIDER,

@@ -156,7 +156,7 @@ export default function SubmitPhotoScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { backgroundColor: C.BG },
   container: { padding: 20 },
   back: { marginBottom: 20 },
   backText: { color: C.ORANGE, fontSize: 15 },

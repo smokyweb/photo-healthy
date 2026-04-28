@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
   TextInput, useWindowDimensions, Linking, Platform,
@@ -60,9 +60,9 @@ export default function ContactScreen() {
       {/* Success Banner */}
       {sent && (
         <View style={styles.successBanner}>
-          <Text style={styles.successTitle}>✓ Message Sent!</Text>
+          <Text style={styles.successTitle}>âœ“ Message Sent!</Text>
           <Text style={styles.successSubtext}>
-            We'll get back to you within 1–2 business days.
+            We'll get back to you within 1â€“2 business days.
           </Text>
         </View>
       )}
@@ -136,15 +136,15 @@ export default function ContactScreen() {
           <View style={styles.infoCard}>
             <Text style={styles.infoCardTitle}>Get in Touch</Text>
             <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>📧</Text>
+              <Text style={styles.infoIcon}>ðŸ“§</Text>
               <Text style={styles.infoText}>support@photohealthy.com</Text>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>⏰</Text>
-              <Text style={styles.infoText}>Mon–Fri, 9am–5pm EST</Text>
+              <Text style={styles.infoIcon}>â°</Text>
+              <Text style={styles.infoText}>Monâ€“Fri, 9amâ€“5pm EST</Text>
             </View>
             <Text style={styles.infoNote}>
-              We typically respond within 1–2 business days.
+              We typically respond within 1â€“2 business days.
             </Text>
           </View>
 
@@ -180,7 +180,7 @@ export default function ContactScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { backgroundColor: C.BG },
   content: { paddingBottom: 0 },
 
   pageHeader: {

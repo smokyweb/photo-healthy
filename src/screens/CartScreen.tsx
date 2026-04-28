@@ -110,7 +110,7 @@ export default function CartScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { backgroundColor: C.BG },
   empty: {
     flex: 1, backgroundColor: C.BG,
     alignItems: 'center', justifyContent: 'center', padding: 32,

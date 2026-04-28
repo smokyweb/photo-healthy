@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
 } from 'react-native';
@@ -17,7 +17,7 @@ const FAQS = [
   },
   {
     q: 'What types of photos are allowed?',
-    a: 'Photos should relate to healthy living — meals, fitness activities, mindfulness practices, nature, and wellness routines. Please keep all content appropriate and positive.',
+    a: 'Photos should relate to healthy living â€” meals, fitness activities, mindfulness practices, nature, and wellness routines. Please keep all content appropriate and positive.',
   },
   {
     q: 'How does the Pro subscription work?',
@@ -33,11 +33,11 @@ const FAQS = [
   },
   {
     q: 'How do I report inappropriate content?',
-    a: "Tap the flag icon 🚩 on any submission or comment to report it. Our moderation team reviews all reports promptly.",
+    a: "Tap the flag icon ðŸš© on any submission or comment to report it. Our moderation team reviews all reports promptly.",
   },
   {
     q: 'What payment methods do you accept?',
-    a: 'We accept all major credit and debit cards via Stripe. We do not store your payment information — all transactions are handled securely by Stripe.',
+    a: 'We accept all major credit and debit cards via Stripe. We do not store your payment information â€” all transactions are handled securely by Stripe.',
   },
 ];
 
@@ -92,7 +92,7 @@ export default function FAQScreen() {
               >
                 <View style={styles.questionRow}>
                   <Text style={styles.question}>{faq.q}</Text>
-                  <Text style={styles.chevron}>{isOpen ? '▲' : '▼'}</Text>
+                  <Text style={styles.chevron}>{isOpen ? 'â–²' : 'â–¼'}</Text>
                 </View>
                 {isOpen && (
                   <Text style={styles.answer}>{faq.a}</Text>
@@ -107,7 +107,7 @@ export default function FAQScreen() {
       <View style={styles.contactRow}>
         <Text style={styles.contactText}>Still have questions? </Text>
         <TouchableOpacity onPress={() => navigation.navigate('Contact' as never)}>
-          <Text style={styles.contactLink}>Contact us →</Text>
+          <Text style={styles.contactLink}>Contact us â†’</Text>
         </TouchableOpacity>
       </View>
 
@@ -117,7 +117,7 @@ export default function FAQScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { backgroundColor: C.BG },
   content: { paddingBottom: 0 },
 
   pageHeader: {

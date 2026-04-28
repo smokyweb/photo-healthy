@@ -191,7 +191,7 @@ export default function SubmissionDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { backgroundColor: C.BG },
   center: { flex: 1, backgroundColor: C.BG, alignItems: 'center', justifyContent: 'center' },
   back: {
     position: 'absolute',

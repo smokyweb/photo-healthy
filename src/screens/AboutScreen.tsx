@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   View, Text, StyleSheet, ScrollView, useWindowDimensions, Platform,
 } from 'react-native';
@@ -9,19 +9,19 @@ import { C, borderRadius } from '../theme';
 
 const VALUES = [
   {
-    icon: '🤝',
+    icon: 'ðŸ¤',
     color: C.TEAL,
     title: 'Community First',
     desc: "We believe in the power of community. Every member's journey matters and inspires others around them.",
   },
   {
-    icon: '🌱',
+    icon: 'ðŸŒ±',
     color: C.ORANGE,
     title: 'Authentic Wellness',
     desc: 'Real progress over perfection. We celebrate honest, everyday wellness moments big and small.',
   },
   {
-    icon: '🎉',
+    icon: 'ðŸŽ‰',
     color: '#A78BFA',
     title: 'Celebrate Progress',
     desc: 'Every step forward is worth celebrating. We cheer each other on at every milestone along the way.',
@@ -56,7 +56,7 @@ export default function AboutScreen() {
       <View style={styles.section}>
         <View style={[styles.philosophyInner, isDesktop && styles.philosophyInnerDesktop]}>
           <Text style={styles.philosophyText}>
-            "We believe that health is not just a destination — it's a daily practice. Every meal
+            "We believe that health is not just a destination â€” it's a daily practice. Every meal
             prepared with care, every morning run, every mindful breath is a step toward a better
             you. Our platform exists to celebrate those moments and connect the people who share them."
           </Text>
@@ -65,7 +65,7 @@ export default function AboutScreen() {
             others to begin their own. When we see someone else's healthy breakfast or sunrise yoga
             session, something shifts in us. We're reminded that we're not alone on this path.
           </Text>
-          <Text style={styles.philosophyAttrib}>— Photo Healthy Team</Text>
+          <Text style={styles.philosophyAttrib}>â€” Photo Healthy Team</Text>
         </View>
       </View>
 
@@ -80,7 +80,7 @@ export default function AboutScreen() {
             <Text style={styles.storyBody}>
               Founded in 2024, Photo Healthy grew from a small group of friends who wanted to hold
               each other accountable for their wellness goals. We started sharing photos of our
-              healthy meals and workouts in a private chat — and it worked.
+              healthy meals and workouts in a private chat â€” and it worked.
             </Text>
             <Text style={styles.storyBody}>
               The encouragement was real, the accountability was genuine, and the results were
@@ -130,7 +130,7 @@ export default function AboutScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { backgroundColor: C.BG },
   content: { paddingBottom: 0 },
 
   heroWrapper: { paddingHorizontal: 24, paddingTop: 40, paddingBottom: 8 },

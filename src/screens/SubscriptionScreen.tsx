@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
 } from 'react-native';
@@ -103,10 +103,10 @@ export default function SubscriptionScreen() {
       </View>
 
       {isPro ? (
-        /* ── Pro Member State ── */
+        /* â”€â”€ Pro Member State â”€â”€ */
         <View style={styles.centered}>
           <View style={styles.proBanner}>
-            <Text style={styles.proBannerText}>✓ You're a Pro Member!</Text>
+            <Text style={styles.proBannerText}>âœ“ You're a Pro Member!</Text>
             {subscription?.cancel_at_period_end && (
               <Text style={styles.proBannerSub}>
                 Your subscription is set to cancel at period end.
@@ -138,7 +138,7 @@ export default function SubscriptionScreen() {
           </View>
         </View>
       ) : (
-        /* ── Pricing Card ── */
+        /* â”€â”€ Pricing Card â”€â”€ */
         <View style={styles.centered}>
           <View style={styles.pricingCard}>
             <Text style={styles.cardTitle}>Photo Healthy Pro</Text>
@@ -154,7 +154,7 @@ export default function SubscriptionScreen() {
             <View style={styles.benefitsList}>
               {BENEFITS.map(b => (
                 <View key={b} style={styles.benefitRow}>
-                  <Text style={styles.checkmark}>✓</Text>
+                  <Text style={styles.checkmark}>âœ“</Text>
                   <Text style={styles.benefitText}>{b}</Text>
                 </View>
               ))}
@@ -181,7 +181,7 @@ export default function SubscriptionScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { backgroundColor: C.BG },
   content: { paddingBottom: 0 },
 
   pageHeader: {

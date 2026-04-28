@@ -284,7 +284,7 @@ export default function ShopScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { backgroundColor: C.BG },
   content: { paddingBottom: 0 },
 
   pageHeader: { paddingHorizontal: 24, paddingTop: 36, paddingBottom: 20 },

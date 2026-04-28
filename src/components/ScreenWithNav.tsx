@@ -2,7 +2,7 @@
  * ScreenWithNav — wraps any screen with TopNavBar on web.
  * Use this for all outer stack screens (ChallengeDetail, Shop, etc.)
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import TopNavBar from './TopNavBar';
 import { C } from '../theme';
@@ -11,7 +11,26 @@ interface Props {
   children: React.ReactNode;
 }
 
+// Inject global CSS once to fix React Navigation's overflow:hidden on web
+let cssInjected = false;
+function injectScrollFix() {
+  if (cssInjected || Platform.OS !== 'web' || typeof document === 'undefined') return;
+  cssInjected = true;
+  const style = document.createElement('style');
+  style.textContent = `
+    /* Allow React Navigation screens to scroll naturally in the browser */
+    #root > div, [data-testid="rnw-root"] { height: auto !important; min-height: 100vh; }
+    /* RN Web stack card containers */
+    .css-view-175oi2r { overflow: visible !important; }
+    /* Make the top-level app container fill viewport but not clip */
+    html, body { height: auto !important; min-height: 100%; overflow-x: hidden; }
+  `;
+  document.head.appendChild(style);
+}
+
 export default function ScreenWithNav({ children }: Props) {
+  useEffect(() => { injectScrollFix(); }, []);
+
   return (
     <View style={s.root}>
       {Platform.OS === 'web' && <TopNavBar />}
@@ -24,14 +43,14 @@ export default function ScreenWithNav({ children }: Props) {
 
 const s = StyleSheet.create({
   root: {
-    flex: 1,
     backgroundColor: C.BG,
-    // On web, allow content to grow and let browser scroll
-    ...(Platform.OS === 'web' ? { minHeight: '100vh' as any, display: 'flex' as any, flexDirection: 'column' as any } : {}),
+    ...(Platform.OS === 'web' ? {
+      minHeight: '100vh' as any,
+    } : { flex: 1 }),
   },
   content: {
-    flex: 1,
-    // On web, allow the content area to grow naturally
-    ...(Platform.OS === 'web' ? { flexGrow: 1 as any } : {}),
+    ...(Platform.OS === 'web' ? {
+      flex: 'unset' as any,
+    } : { flex: 1 }),
   },
 });

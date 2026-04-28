@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+﻿import React, { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   Image, ImageBackground, RefreshControl, useWindowDimensions, Platform,
@@ -18,7 +18,7 @@ const CITY_BG = { uri: 'https://photoai.betaplanets.com/city-bg.png' };
 const MOTIVATION_QUOTE =
   '"Every step forward, no matter how small, is still progress. Keep moving."';
 
-// ── Logged-In Home Dashboard ─────────────────────────────────────────────────
+// â”€â”€ Logged-In Home Dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function LoggedInHome({
   user, challenges, submissions, stats, navigation, refreshing, onRefresh,
 }: any) {
@@ -46,24 +46,24 @@ function LoggedInHome({
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.ORANGE} />
       }
     >
-      {/* ── Welcome Banner ── */}
+      {/* â”€â”€ Welcome Banner â”€â”€ */}
       <ImageBackground source={CITY_BG} style={s.welcomeBanner} resizeMode="cover">
         <View style={s.bannerOverlay}>
           <View style={s.bannerLeft}>
-            <Text style={s.bannerTitle}>Welcome back, {firstName}! 👋</Text>
+            <Text style={s.bannerTitle}>Welcome back, {firstName}! ðŸ‘‹</Text>
             <Text style={s.bannerDate}>{today}</Text>
           </View>
           <View style={s.alertsBox}>
-            <Text style={s.alertsTitle}>🔔 Alerts</Text>
+            <Text style={s.alertsTitle}>ðŸ”” Alerts</Text>
             <Text style={s.alertsBody}>No new alerts</Text>
           </View>
         </View>
       </ImageBackground>
 
-      {/* ── Page Content ── */}
+      {/* â”€â”€ Page Content â”€â”€ */}
       <View style={[s.pageWrap, isDesktop && s.pageWrapDesktop]}>
 
-        {/* ── Hero Section ── */}
+        {/* â”€â”€ Hero Section â”€â”€ */}
         {featured && (
           <View style={[s.heroSection, isDesktop && s.heroSectionDesktop]}>
             {/* Left: Cover Image 60% */}
@@ -78,7 +78,7 @@ function LoggedInHome({
                 <Image source={{ uri: coverImg }} style={s.heroImg} resizeMode="cover" />
               ) : (
                 <View style={[s.heroImg, s.heroImgPlaceholder]}>
-                  <Text style={{ fontSize: 60 }}>🏔️</Text>
+                  <Text style={{ fontSize: 60 }}>ðŸ”ï¸</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -86,7 +86,7 @@ function LoggedInHome({
             {/* Right: Challenge Info Card 40% */}
             <View style={[s.challengeCard, isDesktop && { flex: 4 }]}>
               <View style={s.activeBadge}>
-                <Text style={s.activeBadgeText}>● Active Challenge</Text>
+                <Text style={s.activeBadgeText}>â— Active Challenge</Text>
               </View>
 
               <Text style={s.challengeTitle} numberOfLines={2}>
@@ -99,11 +99,11 @@ function LoggedInHome({
                 </Text>
               )}
 
-              {/* 2×2 Stats Grid */}
+              {/* 2Ã—2 Stats Grid */}
               <View style={s.metaGrid}>
                 {[
-                  { label: 'Feeling', val: featured.feeling_category || featured.feeling_tag || '—' },
-                  { label: 'Movement', val: featured.movement_category || featured.movement_tag || '—' },
+                  { label: 'Feeling', val: featured.feeling_category || featured.feeling_tag || 'â€”' },
+                  { label: 'Movement', val: featured.movement_category || featured.movement_tag || 'â€”' },
                   { label: 'Days Left', val: String(daysLeft) },
                   { label: 'Participants', val: String(featured.submission_count ?? 0) },
                 ].map(({ label, val }) => (
@@ -139,31 +139,31 @@ function LoggedInHome({
           </View>
         )}
 
-        {/* ── Motivation Quote Banner ── */}
+        {/* â”€â”€ Motivation Quote Banner â”€â”€ */}
         <View style={s.quoteBanner}>
-          <Text style={s.quoteAccent}>❝</Text>
+          <Text style={s.quoteAccent}>â</Text>
           <Text style={s.quoteText}>{MOTIVATION_QUOTE}</Text>
         </View>
 
-        {/* ── Stats Row (3 equal cols) ── */}
+        {/* â”€â”€ Stats Row (3 equal cols) â”€â”€ */}
         <View style={[s.statsRow, isDesktop && { gap: 24 }]}>
           {[
             {
-              icon: '🏆',
+              icon: 'ðŸ†',
               num: stats?.challenges ?? 0,
               label: 'Challenges Completed',
               color: C.ORANGE_MID,
               trend: 'All time',
             },
             {
-              icon: '🔥',
+              icon: 'ðŸ”¥',
               num: stats?.streak ?? 0,
               label: 'Day Streak',
               color: '#FBBF24',
               trend: 'Keep it up!',
             },
             {
-              icon: '🚶',
+              icon: 'ðŸš¶',
               num: Number(stats?.totalMiles ?? 0).toFixed(1),
               label: 'Miles Tracked',
               color: C.TEAL,
@@ -179,7 +179,7 @@ function LoggedInHome({
           ))}
         </View>
 
-        {/* ── Community Submissions ── */}
+        {/* â”€â”€ Community Submissions â”€â”€ */}
         {submissions.length > 0 && (
           <View style={s.section}>
             <View style={s.sectionHeader}>
@@ -187,7 +187,7 @@ function LoggedInHome({
               <TouchableOpacity
                 onPress={() => navigation.navigate('Community')}
               >
-                <Text style={s.seeAll}>See all →</Text>
+                <Text style={s.seeAll}>See all â†’</Text>
               </TouchableOpacity>
             </View>
             <View style={s.subGrid}>
@@ -210,7 +210,7 @@ function LoggedInHome({
                       />
                     ) : (
                       <View style={[s.subImg, s.subImgPlaceholder]}>
-                        <Text style={{ fontSize: 24 }}>📷</Text>
+                        <Text style={{ fontSize: 24 }}>ðŸ“·</Text>
                       </View>
                     )}
                     <View style={s.subInfo}>
@@ -221,8 +221,8 @@ function LoggedInHome({
                         {sub.title || 'Untitled'}
                       </Text>
                       <View style={s.subMeta}>
-                        <Text style={s.subMetaText}>❤️ {sub.like_count || 0}</Text>
-                        <Text style={s.subMetaText}>💬 {sub.comment_count || 0}</Text>
+                        <Text style={s.subMetaText}>â¤ï¸ {sub.like_count || 0}</Text>
+                        <Text style={s.subMetaText}>ðŸ’¬ {sub.comment_count || 0}</Text>
                       </View>
                     </View>
                   </TouchableOpacity>
@@ -232,13 +232,13 @@ function LoggedInHome({
           </View>
         )}
 
-        {/* ── Quick Actions (4 equal cols) ── */}
+        {/* â”€â”€ Quick Actions (4 equal cols) â”€â”€ */}
         <View style={s.section}>
           <Text style={s.sectionTitle}>Quick Actions</Text>
           <View style={[s.quickGrid, isDesktop && s.quickGridDesktop]}>
             {[
               {
-                icon: '🧭',
+                icon: 'ðŸ§­',
                 bg: '#16A34A',
                 title: 'Browse Challenges',
                 desc: 'Find your next challenge',
@@ -246,7 +246,7 @@ function LoggedInHome({
                 params: { screen: 'ChallengesTab' },
               },
               {
-                icon: '🖼️',
+                icon: 'ðŸ–¼ï¸',
                 bg: '#0891B2',
                 title: 'View Gallery',
                 desc: 'Your photo collection',
@@ -254,7 +254,7 @@ function LoggedInHome({
                 params: undefined,
               },
               {
-                icon: '👑',
+                icon: 'ðŸ‘‘',
                 bg: '#CA8A04',
                 title: 'Go Pro',
                 desc: 'Unlock premium features',
@@ -262,7 +262,7 @@ function LoggedInHome({
                 params: undefined,
               },
               {
-                icon: '🛍️',
+                icon: 'ðŸ›ï¸',
                 bg: '#DC2626',
                 title: 'Visit Shop',
                 desc: 'Wellness products',
@@ -298,7 +298,7 @@ function LoggedInHome({
   );
 }
 
-// ── Public Landing Page ──────────────────────────────────────────────────────
+// â”€â”€ Public Landing Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function PublicHome({ challenges, submissions, navigation }: any) {
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
@@ -345,9 +345,9 @@ function PublicHome({ challenges, submissions, navigation }: any) {
       {/* Feature pills */}
       <View style={[s.featurePills, isDesktop && { flexDirection: 'row', justifyContent: 'center' }]}>
         {[
-          { icon: '📷', title: 'Weekly Challenges', sub: 'New wellness prompts every week' },
-          { icon: '🌟', title: 'Community Gallery', sub: 'See what others are creating' },
-          { icon: '🏆', title: 'Pro Rewards', sub: 'Unlock exclusive content' },
+          { icon: 'ðŸ“·', title: 'Weekly Challenges', sub: 'New wellness prompts every week' },
+          { icon: 'ðŸŒŸ', title: 'Community Gallery', sub: 'See what others are creating' },
+          { icon: 'ðŸ†', title: 'Pro Rewards', sub: 'Unlock exclusive content' },
         ].map((f, i) => (
           <View key={i} style={s.featurePill}>
             <Text style={s.featurePillIcon}>{f.icon}</Text>
@@ -384,11 +384,11 @@ function PublicHome({ challenges, submissions, navigation }: any) {
                     { backgroundColor: C.CARD_BG2, alignItems: 'center', justifyContent: 'center' },
                   ]}
                 >
-                  <Text style={{ fontSize: 60 }}>🏔️</Text>
+                  <Text style={{ fontSize: 60 }}>ðŸ”ï¸</Text>
                 </View>
               )}
               <View style={s.activeBadge}>
-                <Text style={s.activeBadgeText}>● Active</Text>
+                <Text style={s.activeBadgeText}>â— Active</Text>
               </View>
             </View>
             <View style={s.featuredInfo}>
@@ -431,7 +431,7 @@ function PublicHome({ challenges, submissions, navigation }: any) {
                     />
                   ) : (
                     <View style={[s.subImg, s.subImgPlaceholder]}>
-                      <Text style={{ fontSize: 24 }}>📷</Text>
+                      <Text style={{ fontSize: 24 }}>ðŸ“·</Text>
                     </View>
                   )}
                   <View style={s.subInfo}>
@@ -463,17 +463,17 @@ function PublicHome({ challenges, submissions, navigation }: any) {
         <View style={s.hiwRow}>
           {[
             {
-              icon: '🏆',
+              icon: 'ðŸ†',
               title: 'Join Challenges',
               desc: 'Browse weekly photography challenges across various themes.',
             },
             {
-              icon: '📷',
+              icon: 'ðŸ“·',
               title: 'Submit Photos',
               desc: 'Upload your best shots and share your creative vision.',
             },
             {
-              icon: '📈',
+              icon: 'ðŸ“ˆ',
               title: 'Engage & Grow',
               desc: 'Get feedback, connect with others, and watch your skills improve.',
             },
@@ -486,7 +486,7 @@ function PublicHome({ challenges, submissions, navigation }: any) {
           ))}
         </View>
         <GradientButton
-          label="Get Started Free →"
+          label="Get Started Free â†’"
           variant="primary"
           onPress={() => navigation.navigate('Register')}
           style={{ marginTop: 24, alignSelf: 'center', paddingHorizontal: 40 } as any}
@@ -498,7 +498,7 @@ function PublicHome({ challenges, submissions, navigation }: any) {
   );
 }
 
-// ── Main HomeScreen ──────────────────────────────────────────────────────────
+// â”€â”€ Main HomeScreen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
@@ -567,9 +567,9 @@ export default function HomeScreen() {
   );
 }
 
-// ── Styles ───────────────────────────────────────────────────────────────────
+// â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { backgroundColor: C.BG },
 
   // Welcome Banner
   welcomeBanner: { height: 120, justifyContent: 'flex-end' },

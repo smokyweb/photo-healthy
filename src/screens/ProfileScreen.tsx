@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Image, TouchableOpacity,
   ScrollView, Alert, RefreshControl, useWindowDimensions,
@@ -15,11 +15,11 @@ const BASE = 'https://photoai.betaplanets.com';
 const fullUrl = (url?: string) => (!url ? '' : url.startsWith('http') ? url : BASE + url);
 
 const ACTION_BUTTONS = [
-  { icon: '✏️', label: 'Edit Profile', screen: 'EditProfile', color: C.TEAL },
-  { icon: '📊', label: 'My Progress', screen: 'MyProgress', color: C.TEAL_DARK },
-  { icon: '🖼️', label: 'My Gallery', screen: 'Gallery', color: C.ORANGE_MID },
-  { icon: '🛍️', label: 'My Orders', screen: 'OrderHistory', color: C.WARNING },
-  { icon: '⭐', label: 'Subscription', screen: 'Subscription', color: C.ORANGE },
+  { icon: 'âœï¸', label: 'Edit Profile', screen: 'EditProfile', color: C.TEAL },
+  { icon: 'ðŸ“Š', label: 'My Progress', screen: 'MyProgress', color: C.TEAL_DARK },
+  { icon: 'ðŸ–¼ï¸', label: 'My Gallery', screen: 'Gallery', color: C.ORANGE_MID },
+  { icon: 'ðŸ›ï¸', label: 'My Orders', screen: 'OrderHistory', color: C.WARNING },
+  { icon: 'â­', label: 'Subscription', screen: 'Subscription', color: C.ORANGE },
 ];
 
 export default function ProfileScreen() {
@@ -72,7 +72,7 @@ export default function ProfileScreen() {
     return (
       <View style={styles.guestContainer}>
         <View style={styles.guestIconWrap}>
-          <Text style={styles.guestIcon}>👤</Text>
+          <Text style={styles.guestIcon}>ðŸ‘¤</Text>
         </View>
         <Text style={styles.guestTitle}>Join the Community</Text>
         <Text style={styles.guestBody}>
@@ -120,7 +120,7 @@ export default function ProfileScreen() {
         {/* Pro Badge */}
         {isPro && (
           <View style={styles.proBadge}>
-            <Text style={styles.proBadgeText}>⭐ PRO Member</Text>
+            <Text style={styles.proBadgeText}>â­ PRO Member</Text>
           </View>
         )}
 
@@ -137,10 +137,10 @@ export default function ProfileScreen() {
       {/* Stats Grid */}
       <View style={styles.statsGrid}>
         <StatBlock label="Photos" value={stats.submissions || stats.submission_count || 0} />
-        <StatBlock label="Challenges" value={stats.challenges || stats.challenge_count || 0} icon="🏅" />
-        <StatBlock label="Streak" value={`${stats.streak || 0}🔥`} />
+        <StatBlock label="Challenges" value={stats.challenges || stats.challenge_count || 0} icon="ðŸ…" />
+        <StatBlock label="Streak" value={`${stats.streak || 0}ðŸ”¥`} />
         <StatBlock label="Miles" value={(stats.totalMiles || 0).toFixed(1)} />
-        <StatBlock label="Likes" value={stats.likesReceived || stats.total_likes || 0} icon="❤️" />
+        <StatBlock label="Likes" value={stats.likesReceived || stats.total_likes || 0} icon="â¤ï¸" />
         <StatBlock label="Plan" value={planLabel} highlight={isPro} />
       </View>
 
@@ -159,7 +159,7 @@ export default function ProfileScreen() {
                 <Text style={styles.actionIcon}>{btn.icon}</Text>
               </View>
               <Text style={styles.actionLabel}>{btn.label}</Text>
-              <Text style={styles.actionArrow}>›</Text>
+              <Text style={styles.actionArrow}>â€º</Text>
             </TouchableOpacity>
           ))}
           {user.role === 'admin' && (
@@ -169,10 +169,10 @@ export default function ProfileScreen() {
               activeOpacity={0.8}
             >
               <View style={[styles.actionIconWrap, { backgroundColor: C.DANGER + '22' }]}>
-                <Text style={styles.actionIcon}>🛡️</Text>
+                <Text style={styles.actionIcon}>ðŸ›¡ï¸</Text>
               </View>
               <Text style={styles.actionLabel}>Admin Panel</Text>
-              <Text style={styles.actionArrow}>›</Text>
+              <Text style={styles.actionArrow}>â€º</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -184,7 +184,7 @@ export default function ProfileScreen() {
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>My Recent Photos</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Gallery')}>
-              <Text style={styles.seeAll}>See all →</Text>
+              <Text style={styles.seeAll}>See all â†’</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.submissionsGrid}>
@@ -203,11 +203,11 @@ export default function ProfileScreen() {
                   />
                 ) : (
                   <View style={[styles.submissionImg, styles.submissionPlaceholder]}>
-                    <Text style={{ fontSize: 20 }}>📷</Text>
+                    <Text style={{ fontSize: 20 }}>ðŸ“·</Text>
                   </View>
                 )}
                 <View style={styles.submissionOverlay}>
-                  <Text style={styles.submissionLikes}>❤️ {s.like_count || s.likes || 0}</Text>
+                  <Text style={styles.submissionLikes}>â¤ï¸ {s.like_count || s.likes || 0}</Text>
                 </View>
               </TouchableOpacity>
             ))}
@@ -218,7 +218,7 @@ export default function ProfileScreen() {
       {/* Sign Out */}
       <View style={styles.signOutSection}>
         <TouchableOpacity style={styles.signOutBtn} onPress={handleLogout} activeOpacity={0.8}>
-          <Text style={styles.signOutIcon}>🚪</Text>
+          <Text style={styles.signOutIcon}>ðŸšª</Text>
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
@@ -257,7 +257,7 @@ const statStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { backgroundColor: C.BG },
 
   // Guest
   guestContainer: {
