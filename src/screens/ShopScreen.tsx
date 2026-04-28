@@ -173,7 +173,7 @@ export default function ShopScreen() {
             <View key={rowIdx} style={styles.productRow}>
               {row.map((item: any) => {
                 const imgUri = fullUrl(item.image_url);
-                const isPro = item.is_pro_only && !user?.subscription_status === 'active';
+                const isPro = !!item.is_pro_only && user?.subscription_status !== 'active';
                 return (
                   <TouchableOpacity
                     key={item.id}
@@ -192,7 +192,7 @@ export default function ShopScreen() {
                       <View style={styles.featuredBadge}>
                         <Text style={styles.featuredBadgeText}>Featured</Text>
                       </View>
-                      {item.is_pro_only && (
+                      {!!item.is_pro_only && (
                         <View style={styles.proBadge}>
                           <Text style={styles.proBadgeText}>⭐ Pro Only</Text>
                         </View>
@@ -233,7 +233,7 @@ export default function ShopScreen() {
             <View key={rowIdx} style={styles.productRow}>
               {row.map((item: any) => {
                 const imgUri = fullUrl(item.image_url);
-                const isPro = item.is_pro_only && !user?.subscription_status === 'active';
+                const isPro = !!item.is_pro_only && user?.subscription_status !== 'active';
                 return (
                   <TouchableOpacity
                     key={item.id}
@@ -249,7 +249,7 @@ export default function ShopScreen() {
                           <Text style={{ fontSize: 32 }}>🛒️</Text>
                         </View>
                       )}
-                      {item.is_pro_only && (
+                      {!!item.is_pro_only && (
                         <View style={styles.proBadge}>
                           <Text style={styles.proBadgeText}>⭐ Pro Only</Text>
                         </View>

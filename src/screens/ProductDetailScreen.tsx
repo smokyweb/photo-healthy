@@ -104,7 +104,7 @@ export default function ProductDetailScreen() {
               <Text style={styles.featuredBadgeText}>\u2B50 Featured</Text>
             </View>
           )}
-          {product.is_pro_only && (
+          {!!product.is_pro_only && (
             <View style={styles.proBadgeImg}>
               <Text style={styles.proBadgeImgText}>\u2B50 Pro Only</Text>
             </View>
@@ -125,7 +125,7 @@ export default function ProductDetailScreen() {
           <Text style={styles.price}>${price.toFixed(2)}</Text>
 
           {/* Pro badge */}
-          {product.is_pro_only && !isPro && (
+          {!!product.is_pro_only && !isPro && (
             <View style={styles.proAlert}>
               <Text style={styles.proAlertText}>\uD83D\uDD12 This item is exclusive to Pro members</Text>
             </View>
@@ -154,7 +154,7 @@ export default function ProductDetailScreen() {
             label={added ? '\u2713 Added to Cart!' : 'Add to Cart'}
             variant={added ? 'teal' : 'primary'}
             onPress={handleAddToCart}
-            disabled={product.is_pro_only && !isPro}
+            disabled={!!product.is_pro_only && !isPro}
             style={{ marginTop: 12 } as any}
           />
 
@@ -169,7 +169,7 @@ export default function ProductDetailScreen() {
           )}
 
           {/* Pro upsell */}
-          {product.is_pro_only && !isPro && (
+          {!!product.is_pro_only && !isPro && (
             <GradientButton
               label="Upgrade to Pro"
               variant="outline"
