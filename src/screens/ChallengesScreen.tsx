@@ -7,22 +7,15 @@ import { useNavigation } from '@react-navigation/native';
 import { getChallenges } from '../services/api';
 import ChallengeCard from '../components/ChallengeCard';
 import LoadingSpinner from '../components/LoadingSpinner';
+import GradientButton from '../components/GradientButton';
 import { C, borderRadius } from '../theme';
 import AppFooter from '../components/AppFooter';
+import { Image } from 'react-native';
 
-const CATEGORIES = [
-  'All',
-  '🧘 Calm & Presence',
-  '🏋️ Movement & Energy',
-  '🌳 Nature & Outdoors',
-  '🏡 Home & Everyday Life',
-  '😄 Joy & Gratitude',
-  '🤝 Partner Connection & Community',
-  '🎨 Creativity & Seeing Differently',
-  '💪 Strength & Resilience',
-  '🧐 Reflection & Awareness',
-  '🏕️ Place & Exploration',
-];
+const BASE_URL = 'https://photoai.betaplanets.com';
+const fullUrl = (u?: string) => u ? (u.startsWith('http') ? u : BASE_URL + u) : undefined;
+
+// Categories built dynamically from data - see load()
 
 const STATUS_TABS = [
   { key: 'all', label: 'All' },
@@ -38,6 +31,7 @@ export default function ChallengesScreen() {
 
   const [challenges, setChallenges] = useState<any[]>([]);
   const [filtered, setFiltered] = useState<any[]>([]);
+  const [categories, setCategories] = useState<string[]>(['All']);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
@@ -49,6 +43,12 @@ export default function ChallengesScreen() {
       const data = await getChallenges();
       const list = data?.challenges || data || [];
       setChallenges(list);
+      // Build category list dynamically from actual data
+      const cats = Array.from(new Set(
+        list.map((c: any) => c.category).filter(Boolean)
+      )) as string[];
+      cats.sort();
+      setCategories(['All', ...cats]);
       applyFilters(list, search, status, category);
     } catch (e) {
       console.error(e);
@@ -69,7 +69,10 @@ export default function ChallengesScreen() {
           result = result.filter(c => c.status === s);
         }
       }
-      if (cat !== 'All') result = result.filter(c => c.category === cat);
+      // Use substring match to handle emoji encoding differences
+      if (cat !== 'All') result = result.filter(c =>
+        c.category && (c.category === cat || c.category.includes(cat.replace(/^\S+\s/, '')))
+      );
       if (q.trim()) {
         const lq = q.toLowerCase();
         result = result.filter(
@@ -102,6 +105,56 @@ export default function ChallengesScreen() {
       contentContainerStyle={{ flexGrow: 1 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.ORANGE} />}
     >
+      {/* Featured Challenge Banner */}
+      {(() => {
+        const featured = challenges.find(c => c.is_active || c.status === 'active') || challenges[0];
+        if (!featured) return null;
+        const imgUri = fullUrl(featured.cover_image_url || featured.cover_image);
+        const daysLeft = featured.end_date
+          ? Math.max(0, Math.ceil((new Date(featured.end_date).getTime() - Date.now()) / 86400000))
+          : null;
+        return (
+          <TouchableOpacity
+            style={styles.featuredBanner}
+            onPress={() => navigation.navigate('ChallengeDetail', { challengeId: featured.id })}
+            activeOpacity={0.92}
+          >
+            {imgUri ? (
+              <Image source={{ uri: imgUri }} style={styles.featuredImg} resizeMode="cover" />
+            ) : (
+              <View style={[styles.featuredImg, { backgroundColor: C.CARD_BG2, justifyContent: 'center', alignItems: 'center' }]}>
+                <Text style={{ fontSize: 48 }}>📸</Text>
+              </View>
+            )}
+            <View style={styles.featuredOverlay}>
+              <View style={styles.featuredBadge}>
+                <Text style={styles.featuredBadgeText}>⭐ Featured Challenge</Text>
+              </View>
+              <Text style={styles.featuredTitle} numberOfLines={2}>{featured.title}</Text>
+              <View style={styles.featuredMeta}>
+                {daysLeft !== null && (
+                  <Text style={styles.featuredMetaText}>🗓 {daysLeft} days left</Text>
+                )}
+                {featured.submission_count != null && (
+                  <Text style={styles.featuredMetaText}>📷 {featured.submission_count} submissions</Text>
+                )}
+                {featured.feeling_category && (
+                  <Text style={styles.featuredMetaText}>💙 {featured.feeling_category.split(',')[0].trim()}</Text>
+                )}
+              </View>
+              <View style={{ marginTop: 12, alignSelf: 'flex-start' }}>
+                <GradientButton
+                  label="View Challenge →"
+                  variant="primary"
+                  size="sm"
+                  onPress={() => navigation.navigate('ChallengeDetail', { challengeId: featured.id })}
+                />
+              </View>
+            </View>
+          </TouchableOpacity>
+        );
+      })()}
+
       {/* Search Bar */}
       <View style={styles.searchWrap}>
         <Text style={styles.searchIcon}>🔍</Text>
@@ -145,7 +198,7 @@ export default function ChallengesScreen() {
         style={styles.categoryScroll}
         contentContainerStyle={styles.categoryContent}
       >
-        {CATEGORIES.map(cat => (
+        {categories.map(cat => (
           <TouchableOpacity
             key={cat}
             style={[styles.catChip, category === cat && styles.catChipActive]}
@@ -198,6 +251,51 @@ export default function ChallengesScreen() {
 
 const styles = StyleSheet.create({
   screen: { backgroundColor: C.BG },
+
+  // Featured Banner
+  featuredBanner: {
+    margin: 12,
+    marginBottom: 8,
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    height: 220,
+    position: 'relative',
+  },
+  featuredImg: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+  },
+  featuredOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+    background: 'linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 70%, transparent 100%)' as any,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  featuredBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: C.ORANGE,
+    borderRadius: borderRadius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    marginBottom: 6,
+    backgroundImage: 'linear-gradient(90deg, #F55B09, #FFD000)' as any,
+  },
+  featuredBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  featuredTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '800',
+    fontFamily: "'Lexend', sans-serif",
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowRadius: 4,
+    marginBottom: 6,
+  },
+  featuredMeta: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
+  featuredMetaText: { color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: '500' },
 
   // Search
   searchWrap: {
