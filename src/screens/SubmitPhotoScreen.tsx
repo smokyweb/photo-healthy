@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+﻿import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, Image, TouchableOpacity,
   ScrollView, Alert, Platform, useWindowDimensions,
@@ -10,7 +10,7 @@ import GradientButton from '../components/GradientButton';
 import AppFooter from '../components/AppFooter';
 import { C, borderRadius } from '../theme';
 
-const MAX_PHOTOS = 4;
+const MAX_PHOTOS = 2;
 
 export default function SubmitPhotoScreen() {
   const navigation = useNavigation<any>();
@@ -82,7 +82,7 @@ export default function SubmitPhotoScreen() {
 
       await createSubmission(payload);
       Alert.alert(
-        '✅ Submitted!',
+        'âœ… Submitted!',
         'Your photo has been shared with the community.',
         [{ text: 'View Challenges', onPress: () => navigation.goBack() }]
       );
@@ -117,7 +117,7 @@ export default function SubmitPhotoScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>← Cancel</Text>
+            <Text style={styles.backText}>â† Cancel</Text>
           </TouchableOpacity>
           <Text style={styles.heading}>Submit Photos</Text>
           <View style={{ width: 60 }} />
@@ -133,7 +133,7 @@ export default function SubmitPhotoScreen() {
 
         {/* Photo Grid */}
         <Text style={styles.sectionLabel}>
-          Photos ({photos.length}/{MAX_PHOTOS}) — tap + to add
+          Photo {photos.length === 0 ? '(required)' : photos.length === 1 ? '1 added \u2014 add a 2nd? (optional)' : '2 photos added'}
         </Text>
         <View style={styles.photoGrid}>
           {photoSlots.map((photo, i) => (
@@ -151,7 +151,7 @@ export default function SubmitPhotoScreen() {
                     onPress={() => removePhoto(i)}
                     hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
                   >
-                    <Text style={styles.removeBtnText}>✕</Text>
+                    <Text style={styles.removeBtnText}>âœ•</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -204,7 +204,7 @@ export default function SubmitPhotoScreen() {
           activeOpacity={0.7}
         >
           <View style={[styles.checkbox, agreed && styles.checkboxChecked]}>
-            {agreed && <Text style={styles.checkmark}>✓</Text>}
+            {agreed && <Text style={styles.checkmark}>âœ“</Text>}
           </View>
           <Text style={styles.checkLabel}>
             I agree to the{' '}

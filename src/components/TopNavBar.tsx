@@ -134,9 +134,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: C.CARD_BORDER,
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingVertical: 12,
+    // Respect iOS notch/status bar
+    paddingTop: Platform.OS === 'web' ? 12 : 44,
     zIndex: 100,
-  },
+    // Do NOT use position:fixed - let it flow naturally with the page
+  } as any,
   logoWrap: { marginRight: 24 },
   logoText: { color: C.TEXT, fontSize: 18, fontWeight: '800', fontFamily: "'Lexend', sans-serif" } as any,
   desktopLinks: { flex: 1, flexDirection: 'row', gap: 20, alignItems: 'center' },

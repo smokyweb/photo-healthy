@@ -70,7 +70,7 @@ function LoggedInHome({
             <TouchableOpacity
               style={[s.heroImgWrap, isDesktop && { flex: 6 }]}
               onPress={() =>
-                navigation.navigate('ChallengeDetail', { challengeId: featured.id })
+                navigation.navigate('ChallengeDetail', { challengeId: featured.id, id: featured.id })
               }
               activeOpacity={0.9}
             >
@@ -198,7 +198,7 @@ function LoggedInHome({
                     key={sub.id}
                     style={[s.subCard, isLargeDesktop && s.subCard4]}
                     onPress={() =>
-                      navigation.navigate('SubmissionDetail', { submissionId: sub.id })
+                      navigation.navigate('SubmissionDetail' as never, { submissionId: sub.id, id: sub.id } as never)
                     }
                     activeOpacity={0.88}
                   >
@@ -366,7 +366,7 @@ function PublicHome({ challenges, submissions, navigation }: any) {
           <TouchableOpacity
             style={s.featuredCard}
             onPress={() =>
-              navigation.navigate('ChallengeDetail', { challengeId: featured.id })
+              navigation.navigate('ChallengeDetail', { challengeId: featured.id, id: featured.id })
             }
             activeOpacity={0.9}
           >

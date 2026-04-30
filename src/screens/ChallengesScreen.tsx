@@ -116,7 +116,7 @@ export default function ChallengesScreen() {
         return (
           <TouchableOpacity
             style={styles.featuredBanner}
-            onPress={() => navigation.navigate('ChallengeDetail', { challengeId: featured.id })}
+            onPress={() => navigation.navigate('ChallengeDetail', { challengeId: featured.id, id: featured.id })}
             activeOpacity={0.92}
           >
             {imgUri ? (
@@ -147,7 +147,7 @@ export default function ChallengesScreen() {
                   label="View Challenge →"
                   variant="primary"
                   size="sm"
-                  onPress={() => navigation.navigate('ChallengeDetail', { challengeId: featured.id })}
+                  onPress={() => navigation.navigate('ChallengeDetail', { challengeId: featured.id, id: featured.id })}
                 />
               </View>
             </View>
@@ -232,7 +232,7 @@ export default function ChallengesScreen() {
                 <View key={item.id} style={{ flex: 1, minWidth: 0 }}>
                   <ChallengeCard
                     challenge={item}
-                    onPress={() => navigation.navigate('ChallengeDetail', { challengeId: item.id })}
+                    onPress={() => navigation.navigate('ChallengeDetail', { challengeId: item.id, id: item.id })}
                   />
                 </View>
               ))}
@@ -254,47 +254,67 @@ const styles = StyleSheet.create({
 
   // Featured Banner
   featuredBanner: {
-    margin: 12,
-    marginBottom: 8,
+    marginHorizontal: 12,
+    marginBottom: 12,
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
-    height: 220,
+    height: 300,  // Taller so image is visible
     position: 'relative',
+    backgroundColor: C.CARD_BG,
   },
   featuredImg: {
     width: '100%',
     height: '100%',
     position: 'absolute',
+    top: 0,
+    left: 0,
   },
   featuredOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 16,
-    background: 'linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 70%, transparent 100%)' as any,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    // Tall gradient - only covers bottom 60% so top 40% shows the image clearly
+    paddingTop: 80,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 40%, rgba(0,0,0,0.4) 75%, transparent 100%)' as any,
+    backgroundColor: 'rgba(0,0,0,0.2)',
   },
   featuredBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: C.ORANGE,
     borderRadius: borderRadius.pill,
     paddingHorizontal: 10,
-    paddingVertical: 3,
-    marginBottom: 6,
+    paddingVertical: 4,
+    marginBottom: 8,
     backgroundImage: 'linear-gradient(90deg, #F55B09, #FFD000)' as any,
+    backgroundColor: C.ORANGE,
   },
-  featuredBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  featuredBadgeText: { color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
   featuredTitle: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
     fontFamily: "'Lexend', sans-serif",
-    textShadowColor: 'rgba(0,0,0,0.6)',
-    textShadowRadius: 4,
-    marginBottom: 6,
+    marginBottom: 4,
+    lineHeight: 28,
   },
-  featuredMeta: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
+  featuredDesc: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  featuredMeta: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 2 },
+  featuredChip: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: borderRadius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  featuredChipText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   featuredMetaText: { color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: '500' },
 
   // Search

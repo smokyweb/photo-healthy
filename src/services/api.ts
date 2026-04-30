@@ -77,6 +77,21 @@ async function adminGet<T = any>(path: string): Promise<T> {
 }
 
 // â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+async function adminPut<T = any>(path: string, body?: any): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try { const err = await res.json(); msg = err.error || err.message || msg; } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
 export const login = (email: string, password: string) =>
   request('POST', '/api/auth/login', { email, password });
 
@@ -96,6 +111,9 @@ export const getUsers = () => adminGet('/api/users');
 
 export const updateUser = (id: number, data: any) =>
   request('POST', `/admin-user-update.php?id=${id}`, data);
+
+export const adminResetPassword = (id: number) =>
+  request('POST', '/admin-api-proxy.php?path=/api/admin/users/' + id + '/reset-password&method=POST', {});
 
 export const deleteUser = (id: number) =>
   request('POST', `/api/users/${id}/delete`);
@@ -192,7 +210,22 @@ export const getMyOrders = () => request('GET', '/api/orders/my');
 export const createBundleOrder = (data: any) =>
   request('POST', '/api/orders/bundle', data);
 
-export const adminGetOrders = () => adminGet('/api/admin/orders');
+
+export const adminGetOrders = (params?: any) => adminGet('/api/admin/orders' + (params ? '?' + Object.entries(params).map(([k,v]) => k+'='+encodeURIComponent(String(v))).join('&') : ''));
+export const adminMarkOrderPaid = (id: number) =>
+  request('POST', '/admin-api-proxy.php?path=/api/admin/orders/' + id + '/mark-paid&method=PATCH', {});
+export const adminProcessOrder = (id: number) =>
+  request('POST', '/admin-api-proxy.php?path=/api/admin/orders/' + id + '/process&method=POST', {});
+export const adminFulfillOrder = (id: number, tracking_number: string) =>
+  request('POST', '/admin-api-proxy.php?path=/api/admin/orders/' + id + '/fulfill&method=POST', { tracking_number });
+export const adminUpdateTracking = (id: number, tracking_number: string) =>
+  request('POST', '/admin-api-proxy.php?path=/api/admin/orders/' + id + '/tracking&method=PATCH', { tracking_number });
+
+// Admin activity & user detail endpoints
+export const adminGetActivity = () => adminGet('/api/admin/activity');
+export const adminGetUserSubmissions = (userId: number) => adminGet(`/api/admin/users/${userId}/submissions`);
+export const adminGetUserComments = (userId: number) => adminGet(`/api/admin/users/${userId}/comments`);
+export const adminGetUserOrders = (userId: number) => adminGet(`/api/admin/users/${userId}/orders`);
 
 // â”€â”€ Subscription â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const getSubscriptionStatus = () =>
@@ -210,9 +243,13 @@ export const getSubscriptionPortal = () =>
 export const adminGetDashboardStats = () =>
   adminGet('/api/admin/dashboard-stats');
 
-export const adminGetUsers = () => adminGet('/api/admin/users');
+export const adminGetUsers = () => adminGet('/api/users');
 
 export const adminGetSettings = () => adminGet('/api/admin/settings');
+export const getTaxonomy = () => request('GET', '/api/taxonomy');
+export const adminGetTaxonomy = () => adminGet('/api/admin/taxonomy');
+export const adminUpdateTaxonomy = (key: string, items: string[]) =>
+  adminPut('/api/admin/taxonomy', { key, items });
 
 export const adminUpdateSettings = (data: any) =>
   request('POST', '/api/admin/settings', data);
@@ -248,30 +285,87 @@ export async function uploadPhoto(file: File): Promise<{ url: string }> {
   return res.json();
 }
 
+// Read EXIF orientation from JPEG (fixes iPhone rotation)
+function getExifOrientation(buffer) {
+  try {
+    const view = new DataView(buffer);
+    if (view.getUint16(0, false) !== 0xFFD8) return 1;
+    let offset = 2;
+    while (offset < view.byteLength) {
+      const marker = view.getUint16(offset, false);
+      offset += 2;
+      if (marker === 0xFFE1) {
+        if (view.getUint32(offset + 2, false) !== 0x45786966) return 1;
+        const little = view.getUint16(offset + 8, false) === 0x4949;
+        const tags = view.getUint16(offset + 14, little);
+        for (let i = 0; i < tags; i++) {
+          const tag = view.getUint16(offset + 16 + (i * 12), little);
+          if (tag === 0x0112) return view.getUint16(offset + 16 + (i * 12) + 8, little);
+        }
+      } else if ((marker & 0xFF00) !== 0xFF00) break;
+      else offset += view.getUint16(offset, false);
+    }
+  } catch {}
+  return 1;
+}
+
 function resizeImage(file: File, maxPx: number, quality: number): Promise<string> {
   return new Promise((resolve, reject) => {
-    const img = new Image();
+    const type = (file.type || '').toLowerCase();
+    const name = (file.name || '').toLowerCase();
+    const isHeic = type.includes('heic') || type.includes('heif') || name.endsWith('.heic') || name.endsWith('.heif');
+
     const url = URL.createObjectURL(file);
-    img.onload = () => {
+
+    const drawWithOrientation = (img: HTMLImageElement, orientation: number) => {
       URL.revokeObjectURL(url);
       let { width, height } = img;
-      if (width > maxPx || height > maxPx) {
-        if (width > height) {
-          height = Math.round((height * maxPx) / width);
-          width = maxPx;
-        } else {
-          width = Math.round((width * maxPx) / height);
-          height = maxPx;
-        }
+      const swap = orientation >= 5 && orientation <= 8;
+      let tw = swap ? height : width, th = swap ? width : height;
+      if (tw > maxPx || th > maxPx) {
+        const scale = maxPx / Math.max(tw, th);
+        tw = Math.round(tw * scale); th = Math.round(th * scale);
       }
       const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
+      canvas.width = swap ? th : tw;
+      canvas.height = swap ? tw : th;
       const ctx = canvas.getContext('2d')!;
+      ctx.save();
+      const cw = canvas.width, ch = canvas.height;
+      switch (orientation) {
+        case 2: ctx.transform(-1,0,0,1,cw,0); break;
+        case 3: ctx.transform(-1,0,0,-1,cw,ch); break;
+        case 4: ctx.transform(1,0,0,-1,0,ch); break;
+        case 5: ctx.transform(0,1,1,0,0,0); break;
+        case 6: ctx.transform(0,1,-1,0,ch,0); break;
+        case 7: ctx.transform(0,-1,-1,0,ch,cw); break;
+        case 8: ctx.transform(0,-1,1,0,0,cw); break;
+      }
       ctx.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL(file.type || 'image/jpeg', quality));
+      ctx.restore();
+      const outType = (isHeic || type.includes('jpeg') || type.includes('jpg')) ? 'image/jpeg' : type.includes('png') ? 'image/png' : 'image/jpeg';
+      resolve(canvas.toDataURL(outType, quality));
     };
-    img.onerror = reject;
-    img.src = url;
+
+    if (isHeic) {
+      // Try direct render (works in Safari), fail gracefully in other browsers
+      const img = new Image();
+      img.onload = () => drawWithOrientation(img, 1);
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('HEIC photos not supported in this browser. Please set your iPhone camera to capture in JPEG mode (Settings > Camera > Formats > Most Compatible).')); };
+      img.src = url;
+    } else {
+      // For JPEG: read EXIF orientation first
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const buf = e.target?.result as ArrayBuffer;
+        const orientation = getExifOrientation(buf);
+        const img = new Image();
+        img.onload = () => drawWithOrientation(img, orientation);
+        img.onerror = reject;
+        img.src = url;
+      };
+      reader.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Failed to read image')); };
+      reader.readAsArrayBuffer(file);
+    }
   });
 }

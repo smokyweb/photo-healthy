@@ -1,63 +1,78 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   View, Text, StyleSheet, ScrollView, useWindowDimensions, Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import GradientButton from '../components/GradientButton';
 import AppFooter from '../components/AppFooter';
-import { C, borderRadius } from '../theme';
+import { C } from '../theme';
 
+// ─── Design Tokens ───────────────────────────────────────────────────────────
+const MAX_WIDTH = 1100;
+const SECTION_PAD_V = 64;
+const SECTION_PAD_V_HERO = 80;
+const CONTENT_PAD_H = 24;
+const CARD_RADIUS = 16;
+
+// ─── Data ─────────────────────────────────────────────────────────────────────
 const STEPS = [
   {
     num: '1',
     color: C.ORANGE,
     title: 'Sign Up & Create Your Profile',
-    desc: 'Join for free in seconds. Create your profile, set your wellness goals, and introduce yourself to the community. No credit card required.',
-    imageEmoji: '📱',
+    body1: 'Join for free in seconds. Create your profile and set your wellness goals to get started on the right foot.',
+    body2: 'Introduce yourself to the community and let others know what you are working toward. No credit card required.',
   },
   {
     num: '2',
     color: C.TEAL,
     title: 'Join Challenges & Submit Photos',
-    desc: 'Browse active challenges across nutrition, fitness, mindfulness, and more. Submit photos to document your journey and inspire others.',
-    imageEmoji: '📷',
+    body1: 'Browse active challenges across nutrition, fitness, mindfulness, and more to find what motivates you.',
+    body2: 'Submit photos to document your journey, inspire others, and stay accountable to your goals every day.',
   },
   {
     num: '3',
     color: '#A78BFA',
-    title: 'Engage with the Community & Track Progress',
-    desc: "Like and comment on others' submissions, receive encouragement, and use your progress dashboard to track your wellness journey over time.",
-    imageEmoji: '📈',
+    title: 'Engage, Grow & Track Progress',
+    body1: 'Like and comment on others\'  submissions, receive genuine encouragement, and build real connections.',
+    body2: 'Use your personal dashboard to track your wellness journey and celebrate milestones along the way.',
   },
 ];
 
-const PRO_BENEFITS = [
-  'Unlimited monthly challenge submissions',
-  'Access to Pro-only exclusive challenges',
-  'Download your original unwatermarked photos',
-  'Pro badge on your profile',
-  'Access to Pro-only shop items',
-  'Priority support',
+const GUIDELINES = [
+  {
+    color: C.TEAL,
+    title: 'Be Kind & Supportive',
+    desc: 'Encourage others on their wellness journey. Positive energy helps everyone grow.',
+  },
+  {
+    color: C.ORANGE,
+    title: 'Share Authentically',
+    desc: 'Real moments over perfection. Your genuine journey is what inspires others most.',
+  },
+  {
+    color: '#A78BFA',
+    title: 'Respect Privacy',
+    desc: "Always get permission before sharing photos that include other people's faces.",
+  },
+  {
+    color: C.TEAL,
+    title: 'Stay On Topic',
+    desc: 'Keep submissions relevant to the challenge theme to maintain quality for all members.',
+  },
+  {
+    color: C.ORANGE,
+    title: 'No Spam or Ads',
+    desc: 'Avoid self-promotion or advertising. The community thrives on genuine sharing.',
+  },
+  {
+    color: '#A78BFA',
+    title: 'Celebrate Progress',
+    desc: 'Every step forward counts. Acknowledge and cheer on the progress of your fellow members.',
+  },
 ];
 
-const FEATURES = [
-  {
-    icon: '🏆',
-    title: 'Join Challenges',
-    desc: 'Browse and join themed wellness challenges across nutrition, fitness, and mindfulness.',
-  },
-  {
-    icon: '📸',
-    title: 'Submit Photos',
-    desc: 'Capture and share your healthy moments visually with the community.',
-  },
-  {
-    icon: '📊',
-    title: 'Engage & Grow',
-    desc: 'Connect with community members and track your wellness progress over time.',
-  },
-];
-
+// ─── Screen ───────────────────────────────────────────────────────────────────
 export default function HowItWorksScreen() {
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
@@ -65,98 +80,77 @@ export default function HowItWorksScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Hero */}
-      <View style={styles.heroWrapper}>
-        <View style={styles.heroBg as any}>
-          <Text style={styles.heroTitle}>How It Works</Text>
-          <Text style={styles.heroSubtitle}>
-            Getting healthy has never been easier. Join a community that motivates you every single day.
-          </Text>
+
+      {/* ── 1. Hero ── */}
+      <View style={styles.heroSection as any}>
+        <Text style={styles.heroTitle}>How It Works</Text>
+        <Text style={styles.heroSubtitle}>
+          Getting healthy has never been easier. Join a community that motivates you every single day.
+        </Text>
+      </View>
+
+      {/* ── 2. Steps ── */}
+      <View style={styles.stepsSection}>
+        <View style={styles.stepsInner}>
+          {STEPS.map((step, idx) => {
+            const flip = isDesktop && idx % 2 !== 0;
+            return (
+              <View
+                key={step.num}
+                style={[
+                  styles.stepRow,
+                  isDesktop && styles.stepRowDesktop,
+                  flip && (styles.stepRowReversed as any),
+                  idx < STEPS.length - 1 && styles.stepRowSpaced,
+                ]}
+              >
+                {/* Text side */}
+                <View style={[styles.stepTextSide, isDesktop && styles.stepHalf]}>
+                  <View style={[styles.stepBadge, { backgroundColor: step.color }]}>
+                    <Text style={styles.stepBadgeNum}>{step.num}</Text>
+                  </View>
+                  <Text style={styles.stepTitle}>{step.title}</Text>
+                  <Text style={styles.stepBody}>{step.body1}</Text>
+                  <Text style={styles.stepBody}>{step.body2}</Text>
+                </View>
+                {/* Image side */}
+                <View style={[styles.stepImageSide, isDesktop && styles.stepHalf]}>
+                  <View style={styles.stepImageCard} />
+                </View>
+              </View>
+            );
+          })}
         </View>
       </View>
 
-      {/* Alternating Steps */}
-      <View style={styles.stepsSection}>
-        {STEPS.map((step, idx) => {
-          const flipOnDesktop = isDesktop && idx % 2 !== 0;
-          return (
-            <View
-              key={step.num}
-              style={[
-                styles.stepRow,
-                isDesktop && styles.stepRowDesktop,
-                flipOnDesktop && (styles.stepRowReversed as any),
-              ]}
-            >
-              {/* Text side */}
-              <View style={[styles.stepTextSide, isDesktop && styles.stepSideDesktop]}>
-                <View style={[styles.stepBadge, { backgroundColor: step.color }]}>
-                  <Text style={styles.stepBadgeNum}>{step.num}</Text>
-                </View>
-                <Text style={styles.stepTitle}>{step.title}</Text>
-                <Text style={styles.stepDesc}>{step.desc}</Text>
-              </View>
-              {/* Image side */}
-              <View style={[styles.stepImageSide, isDesktop && styles.stepSideDesktop]}>
-                <View style={styles.stepImageCard}>
-                  <Text style={styles.stepImageEmoji}>{step.imageEmoji}</Text>
-                </View>
-              </View>
-            </View>
-          );
-        })}
-      </View>
-
-      {/* Pro Benefits */}
-      <View style={styles.proSection}>
-        <View style={[styles.proInner, isDesktop && styles.proInnerDesktop]}>
-          <Text style={styles.proLabel}>⭐ PRO MEMBERSHIP</Text>
-          <Text style={styles.proTitle}>Take It to the Next Level</Text>
-          <Text style={styles.proSubtitle}>
-            Unlock the full Photo Healthy experience with a Pro membership
-          </Text>
-          <View style={styles.proBenefitsList}>
-            {PRO_BENEFITS.map(b => (
-              <View key={b} style={styles.proBenefitRow}>
-                <Text style={styles.proBenefitCheck}>✓</Text>
-                <Text style={styles.proBenefitText}>{b}</Text>
+      {/* ── 3. Community Guidelines ── */}
+      <View style={styles.guidelinesSection}>
+        <View style={styles.guidelinesInner}>
+          <Text style={styles.sectionTitle}>Community Guidelines</Text>
+          <View style={[styles.guidelinesGrid, isDesktop && styles.guidelinesGridDesktop]}>
+            {GUIDELINES.map(g => (
+              <View key={g.title} style={[styles.guidelineCard, isDesktop && styles.guidelineCardDesktop]}>
+                <Text style={[styles.guidelineTitle, { color: g.color }]}>{g.title}</Text>
+                <Text style={styles.guidelineDesc}>{g.desc}</Text>
               </View>
             ))}
           </View>
-          <GradientButton
-            label="Go Pro — $9.99/month"
-            onPress={() => navigation.navigate('Subscription' as never)}
-            size="lg"
-          />
         </View>
       </View>
 
-      {/* 3-Column Feature Grid */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Everything You Need</Text>
-        <View style={[styles.featureGrid, isDesktop && styles.featureGridDesktop]}>
-          {FEATURES.map(f => (
-            <View key={f.title} style={[styles.featureCard, isDesktop && styles.featureCardDesktop]}>
-              <Text style={styles.featureIcon}>{f.icon}</Text>
-              <Text style={styles.featureTitle}>{f.title}</Text>
-              <Text style={styles.featureDesc}>{f.desc}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      {/* CTA Banner */}
-      <View style={styles.ctaWrapper}>
-        <View style={styles.ctaBanner}>
+      {/* ── 4. CTA Banner ── */}
+      <View style={styles.ctaSection}>
+        <View style={styles.ctaBanner as any}>
           <Text style={styles.ctaTitle}>Ready to Start Your Journey?</Text>
           <Text style={styles.ctaSubtitle}>
             Join thousands of members already living healthier lives
           </Text>
           <GradientButton
-            label="Get Started Free →"
+            label="Get Started Free"
             onPress={() => navigation.navigate('Register' as never)}
             size="lg"
             style={styles.ctaBtn}
+            variant="outline"
           />
         </View>
       </View>
@@ -166,18 +160,19 @@ export default function HowItWorksScreen() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   screen: { backgroundColor: C.BG },
   content: { paddingBottom: 0 },
 
-  heroWrapper: { padding: 24, paddingTop: 32 },
-  heroBg: {
-    borderRadius: 16,
-    padding: 48,
+  // Hero — gradient full width
+  heroSection: {
+    paddingVertical: SECTION_PAD_V_HERO,
+    paddingHorizontal: CONTENT_PAD_H,
     alignItems: 'center',
     backgroundColor: C.ORANGE,
     ...(Platform.OS === 'web'
-      ? { backgroundImage: 'linear-gradient(135deg, #F55B09 0%, #FFD000 50%, #54DFB6 100%)' }
+      ? { backgroundImage: 'linear-gradient(135deg, #F55B09 0%, #54DFB6 100%)' }
       : {}),
   },
   heroTitle: {
@@ -186,6 +181,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     textAlign: 'center',
     marginBottom: 12,
+    ...(Platform.OS === 'web' ? { fontFamily: "'Lexend', sans-serif" } : {}),
   },
   heroSubtitle: {
     color: 'rgba(255,255,255,0.92)',
@@ -195,133 +191,129 @@ const styles = StyleSheet.create({
     maxWidth: 560,
   },
 
-  stepsSection: { paddingHorizontal: 24, paddingTop: 40, paddingBottom: 16 },
-  stepRow: { marginBottom: 40, gap: 20 },
-  stepRowDesktop: { flexDirection: 'row', alignItems: 'center' },
+  // Steps section
+  stepsSection: {
+    paddingVertical: SECTION_PAD_V,
+    paddingHorizontal: CONTENT_PAD_H,
+  },
+  stepsInner: {
+    maxWidth: MAX_WIDTH,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  stepRow: { gap: 24 },
+  stepRowDesktop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 48,
+  },
   stepRowReversed: { flexDirection: 'row-reverse' },
+  stepRowSpaced: { marginBottom: 48 },
+  stepHalf: { flex: 1 },
   stepTextSide: {},
-  stepSideDesktop: { flex: 1 },
+  stepImageSide: {},
   stepBadge: {
     width: 48,
     height: 48,
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 14,
+    marginBottom: 16,
+    alignSelf: 'flex-start',
   },
   stepBadgeNum: { color: C.WHITE, fontSize: 20, fontWeight: '900' },
   stepTitle: {
     color: C.TEXT,
     fontSize: 22,
     fontWeight: '800',
-    marginBottom: 10,
+    marginBottom: 12,
     lineHeight: 30,
+    ...(Platform.OS === 'web' ? { fontFamily: "'Lexend', sans-serif" } : {}),
   },
-  stepDesc: { color: C.TEXT_SECONDARY, fontSize: 15, lineHeight: 24 },
-  stepImageSide: {},
-  stepImageCard: {
-    backgroundColor: C.CARD_BG,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.CARD_BORDER,
-    height: 220,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepImageEmoji: { fontSize: 72 },
-
-  proSection: {
-    backgroundColor: C.CARD_BG,
-    paddingVertical: 48,
-    paddingHorizontal: 24,
-  },
-  proInner: {},
-  proInnerDesktop: { maxWidth: 700, alignSelf: 'center', width: '100%' },
-  proLabel: {
-    color: C.ORANGE,
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-    marginBottom: 10,
-    textTransform: 'uppercase',
-  },
-  proTitle: {
-    color: C.TEXT,
-    fontSize: 28,
-    fontWeight: '900',
-    marginBottom: 8,
-  },
-  proSubtitle: {
+  stepBody: {
     color: C.TEXT_SECONDARY,
     fontSize: 15,
-    lineHeight: 22,
-    marginBottom: 24,
+    lineHeight: 24,
+    marginBottom: 8,
   },
-  proBenefitsList: { marginBottom: 28 },
-  proBenefitRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-    gap: 10,
+  stepImageCard: {
+    backgroundColor: C.CARD_BG2,
+    borderRadius: CARD_RADIUS,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+    height: 280,
   },
-  proBenefitCheck: { color: C.TEAL, fontSize: 15, fontWeight: '800', marginTop: 2 },
-  proBenefitText: { color: C.TEXT_SECONDARY, fontSize: 15, flex: 1, lineHeight: 22 },
 
-  section: { paddingHorizontal: 24, paddingVertical: 40 },
+  // Community Guidelines
+  guidelinesSection: {
+    paddingVertical: SECTION_PAD_V,
+    paddingHorizontal: CONTENT_PAD_H,
+    backgroundColor: C.CARD_BG2,
+  },
+  guidelinesInner: {
+    maxWidth: MAX_WIDTH,
+    alignSelf: 'center',
+    width: '100%',
+  },
   sectionTitle: {
     color: C.TEXT,
     fontSize: 28,
     fontWeight: '800',
-    marginBottom: 28,
+    marginBottom: 32,
     textAlign: 'center',
+    ...(Platform.OS === 'web' ? { fontFamily: "'Lexend', sans-serif" } : {}),
   },
-  featureGrid: { gap: 16 },
-  featureGridDesktop: { flexDirection: 'row' },
-  featureCard: {
+  guidelinesGrid: { gap: 24 },
+  guidelinesGridDesktop: { flexDirection: 'row', flexWrap: 'wrap' },
+  guidelineCard: {
     backgroundColor: C.CARD_BG,
-    borderRadius: 12,
+    borderRadius: CARD_RADIUS,
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
-    padding: 28,
-    alignItems: 'center',
+    padding: 24,
   },
-  featureCardDesktop: { flex: 1 },
-  featureIcon: { fontSize: 44, marginBottom: 14 },
-  featureTitle: {
-    color: C.TEXT,
-    fontSize: 17,
-    fontWeight: '700',
+  guidelineCardDesktop: { width: 'calc(33.333% - 16px)' as any },
+  guidelineTitle: {
+    fontSize: 16,
+    fontWeight: '800',
     marginBottom: 8,
-    textAlign: 'center',
+    ...(Platform.OS === 'web' ? { fontFamily: "'Lexend', sans-serif" } : {}),
   },
-  featureDesc: {
+  guidelineDesc: {
     color: C.TEXT_SECONDARY,
     fontSize: 14,
     lineHeight: 22,
-    textAlign: 'center',
   },
 
-  ctaWrapper: { paddingHorizontal: 24, paddingBottom: 48 },
+  // CTA Banner — same gradient as hero
+  ctaSection: {
+    paddingVertical: SECTION_PAD_V,
+    paddingHorizontal: CONTENT_PAD_H,
+  },
   ctaBanner: {
-    backgroundColor: C.CARD_BG,
-    borderRadius: 16,
-    padding: 48,
+    borderRadius: CARD_RADIUS,
+    paddingVertical: SECTION_PAD_V,
+    paddingHorizontal: CONTENT_PAD_H,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: C.CARD_BORDER,
+    backgroundColor: C.ORANGE,
+    ...(Platform.OS === 'web'
+      ? { backgroundImage: 'linear-gradient(135deg, #F55B09 0%, #54DFB6 100%)' }
+      : {}),
   },
   ctaTitle: {
-    color: C.TEXT,
-    fontSize: 28,
+    color: C.WHITE,
+    fontSize: 32,
     fontWeight: '900',
     textAlign: 'center',
     marginBottom: 8,
+    ...(Platform.OS === 'web' ? { fontFamily: "'Lexend', sans-serif" } : {}),
   },
   ctaSubtitle: {
-    color: C.TEXT_SECONDARY,
-    fontSize: 15,
+    color: 'rgba(255,255,255,0.88)',
+    fontSize: 16,
     textAlign: 'center',
     lineHeight: 22,
+    marginBottom: 4,
   },
-  ctaBtn: { marginTop: 20 },
+  ctaBtn: { marginTop: 20, borderColor: C.WHITE },
 });

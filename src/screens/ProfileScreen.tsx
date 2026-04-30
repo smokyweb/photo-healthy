@@ -1,9 +1,9 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Image, TouchableOpacity,
   ScrollView, Alert, RefreshControl, useWindowDimensions,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { getUserStats, getSubscriptionStatus, getSubmissions, getMyChallenges } from '../services/api';
 import GradientButton from '../components/GradientButton';
@@ -58,7 +58,7 @@ export default function ProfileScreen() {
     setRefreshing(false);
   };
 
-  useEffect(() => { load(); }, [user]);
+  useFocusEffect(useCallback(() => { load(); }, [user]));
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [

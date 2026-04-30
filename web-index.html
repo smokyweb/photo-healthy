@@ -2,10 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+
   <meta name="theme-color" content="#202333" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <!-- iOS Safari: respect safe area so nav doesn't overlap status bar -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
   <title>Photo Healthy — Capture, Share, Thrive</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -32,8 +34,8 @@
       flex-direction: column;
       width: 100%;
       min-width: 0;
+      /* dvh = dynamic viewport height: shrinks when Safari URL bar is visible */
       height: 100vh;
-      height: -webkit-fill-available;
       height: 100dvh;
       overflow: hidden;
       position: relative;
@@ -52,6 +54,18 @@
       height: 100% !important;
       overflow: hidden !important;
     }
+    /* Safe area for iOS notch + home indicator */
+    body {
+      padding-top: env(safe-area-inset-top, 0px);
+      /* Do NOT pad body bottom - the tab bar handles it */
+    }
+    /* iOS Safari: push tab bar above the URL bar / home indicator */
+    @supports (padding-bottom: env(safe-area-inset-bottom)) {
+      /* React Navigation tab bar container */
+      #root > div > div > div > div:last-child {
+        padding-bottom: env(safe-area-inset-bottom) !important;
+      }
+    }
     /* Prevent tap highlight on mobile */
     * { -webkit-tap-highlight-color: transparent; }
     /* Ensure text doesn't get too small on mobile */
@@ -59,9 +73,15 @@
       html { font-size: 16px; }
     }
     /* Scrollable horizontal lists look better on touch */
-    [data-horizontal-scroll] {
+    /* Slim scrollbars site-wide - orange accent */
+    ::-webkit-scrollbar { height: 5px; width: 5px; }
+    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb { background: rgba(245,91,9,0.45); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(245,91,9,0.75); }
+    * { scrollbar-width: thin; scrollbar-color: rgba(245,91,9,0.45) rgba(255,255,255,0.04); }
+    /* Horizontal scroll containers */
+    [data-horizontal-scroll], div[style*="overflow-x"] {
       -webkit-overflow-scrolling: touch;
-      scrollbar-width: thin;
     }
   </style>
 </head>

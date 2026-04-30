@@ -65,6 +65,12 @@ export default function RegisterScreen() {
 
         {/* Form */}
         <View style={styles.form}>
+          <TouchableOpacity
+            onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Login')}
+            style={{ marginBottom: 16 }}
+          >
+            <Text style={{ color: C.ORANGE, fontSize: 14, fontWeight: '600' }}>← Back</Text>
+          </TouchableOpacity>
           <Text style={styles.heading}>Join the Community</Text>
           <Text style={styles.subheading}>Create your free account</Text>
 

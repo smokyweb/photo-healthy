@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Image, ScrollView,
   TouchableOpacity, TextInput, RefreshControl, Alert,
   useWindowDimensions, Platform, Linking,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { getChallenge, getSubmissions, getUserAccess, getChallengeEnrollment, enterChallenge } from '../services/api';
 import GradientButton from '../components/GradientButton';
@@ -26,7 +26,7 @@ function formatDate(dateStr?: string) {
 export default function ChallengeDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { challengeId } = route.params || {};
+  const { challengeId: _cid, id: _id } = route.params || {}; const challengeId = _cid || _id;
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
@@ -64,12 +64,23 @@ export default function ChallengeDetailScreen() {
     setRefreshing(false);
   };
 
-  useEffect(() => { if (challengeId) load(); }, [challengeId]);
+  useFocusEffect(useCallback(() => { if (challengeId) load(); }, [challengeId]));
 
   const onRefresh = () => { setRefreshing(true); load(); };
 
   const handleEnterChallenge = async () => {
-    if (!user) { navigation.navigate('Login'); return; }
+    if (!user) {
+      Alert.alert(
+        'Join Free to Enter',
+        'Create a free account to enter challenges, track your progress, and connect with the community!',
+        [
+          { text: 'Sign Up Free', onPress: () => navigation.navigate('Register') },
+          { text: 'Log In', onPress: () => navigation.navigate('Login') },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+      return;
+    }
     if (challenge?.is_pro_only && !isPro) {
       Alert.alert(
         'Pro Members Only',
@@ -93,7 +104,14 @@ export default function ChallengeDetailScreen() {
   };
 
   const handleSubmit = () => {
-    if (!user) { navigation.navigate('Login'); return; }
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please log in to submit photos.', [
+        { text: 'Log In', onPress: () => navigation.navigate('Login') },
+        { text: 'Sign Up', onPress: () => navigation.navigate('Register') },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+      return;
+    }
     // Block if monthly limit reached
     if (remainingSubmissions !== undefined && remainingSubmissions <= 0) {
       Alert.alert(
@@ -153,7 +171,7 @@ export default function ChallengeDetailScreen() {
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
 
-      {/* ── Hero: 2-col on desktop ── */}
+      {/* â”€â”€ Hero: 2-col on desktop â”€â”€ */}
       <View style={[styles.heroWrap, isDesktop && styles.heroWrapDesktop]}>
 
         {/* Cover image */}
@@ -185,21 +203,21 @@ export default function ChallengeDetailScreen() {
             <Text style={styles.description}>{challenge.description}</Text>
           )}
 
-          {/* 2×2 stats grid */}
+          {/* 2Ã—2 stats grid */}
           <View style={styles.statsGrid}>
             {[
-              { label: 'Category', val: challenge.category || '—' },
+              { label: 'Category', val: challenge.category || 'â€”' },
               {
                 label: 'Feeling',
-                val: challenge.feeling_category || challenge.feeling_tag || '—',
+                val: challenge.feeling_category || challenge.feeling_tag || 'â€”',
               },
               {
                 label: 'Movement',
-                val: challenge.movement_category || challenge.movement_tag || '—',
+                val: challenge.movement_category || challenge.movement_tag || 'â€”',
               },
               {
                 label: daysLeft !== null ? 'Days Left' : 'Status',
-                val: daysLeft !== null ? String(daysLeft) : (challenge.status || '—'),
+                val: daysLeft !== null ? String(daysLeft) : (challenge.status || 'â€”'),
               },
             ].map(({ label, val }) => (
               <View key={label} style={styles.statItem}>
@@ -228,7 +246,7 @@ export default function ChallengeDetailScreen() {
           {isActive && isEnrolled && !personalDeadlineExpired && (
             <>
               <View style={styles.daysLeftBadge}>
-                <Text style={styles.daysLeftText}>🗓 {personalDaysLeft} day{personalDaysLeft !== 1 ? 's' : ''} left to complete</Text>
+                <Text style={styles.daysLeftText}>📅 {personalDaysLeft} day{personalDaysLeft !== 1 ? 's' : ''} left to complete</Text>
               </View>
               <GradientButton
                 label={remainingSubmissions === 0 ? 'Monthly Limit Reached' : 'Submit Photos'}
@@ -277,7 +295,7 @@ export default function ChallengeDetailScreen() {
         </View>
       </View>
 
-      {/* ── Community Submissions ── */}
+      {/* â”€â”€ Community Submissions â”€â”€ */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>
@@ -297,7 +315,7 @@ export default function ChallengeDetailScreen() {
           />
           {subSearch.length > 0 && (
             <TouchableOpacity onPress={() => setSubSearch('')}>
-              <Text style={{ color: C.TEXT_MUTED, fontSize: 14 }}>✕</Text>
+              <Text style={{ color: C.TEXT_MUTED, fontSize: 14 }}>âœ•</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -312,7 +330,7 @@ export default function ChallengeDetailScreen() {
                   key={sub.id}
                   style={styles.subCard}
                   onPress={() =>
-                    navigation.navigate('SubmissionDetail', { submissionId: sub.id })
+                    navigation.navigate('SubmissionDetail' as never, { submissionId: sub.id, id: sub.id } as never)
                   }
                   activeOpacity={0.88}
                 >
@@ -331,7 +349,7 @@ export default function ChallengeDetailScreen() {
                       {sub.title || 'Untitled'}
                     </Text>
                     <View style={styles.subMeta}>
-                      <Text style={styles.subMetaText}>❤️ {sub.like_count || 0}</Text>
+                      <Text style={styles.subMetaText}>â¤ï¸ {sub.like_count || 0}</Text>
                       <Text style={styles.subMetaText}>💬 {sub.comment_count || 0}</Text>
                     </View>
                   </View>
@@ -353,7 +371,7 @@ export default function ChallengeDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: C.BG },
+  screen: { flex: 1, backgroundColor: C.BG },
   center: {
     flex: 1,
     alignItems: 'center',
@@ -427,7 +445,7 @@ const styles = StyleSheet.create({
     fontFamily: "'Inter', sans-serif",
   } as any,
 
-  // 2×2 Stats grid
+  // 2Ã—2 Stats grid
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

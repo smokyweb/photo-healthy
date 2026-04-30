@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Image, ScrollView,
   TouchableOpacity, TextInput, Alert, RefreshControl, useWindowDimensions,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { getSubmission, getComments, createComment, likeSubmission, deleteComment } from '../services/api';
 import GradientButton from '../components/GradientButton';
@@ -21,7 +21,7 @@ function initials(name: string) {
 export default function SubmissionDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { submissionId } = route.params || {};
+  const { submissionId: _sid, id: _id } = route.params || {}; const submissionId = _sid || _id;
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
@@ -63,13 +63,27 @@ export default function SubmissionDetailScreen() {
   useEffect(() => { load(); }, [submissionId]);
 
   const handleLike = async () => {
-    if (!user) { navigation.navigate('Login' as never); return; }
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please sign in to like submissions.', [
+        { text: 'Log In', onPress: () => navigation.navigate('Login' as never) },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+      return;
+    }
     try {
-      await likeSubmission(submissionId);
-      const delta = liked ? -1 : 1;
-      setLiked(v => !v);
-      setLikeCount(n => n + delta);
-    } catch {}
+      const result = await likeSubmission(submissionId);
+      // Use server response if available, otherwise optimistic update
+      if (result && result.like_count !== undefined) {
+        setLiked(result.liked);
+        setLikeCount(result.like_count);
+      } else {
+        const delta = liked ? -1 : 1;
+        setLiked(v => !v);
+        setLikeCount(n => n + delta);
+      }
+    } catch (e: any) {
+      console.error('Like failed:', e.message);
+    }
   };
 
   const handleComment = async () => {
@@ -78,7 +92,7 @@ export default function SubmissionDetailScreen() {
     if (!text) return;
     setPosting(true);
     try {
-      await createComment({ submission_id: submissionId, content: text });
+      await createComment({ submission_id: submissionId, text: text });
       setCommentText('');
       // Reload comments
       const cData = await getComments(submissionId);
@@ -89,19 +103,18 @@ export default function SubmissionDetailScreen() {
     setPosting(false);
   };
 
-  const handleDeleteComment = (commentId: number) => {
-    Alert.alert('Delete Comment', 'Remove this comment?', [
-      { text: 'Cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteComment(commentId);
-            setComments(cs => cs.filter(c => c.id !== commentId));
-          } catch {}
-        },
-      },
-    ]);
+  const handleDeleteComment = async (commentId: number) => {
+    // Use window.confirm on web for reliable cross-browser support
+    const confirmed = typeof window !== 'undefined' && window.confirm
+      ? window.confirm('Delete this comment?')
+      : true;
+    if (!confirmed) return;
+    try {
+      await deleteComment(commentId);
+      setComments(cs => cs.filter(c => c.id !== commentId));
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Could not delete comment.');
+    }
   };
 
   if (loading) return <LoadingSpinner fullScreen />;
@@ -111,13 +124,19 @@ export default function SubmissionDetailScreen() {
       <ScrollView style={styles.screen} contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
         <Text style={{ color: C.TEXT_MUTED, fontSize: 16, marginBottom: 16 }}>{error || 'Submission not found'}</Text>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={{ color: C.ORANGE }}>← Go Back</Text>
+          <Text style={{ color: C.ORANGE }}>â† Go Back</Text>
         </TouchableOpacity>
       </ScrollView>
     );
   }
 
-  const imgUrl = fullUrl(submission.photo1_url || submission.image_url || submission.photo_url);
+  // Collect all photos
+  const allPhotos = [
+    submission.photo1_url || submission.image_url || submission.photo_url,
+    submission.photo2_url,
+    submission.photo3_url,
+    submission.photo4_url,
+  ].filter(Boolean).map(u => fullUrl(u) || u);
   const dateStr = submission.created_at
     ? new Date(submission.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : '';
@@ -130,7 +149,7 @@ export default function SubmissionDetailScreen() {
     >
       {/* Back button */}
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-        <Text style={styles.backText}>← Back</Text>
+        <Text style={styles.backText}>â† Back</Text>
       </TouchableOpacity>
 
       <View style={[styles.layout, isDesktop && styles.layoutDesktop]}>
@@ -210,7 +229,7 @@ export default function SubmissionDetailScreen() {
                       </Text>
                     ) : null}
                   </View>
-                  <Text style={styles.commentText}>{c.content}</Text>
+                  <Text style={styles.commentText}>{c.text || c.content}</Text>
                 </View>
                 {user && (user.id === c.user_id || user.role === 'admin' || user.is_admin) && (
                   <TouchableOpacity onPress={() => handleDeleteComment(c.id)} style={styles.deleteBtn}>

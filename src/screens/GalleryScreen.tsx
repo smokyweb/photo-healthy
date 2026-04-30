@@ -1,9 +1,9 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Image,
   TouchableOpacity, ScrollView, RefreshControl, useWindowDimensions,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { getSubmissions } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
@@ -36,7 +36,7 @@ export default function GalleryScreen() {
     setRefreshing(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useFocusEffect(useCallback(() => { load(); }, []));
 
   if (loading) return <LoadingSpinner fullScreen />;
 
@@ -68,7 +68,7 @@ export default function GalleryScreen() {
                   <TouchableOpacity
                     key={item.id}
                     style={[styles.item, { width: `${100 / numCols - 0.5}%` as any }]}
-                    onPress={() => navigation.navigate('SubmissionDetail', { submissionId: item.id })}
+                    onPress={() => navigation.navigate('SubmissionDetail' as never, { submissionId: item.id, id: item.id } as never)}
                     activeOpacity={0.85}
                   >
                     {imgUri ? (

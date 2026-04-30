@@ -1,33 +1,39 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   View, Text, StyleSheet, ScrollView, useWindowDimensions, Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import GradientButton from '../components/GradientButton';
 import AppFooter from '../components/AppFooter';
-import { C, borderRadius } from '../theme';
+import { C } from '../theme';
 
+// ─── Design Tokens ───────────────────────────────────────────────────────────
+const MAX_WIDTH = 1100;
+const SECTION_PAD_V = 64;
+const SECTION_PAD_V_HERO = 80;
+const CONTENT_PAD_H = 24;
+const CARD_RADIUS = 16;
+
+// ─── Data ─────────────────────────────────────────────────────────────────────
 const VALUES = [
   {
-    icon: '🤝',
     color: C.TEAL,
     title: 'Community First',
     desc: "We believe in the power of community. Every member's journey matters and inspires others around them.",
   },
   {
-    icon: '🌱',
     color: C.ORANGE,
     title: 'Authentic Wellness',
     desc: 'Real progress over perfection. We celebrate honest, everyday wellness moments big and small.',
   },
   {
-    icon: '🎉',
     color: '#A78BFA',
     title: 'Celebrate Progress',
     desc: 'Every step forward is worth celebrating. We cheer each other on at every milestone along the way.',
   },
 ];
 
+// ─── Screen ───────────────────────────────────────────────────────────────────
 export default function AboutScreen() {
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
@@ -35,26 +41,25 @@ export default function AboutScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Hero */}
-      <View style={styles.heroWrapper}>
-        <View style={[styles.heroCard, isDesktop && styles.heroCardDesktop]}>
-          <Text style={styles.heroTitle}>Our Purpose</Text>
-          <Text style={styles.heroDesc}>
-            Photo Healthy is a vibrant community where wellness meets visual storytelling. We empower
-            individuals to document and share their healthy living journeys through photography,
-            building meaningful connections along the way.
-          </Text>
-          <GradientButton
-            label="Join Our Community"
-            onPress={() => navigation.navigate('Register' as never)}
-            style={styles.heroBtn}
-          />
-        </View>
+
+      {/* ── 1. Hero ── */}
+      <View style={styles.heroSection}>
+        <Text style={styles.heroTitle}>Our Purpose</Text>
+        <Text style={styles.heroDesc}>
+          Photo Healthy is a vibrant community where wellness meets visual storytelling. We empower
+          individuals to document and share their healthy living journeys through photography,
+          building meaningful connections along the way.
+        </Text>
+        <GradientButton
+          label="Join Our Community"
+          onPress={() => navigation.navigate('Register' as never)}
+          style={styles.heroBtn}
+        />
       </View>
 
-      {/* Philosophy */}
-      <View style={styles.section}>
-        <View style={[styles.philosophyInner, isDesktop && styles.philosophyInnerDesktop]}>
+      {/* ── 2. Philosophy ── */}
+      <View style={styles.philosophySection}>
+        <View style={styles.philosophyInner}>
           <Text style={styles.philosophyText}>
             "We believe that health is not just a destination — it's a daily practice. Every meal
             prepared with care, every morning run, every mindful breath is a step toward a better
@@ -69,13 +74,11 @@ export default function AboutScreen() {
         </View>
       </View>
 
-      {/* Our Story */}
-      <View style={styles.section}>
+      {/* ── 3. Our Story ── */}
+      <View style={styles.storySection}>
         <View style={[styles.storyRow, isDesktop && styles.storyRowDesktop]}>
-          {/* Image placeholder */}
           <View style={[styles.storyImage, isDesktop && styles.storyImageDesktop]} />
-          {/* Text */}
-          <View style={[styles.storyText, isDesktop && styles.storyTextDesktop]}>
+          <View style={[styles.storyTextCol, isDesktop && styles.storyTextColDesktop]}>
             <Text style={styles.storyTitle}>Our Story</Text>
             <Text style={styles.storyBody}>
               Founded in 2024, Photo Healthy grew from a small group of friends who wanted to hold
@@ -95,22 +98,23 @@ export default function AboutScreen() {
         </View>
       </View>
 
-      {/* Values */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Our Values</Text>
-        <View style={[styles.valuesGrid, isDesktop && styles.valuesGridDesktop]}>
-          {VALUES.map(v => (
-            <View key={v.title} style={[styles.valueCard, isDesktop && styles.valueCardDesktop]}>
-              <Text style={styles.valueIcon}>{v.icon}</Text>
-              <Text style={[styles.valueTitle, { color: v.color }]}>{v.title}</Text>
-              <Text style={styles.valueDesc}>{v.desc}</Text>
-            </View>
-          ))}
+      {/* ── 4. Values ── */}
+      <View style={styles.valuesSection}>
+        <View style={styles.sectionInner}>
+          <Text style={styles.sectionTitle}>Our Values</Text>
+          <View style={[styles.valuesGrid, isDesktop && styles.valuesGridDesktop]}>
+            {VALUES.map(v => (
+              <View key={v.title} style={[styles.valueCard, isDesktop && styles.valueCardDesktop]}>
+                <Text style={[styles.valueTitle, { color: v.color }]}>{v.title}</Text>
+                <Text style={styles.valueDesc}>{v.desc}</Text>
+              </View>
+            ))}
+          </View>
         </View>
       </View>
 
-      {/* CTA Banner */}
-      <View style={styles.ctaWrapper}>
+      {/* ── 5. CTA Banner ── */}
+      <View style={styles.ctaSection}>
         <View style={styles.ctaBanner as any}>
           <Text style={styles.ctaTitle}>Start Your Journey</Text>
           <Text style={styles.ctaSubtitle}>Join thousands of members already thriving</Text>
@@ -129,40 +133,48 @@ export default function AboutScreen() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   screen: { backgroundColor: C.BG },
   content: { paddingBottom: 0 },
 
-  heroWrapper: { paddingHorizontal: 24, paddingTop: 40, paddingBottom: 8 },
-  heroCard: {
+  // Hero — full-width dark card
+  heroSection: {
     backgroundColor: C.CARD_BG,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: C.CARD_BORDER,
-    padding: 32,
+    borderBottomWidth: 1,
+    borderBottomColor: C.CARD_BORDER,
+    paddingVertical: SECTION_PAD_V_HERO,
+    paddingHorizontal: CONTENT_PAD_H,
     alignItems: 'center',
   },
-  heroCardDesktop: { maxWidth: 800, alignSelf: 'center', width: '100%' },
   heroTitle: {
     color: C.TEXT,
-    fontSize: 36,
+    fontSize: 40,
     fontWeight: '900',
     textAlign: 'center',
     marginBottom: 16,
+    ...(Platform.OS === 'web' ? { fontFamily: "'Lexend', sans-serif" } : {}),
   },
   heroDesc: {
     color: C.TEXT_SECONDARY,
     fontSize: 16,
     lineHeight: 26,
     textAlign: 'center',
-    marginBottom: 20,
+    maxWidth: 680,
+    marginBottom: 28,
   },
   heroBtn: { alignSelf: 'center' },
 
-  section: { paddingHorizontal: 24, paddingVertical: 32 },
-
-  philosophyInner: { alignItems: 'center' },
-  philosophyInnerDesktop: { maxWidth: 800, alignSelf: 'center', width: '100%' },
+  // Philosophy — centered narrow block
+  philosophySection: {
+    paddingVertical: SECTION_PAD_V,
+    paddingHorizontal: CONTENT_PAD_H,
+  },
+  philosophyInner: {
+    maxWidth: 800,
+    alignSelf: 'center',
+    width: '100%',
+  },
   philosophyText: {
     color: C.TEXT_SECONDARY,
     fontSize: 16,
@@ -179,23 +191,38 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-  storyRow: { gap: 24 },
-  storyRowDesktop: { flexDirection: 'row', alignItems: 'flex-start' },
+  // Our Story — 2-col on desktop
+  storySection: {
+    paddingVertical: SECTION_PAD_V,
+    paddingHorizontal: CONTENT_PAD_H,
+  },
+  storyRow: {
+    maxWidth: MAX_WIDTH,
+    alignSelf: 'center',
+    width: '100%',
+    gap: 24,
+  },
+  storyRowDesktop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 48,
+  },
   storyImage: {
-    backgroundColor: C.CARD_BG,
-    borderRadius: 12,
-    height: 350,
+    backgroundColor: C.CARD_BG2,
+    borderRadius: CARD_RADIUS,
+    height: 400,
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
   },
-  storyImageDesktop: { flex: 1, minWidth: 300 },
-  storyText: {},
-  storyTextDesktop: { flex: 1 },
+  storyImageDesktop: { flex: 1 },
+  storyTextCol: {},
+  storyTextColDesktop: { flex: 1 },
   storyTitle: {
     color: C.TEXT,
     fontSize: 28,
     fontWeight: '800',
     marginBottom: 16,
+    ...(Platform.OS === 'web' ? { fontFamily: "'Lexend', sans-serif" } : {}),
   },
   storyBody: {
     color: C.TEXT_SECONDARY,
@@ -204,26 +231,43 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
+  // Values — 3-col grid
+  valuesSection: {
+    paddingVertical: SECTION_PAD_V,
+    paddingHorizontal: CONTENT_PAD_H,
+    backgroundColor: C.CARD_BG2,
+  },
+  sectionInner: {
+    maxWidth: MAX_WIDTH,
+    alignSelf: 'center',
+    width: '100%',
+  },
   sectionTitle: {
     color: C.TEXT,
     fontSize: 28,
     fontWeight: '800',
-    marginBottom: 24,
+    marginBottom: 32,
     textAlign: 'center',
+    ...(Platform.OS === 'web' ? { fontFamily: "'Lexend', sans-serif" } : {}),
   },
-  valuesGrid: { gap: 16 },
+  valuesGrid: { gap: 24 },
   valuesGridDesktop: { flexDirection: 'row' },
   valueCard: {
     backgroundColor: C.CARD_BG,
-    borderRadius: 12,
+    borderRadius: CARD_RADIUS,
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
-    padding: 24,
+    padding: 28,
     alignItems: 'center',
   },
   valueCardDesktop: { flex: 1 },
-  valueIcon: { fontSize: 36, marginBottom: 12 },
-  valueTitle: { fontSize: 17, fontWeight: '800', marginBottom: 8, textAlign: 'center' },
+  valueTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 10,
+    textAlign: 'center',
+    ...(Platform.OS === 'web' ? { fontFamily: "'Lexend', sans-serif" } : {}),
+  },
   valueDesc: {
     color: C.TEXT_SECONDARY,
     fontSize: 14,
@@ -231,10 +275,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  ctaWrapper: { paddingHorizontal: 24, paddingBottom: 40 },
+  // CTA Banner — orange gradient
+  ctaSection: {
+    paddingVertical: SECTION_PAD_V,
+    paddingHorizontal: CONTENT_PAD_H,
+  },
   ctaBanner: {
-    borderRadius: 16,
-    padding: 48,
+    borderRadius: CARD_RADIUS,
+    paddingVertical: SECTION_PAD_V,
+    paddingHorizontal: CONTENT_PAD_H,
     alignItems: 'center',
     backgroundColor: C.ORANGE,
     ...(Platform.OS === 'web'
@@ -247,6 +296,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     textAlign: 'center',
     marginBottom: 8,
+    ...(Platform.OS === 'web' ? { fontFamily: "'Lexend', sans-serif" } : {}),
   },
   ctaSubtitle: {
     color: 'rgba(255,255,255,0.88)',
