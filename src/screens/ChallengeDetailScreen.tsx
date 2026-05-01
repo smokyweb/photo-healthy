@@ -73,6 +73,7 @@ export default function ChallengeDetailScreen() {
   const onRefresh = () => { setRefreshing(true); load(); };
 
   const handleEnterChallenge = async () => {
+    if (enrolling) return;
     if (!user) {
       Alert.alert(
         'Join Free to Enter',
@@ -244,6 +245,8 @@ export default function ChallengeDetailScreen() {
               label={enrolling ? 'Joining...' : challenge?.is_pro_only && !isPro ? '⭐ Pro Members Only' : '🏁 Enter Challenge'}
               variant={challenge?.is_pro_only && !isPro ? 'outline' : 'primary'}
               onPress={handleEnterChallenge}
+              loading={enrolling}
+              disabled={enrolling}
               style={styles.actionBtn}
             />
           )}

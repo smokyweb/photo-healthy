@@ -1,3 +1,4 @@
+import { validateForm, sanitize } from '../utils/validation';
 ﻿import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
@@ -27,7 +28,13 @@ export default function ContactScreen() {
   };
 
   const handleSend = async () => {
-    if (!name.trim() || !email.trim() || !message.trim()) {
+    const contactErr = validateForm([
+      { value: name, rules: { required: true, maxLength: 100, label: 'Name' } },
+      { value: email, rules: { required: true, email: true, maxLength: 200, label: 'Email' } },
+      { value: message, rules: { required: true, maxLength: 2000, label: 'Message' } },
+    ]);
+    if (contactErr) { Alert.alert('Validation Error', contactErr); return; }
+    if (false && !name.trim() || !email.trim() || !message.trim()) {
       Alert.alert('Missing Fields', 'Please fill in your name, email, and message.');
       return;
     }
@@ -125,7 +132,7 @@ export default function ContactScreen() {
             label="Send Message"
             onPress={handleSend}
             loading={sending}
-            disabled={sent}
+            disabled={sending || sent}
             style={styles.sendBtn}
           />
         </View>

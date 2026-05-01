@@ -1,3 +1,4 @@
+import { validateForm, sanitize } from '../utils/validation';
 ﻿import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, Image, TouchableOpacity,
@@ -56,7 +57,12 @@ export default function SubmitPhotoScreen() {
 
   const handleSubmit = async () => {
     if (photos.length === 0) { setError('Please select at least one photo.'); return; }
-    if (!title.trim()) { setError('Please add a title.'); return; }
+    const submitErr = validateForm([
+      { value: title, rules: { required: true, maxLength: 150, label: 'Title' } },
+    ]);
+    if (submitErr) { setError(submitErr); return; }
+    if (description.length > 1000) { setError('Description must be under 1000 characters.'); return; }
+    if (miles && !/^\d*\.?\d+$/.test(miles)) { setError('Miles must be a number.'); return; }
     if (!agreed) { setError('Please agree to the community guidelines.'); return; }
     setError('');
     setLoading(true);
@@ -70,8 +76,8 @@ export default function SubmitPhotoScreen() {
       // Build submission payload with photo1_url through photo4_url
       const payload: any = {
         challenge_id: challengeId,
-        title: title.trim(),
-        description: description.trim(),
+        title: sanitize(title, 150),
+        description: sanitize(description, 1000),
         miles: miles ? parseFloat(miles) : undefined,
       };
       uploadedUrls.forEach((url, i) => {

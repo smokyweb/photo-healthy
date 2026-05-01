@@ -1,3 +1,4 @@
+import { validateForm, sanitize } from '../utils/validation';
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, Image, KeyboardAvoidingView,
@@ -35,7 +36,7 @@ export default function RegisterScreen() {
     setError('');
     setLoading(true);
     try {
-      await register(name.trim(), email.trim(), password);
+      await register(cleanName, cleanEmail, password);
       navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
     } catch (e: any) {
       setError(e.message || 'Registration failed. Please try again.');

@@ -164,6 +164,7 @@ export default function SubscriptionScreen() {
               label="Upgrade to Pro"
               onPress={handleSubscribe}
               loading={subscribing}
+              disabled={subscribing}
               size="lg"
               style={styles.upgradeBtn}
             />

@@ -124,6 +124,7 @@ export default function CartScreen() {
               label={loading ? 'Redirecting...' : 'Proceed to Checkout'}
               onPress={handleCheckout}
               loading={loading}
+              disabled={loading}
               style={{ marginTop: 4 } as any}
             />
             <TouchableOpacity

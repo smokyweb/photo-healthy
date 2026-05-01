@@ -1,3 +1,4 @@
+import { validateForm, sanitize } from '../utils/validation';
 ﻿import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -23,7 +24,12 @@ export default function EditProfileScreen() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateProfile({ name: name.trim(), bio: bio.trim() });
+      const profileErr = validateForm([
+      { value: name, rules: { required: true, maxLength: 100, label: 'Name' } },
+      { value: bio, rules: { maxLength: 500, label: 'Bio' } },
+    ]);
+    if (profileErr) { Alert.alert('Validation Error', profileErr); return; }
+    await updateProfile({ name: sanitize(name, 100), bio: sanitize(bio, 500) });
       await refreshUser();
       Alert.alert('Saved', 'Profile updated successfully!');
     } catch (e: any) {
@@ -76,7 +82,7 @@ export default function EditProfileScreen() {
           autoCapitalize="sentences"
         />
 
-        <GradientButton label="Save Changes" onPress={handleSave} loading={saving} style={{ marginBottom: 32 }} />
+        <GradientButton label="Save Changes" onPress={handleSave} loading={saving} disabled={saving} style={{ marginBottom: 32 }} />
 
         <Text style={styles.sectionTitle}>Change Password</Text>
         <Input label="Current Password" value={currentPw} onChangeText={setCurrentPw} secureTextEntry />
