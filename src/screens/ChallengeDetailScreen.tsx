@@ -64,7 +64,11 @@ export default function ChallengeDetailScreen() {
     setRefreshing(false);
   };
 
-  useFocusEffect(useCallback(() => { if (challengeId) load(); }, [challengeId]));
+  useFocusEffect(useCallback(() => {
+    if (challengeId) {
+      load().catch(e => console.error('[ChallengeDetail] load error:', e?.message));
+    }
+  }, [challengeId]));
 
   const onRefresh = () => { setRefreshing(true); load(); };
 

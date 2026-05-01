@@ -32,6 +32,7 @@ export default function ShopScreen() {
 
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cartAdded, setCartAdded] = useState<number | null>(null); // id of last added product
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
@@ -77,10 +78,12 @@ export default function ShopScreen() {
     addItem({
       id: product.id,
       name: product.title || product.name,
-      price: product.price,
-      image: fullUrl(product.image_url) || product.image_url,
+      price: Number(product.price),
+      image: fullUrl(product.image_url) || undefined,
     });
-    Alert.alert('Added!', `${product.title} added to cart.`);
+    // Visual feedback - highlight the button briefly
+    setCartAdded(product.id);
+    setTimeout(() => setCartAdded(null), 2000);
   };
 
   const numFeaturedCols = isDesktop ? 4 : isTablet ? 2 : 1;
@@ -298,6 +301,9 @@ const styles = StyleSheet.create({
   headerLeft: {},
   pageTitle: { color: C.TEXT, fontSize: 36, fontWeight: '900', marginBottom: 4 },
   pageSubtitle: { color: C.TEXT_SECONDARY, fontSize: 15 },
+  cartBtnActive: {
+    borderColor: C.ORANGE,
+  },
   cartBtn: {
     backgroundColor: C.ORANGE,
     borderRadius: borderRadius.pill,

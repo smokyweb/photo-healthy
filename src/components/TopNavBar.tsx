@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { C, borderRadius } from '../theme';
 
 const NAV_LINKS = [
@@ -20,6 +21,7 @@ const NAV_LINKS = [
 export default function TopNavBar() {
   const nav = useNavigation<any>();
   const { user, logout } = useAuth();
+  const { itemCount } = useCart();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -65,6 +67,14 @@ export default function TopNavBar() {
             </View>
           ) : (
             <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity onPress={() => handleNav('Cart')} style={{ position: 'relative', marginRight: 8, padding: 6 }}>
+                <Text style={{ fontSize: 20 }}>🛒</Text>
+                {itemCount > 0 && (
+                  <View style={{ position: 'absolute', top: 0, right: 0, backgroundColor: '#F55B09', borderRadius: 8, width: 16, height: 16, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{itemCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => handleNav('Login')} style={styles.loginBtn}>
                 <Text style={styles.loginBtnText}>Log In</Text>
               </TouchableOpacity>
@@ -74,12 +84,22 @@ export default function TopNavBar() {
             </View>
           )
         ) : (
-          // Hamburger for mobile
-          <TouchableOpacity onPress={() => setMenuOpen(true)} style={styles.hamburger}>
-            <View style={styles.hamLine} />
-            <View style={styles.hamLine} />
-            <View style={styles.hamLine} />
-          </TouchableOpacity>
+          // Mobile: cart icon + hamburger
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity onPress={() => handleNav('Cart')} style={{ position: 'relative', padding: 6 }}>
+              <Text style={{ fontSize: 22 }}>🛒</Text>
+              {itemCount > 0 && (
+                <View style={{ position: 'absolute', top: 2, right: 2, backgroundColor: '#F55B09', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 }}>
+                  <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{itemCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setMenuOpen(true)} style={styles.hamburger}>
+              <View style={styles.hamLine} />
+              <View style={styles.hamLine} />
+              <View style={styles.hamLine} />
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 

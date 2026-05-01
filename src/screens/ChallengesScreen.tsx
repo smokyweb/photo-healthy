@@ -17,12 +17,7 @@ const fullUrl = (u?: string) => u ? (u.startsWith('http') ? u : BASE_URL + u) : 
 
 // Categories built dynamically from data - see load()
 
-const STATUS_TABS = [
-  { key: 'all', label: 'All' },
-  { key: 'active', label: 'Active' },
-  { key: 'completed', label: 'Completed' },
-  { key: 'archived', label: 'Archived' },
-];
+// STATUS_TABS computed dynamically below
 
 export default function ChallengesScreen() {
   const navigation = useNavigation<any>();
@@ -61,9 +56,14 @@ export default function ChallengesScreen() {
     (list: any[], q: string, s: string, cat: string) => {
       let result = [...list];
       if (s !== 'all') {
-        if (s === 'completed') {
-          result = result.filter(c => c.status === 'ended' || c.status === 'completed');
+        if (s === 'active') {
+          // Active = currently running (is_active = 1, not explicitly archived)
+          result = result.filter(c => (c.is_active === 1 || c.is_active === true) && c.status !== 'archived');
+        } else if (s === 'completed') {
+          // Completed = ended (is_active = 0 or status = ended/completed), not archived
+          result = result.filter(c => (c.is_active === 0 || c.is_active === false || c.status === 'ended' || c.status === 'completed') && c.status !== 'archived');
         } else if (s === 'archived') {
+          // Archived = manually archived by admin
           result = result.filter(c => c.status === 'archived');
         } else {
           result = result.filter(c => c.status === s);
@@ -99,6 +99,19 @@ export default function ChallengesScreen() {
   }
   const rows = chunkArray(filtered, numCols);
 
+  // Tab counts using is_active field
+  const tabCounts = {
+    all: challenges.length,
+    active: challenges.filter(c => c.is_active === 1 || c.is_active === true).length,
+    completed: challenges.filter(c => (c.is_active === 0 || c.is_active === false) && c.status !== 'archived').length,
+    archived: challenges.filter(c => c.status === 'archived').length,
+  };
+  const STATUS_TABS = [
+    { key: 'all', label: 'All (' + tabCounts.all + ')' },
+    { key: 'active', label: 'Active (' + tabCounts.active + ')' },
+    { key: 'completed', label: 'Completed (' + tabCounts.completed + ')' },
+    { key: 'archived', label: 'Archived (' + tabCounts.archived + ')' },
+  ];
   return (
     <ScrollView
       style={styles.screen}

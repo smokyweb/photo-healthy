@@ -1,6 +1,5 @@
 /**
- * BottomNavBar - shows on outer stack screens (non-tab screens)
- * Gives users quick access to main sections without needing back button chains
+ * BottomNavBar - shows on outer stack screens (non-tab screens) on web desktop
  */
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
@@ -9,14 +8,14 @@ import { C } from '../theme';
 
 const NAV_ITEMS = [
   { label: 'Home', icon: '🏠', screen: 'Main', params: { screen: 'HomeTab' } },
-  { label: 'Challenges', icon: '📷', screen: 'Main', params: { screen: 'ChallengesTab' } },
-  { label: 'Shop', icon: '🛍️', screen: 'Shop' },
+  { label: 'Challenges', icon: '🏆', screen: 'Main', params: { screen: 'ChallengesTab' } },
+  { label: 'Shop', icon: '🛒', screen: 'Shop', params: undefined },
   { label: 'Profile', icon: '👤', screen: 'Main', params: { screen: 'ProfileTab' } },
 ];
 
 export default function BottomNavBar() {
   const nav = useNavigation<any>();
-  if (Platform.OS !== 'web') return null; // Only show on web
+  if (Platform.OS !== 'web') return null;
 
   return (
     <View style={styles.bar}>
@@ -45,6 +44,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   item: { flex: 1, alignItems: 'center', gap: 3 },
-  icon: { fontSize: 20 },
+  icon: { fontSize: 22 },
   label: { color: C.TEXT_MUTED, fontSize: 10, fontWeight: '600' },
 });

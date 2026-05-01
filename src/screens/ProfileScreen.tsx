@@ -260,7 +260,7 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 key={s.id}
                 style={styles.submissionThumb}
-                onPress={() => navigation.navigate('SubmissionDetail' as never, { submissionId: s.id } as never)}
+                onPress={() => navigation.navigate('SubmissionDetail' as never, { submissionId: s.id, id: s.id } as never)}
                 activeOpacity={0.85}
               >
                 {(s.image_url || s.photo_url) ? (

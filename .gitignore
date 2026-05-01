@@ -6,3 +6,23 @@ server.pid
 server.log
 *.bundle.js
 *.bundle.js.LICENSE.txt
+
+# Deploy scripts contain credentials - keep local only
+deploy-all.js
+deploy-server-only.js
+deploy-bundles*.js
+deploy-quick.js
+deploy-to-dist-web.js
+deploy-*.js
+restart-*.js
+fix-*.js
+write-*.js
+check-*.js
+find-*.js
+add-*.js
+patch-*.js
+test-*.js
+
+.env.deploy
+.env.local
+*.env.local

@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { Platform, View, ActivityIndicator } from 'react-native';
+import { Platform, View, Text, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -105,10 +105,10 @@ function MainTabs() {
         tabBarInactiveTintColor: C.MED,
       }}
     >
-      <Tab.Screen name="HomeTab" component={HomeScreen} options={{ title: 'Home', tabBarLabel: 'Home' }} />
-      <Tab.Screen name="ChallengesTab" component={ChallengesScreen} options={{ title: 'Challenges', tabBarLabel: 'Challenges' }} />
-      <Tab.Screen name="CommunityTab" component={CommunityScreen} options={{ title: 'Community', tabBarLabel: 'Community' }} />
-      <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: 'Profile', tabBarLabel: 'Profile' }} />
+      <Tab.Screen name="HomeTab" component={HomeScreen} options={{ title: 'Home', tabBarLabel: 'Home', tabBarIcon: ({ color, size }) => <Text style={{ fontSize: size || 20, color }}>🏠</Text> }} />
+      <Tab.Screen name="ChallengesTab" component={ChallengesScreen} options={{ title: 'Challenges', tabBarLabel: 'Challenges', tabBarIcon: ({ color, size }) => <Text style={{ fontSize: size || 20, color }}>🏆</Text> }} />
+      <Tab.Screen name="CommunityTab" component={CommunityScreen} options={{ title: 'Community', tabBarLabel: 'Community', tabBarIcon: ({ color, size }) => <Text style={{ fontSize: size || 20, color }}>👥</Text> }} />
+      <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: 'Profile', tabBarLabel: 'Profile', tabBarIcon: ({ color, size }) => <Text style={{ fontSize: size || 20, color }}>👤</Text> }} />
     </Tab.Navigator>
     </View>
   );

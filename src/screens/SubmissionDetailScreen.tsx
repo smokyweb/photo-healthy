@@ -21,7 +21,9 @@ function initials(name: string) {
 export default function SubmissionDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { submissionId: _sid, id: _id } = route.params || {}; const submissionId = _sid || _id;
+  const { submissionId: _sid, id: _id } = route.params || {};
+  // Guard against 'undefined' string from broken URL path params
+  const submissionId = (_sid && _sid !== 'undefined' ? _sid : null) || (_id && _id !== 'undefined' ? _id : null);
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
@@ -136,7 +138,7 @@ export default function SubmissionDetailScreen() {
     submission.photo2_url,
     submission.photo3_url,
     submission.photo4_url,
-  ].filter(Boolean).map(u => fullUrl(u) || u);
+  ].map(u => fullUrl(u as string)).filter(Boolean) as string[];
   const dateStr = submission.created_at
     ? new Date(submission.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : '';
@@ -155,8 +157,8 @@ export default function SubmissionDetailScreen() {
       <View style={[styles.layout, isDesktop && styles.layoutDesktop]}>
         {/* Photo */}
         <View style={[styles.imageSection, isDesktop && styles.imageSectionDesktop]}>
-          {imgUrl ? (
-            <Image source={{ uri: imgUrl }} style={styles.image} resizeMode="cover" />
+          {allPhotos.length > 0 ? (
+            <Image source={{ uri: allPhotos[0] }} style={styles.image} resizeMode="cover" />
           ) : (
             <View style={styles.imagePlaceholder}>
               <Text style={{ fontSize: 60 }}>{'\uD83D\uDCF7'}</Text>

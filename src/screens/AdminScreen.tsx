@@ -102,7 +102,9 @@ export default function AdminScreen() {
     return (
       <View style={[styles.screen, { justifyContent: 'center', alignItems: 'center', flex: 1 }]}>
         <Text style={{ fontSize: 48, marginBottom: 16 }}>🔒</Text>
-        <Text style={{ color: C.TEXT, fontSize: 20, fontWeight: '700', marginBottom: 8 }}>Access Denied</Text>
+        <Text style={{ color: C.TEXT, fontSize: 13, lineHeight: 20 }}>
+                        {[o.customer_name || o.user_name, addr.line1, addr.line2, [addr.city, addr.state].filter(Boolean).join(', ') + ' ' + (addr.postal_code||''), addr.country].filter(Boolean).join('\n')}
+                      </Text>
         <Text style={{ color: C.TEXT_MUTED, marginBottom: 24 }}>Admin access required.</Text>
         <GradientButton label="Go Back" onPress={() => navigation.goBack()} variant="outline" />
       </View>
@@ -639,7 +641,7 @@ export default function AdminScreen() {
             <View key={o.id} style={styles.listItem}>
               <View style={styles.listItemInfo}>
                 <Text style={styles.listItemTitle}>Order #{o.id}</Text>
-                <Text style={styles.listItemSub}>${Number(o.total ?? 0).toFixed(2)}</Text>
+                <Text style={styles.listItemSub}>{(o.total_amount && Number(o.total_amount) > 0) || (o.total && Number(o.total) > 0) ? ('$' + Number(o.total_amount || o.total).toFixed(2)) : '$0.00'}</Text>
                 <Text style={[styles.listItemMeta, { color: o.status === 'completed' ? C.TEAL : o.status === 'refunded' ? C.DANGER : C.TEXT_MUTED }]}>
                   {o.status} {o.created_at ? '- ' + new Date(o.created_at).toLocaleDateString() : ''}
                 </Text>
@@ -1290,213 +1292,227 @@ export default function AdminScreen() {
   };
 
   const renderOrders = () => {
+    const ORDER_STATUS_COLORS = {
+      pending: '#F59E0B',
+      paid: '#54DFB6',
+      processed: '#29B6E0',
+      fulfilled: '#4CAF50',
+      failed: '#ef4444',
+      refunded: '#9C27B0',
+    };
+    const STATUS_LABELS = {
+      pending: 'Pending Payment',
+      paid: 'Paid - Ready to Ship',
+      processed: 'Packed',
+      fulfilled: 'Shipped',
+      failed: 'Payment Failed',
+      refunded: 'Refunded',
+    };
+
+    const getItems = (o) => {
+      try { return JSON.parse(o.items_json || '[]'); } catch { return []; }
+    };
+
     const filtered = orders.filter(o => {
-      if (orderFilter !== 'All' && (o.status || '').toLowerCase() !== orderFilter.toLowerCase()) return false;
-      if (orderSearch.trim()) {
-        const q = orderSearch.toLowerCase();
-        return (o.user_name || '').toLowerCase().includes(q) || (o.user_email || '').toLowerCase().includes(q);
-      }
-      return true;
+      const statusMatch = orderFilter === 'All' || (o.status || '').toLowerCase() === orderFilter.toLowerCase();
+      const searchMatch = !orderSearch.trim() ||
+        (o.customer_name || o.user_name || '').toLowerCase().includes(orderSearch.toLowerCase()) ||
+        (o.customer_email || o.user_email || '').toLowerCase().includes(orderSearch.toLowerCase()) ||
+        String(o.id).includes(orderSearch);
+      return statusMatch && searchMatch;
     });
 
-    const statusColor = (status: string) => {
-      if (status === 'completed') return C.TEAL;
-      if (status === 'refunded') return C.DANGER;
-      return '#F59E0B';
-    };
-
-    const getItems = (o: any): any[] => {
-      if (!o.items_json) return [];
-      try {
-        const parsed = typeof o.items_json === 'string' ? JSON.parse(o.items_json) : o.items_json;
-        return Array.isArray(parsed) ? parsed : [];
-      } catch { return []; }
-    };
+    // Count by status
+    const counts = {};
+    orders.forEach(o => { counts[o.status] = (counts[o.status] || 0) + 1; });
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Orders ({filtered.length})</Text>
+        <Text style={styles.sectionTitle}>🚚 Orders ({filtered.length})</Text>
+
+        {/* Paid orders need action banner */}
+        {(counts['paid'] || 0) > 0 && (
+          <View style={{ backgroundColor: '#54DFB622', borderRadius: 10, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#54DFB6' }}>
+            <Text style={{ color: '#54DFB6', fontWeight: '700' }}>✅ {counts['paid']} order{counts['paid'] !== 1 ? 's' : ''} paid and waiting to ship!</Text>
+          </View>
+        )}
 
         {/* Search */}
         <View style={styles.searchBar}>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by customer name or email..."
+            placeholder="Search by name, email, or order #..."
             placeholderTextColor={C.TEXT_MUTED}
             value={orderSearch}
             onChangeText={setOrderSearch}
           />
-          {orderSearch ? <TouchableOpacity onPress={() => setOrderSearch('')}><Text style={{ color: C.TEXT_MUTED, paddingHorizontal: 8 }}>x</Text></TouchableOpacity> : null}
         </View>
 
-        {/* Filter tabs */}
-        <View style={{ flexDirection: 'row', gap: 6, marginBottom: 14 }}>
-          {(['All', 'Pending', 'Completed', 'Refunded'] as const).map(f => (
+        {/* Status filter chips */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={true} persistentScrollbar style={{ marginBottom: 12 }}>
+          {['All', 'Pending', 'Paid', 'Processed', 'Fulfilled', 'Refunded'].map(f => (
             <TouchableOpacity
               key={f}
-              style={[styles.chipOption, orderFilter === f && styles.chipOptionActive]}
+              style={[styles.chipOption, orderFilter === f && styles.chipOptionActive, { marginRight: 6 }]}
               onPress={() => setOrderFilter(f)}
             >
               <Text style={[styles.chipOptionText, orderFilter === f && styles.chipOptionTextActive]}>
-                {f} {f !== 'All' ? '(' + orders.filter(o => (o.status || '').toLowerCase() === f.toLowerCase()).length + ')' : ''}
+                {f} {f !== 'All' && counts[f.toLowerCase()] ? '(' + counts[f.toLowerCase()] + ')' : ''}
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
 
+        {/* Order list */}
         {filtered.map(o => {
-          const items = getItems(o);
           const isExpanded = expandedOrders.has(o.id);
+          const items = getItems(o);
+          const statusColor = ORDER_STATUS_COLORS[o.status] || '#F59E0B';
+          const statusLabel = STATUS_LABELS[o.status] || o.status;
+          const total = Number(o.total_amount || o.total || 0);
+          const customerName = o.customer_name || o.user_name || o.customer_email || 'Unknown';
+          const customerEmail = o.customer_email || o.user_email || '';
+
           return (
-            <View key={o.id} style={[styles.listItem, { flexDirection: 'column', gap: 0 }]}>
-              <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'flex-start' }} onPress={() => toggleOrderExpand(o.id)} activeOpacity={0.8}>
-                <View style={styles.listItemInfo}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <Text style={styles.listItemTitle}>Order #{o.id}</Text>
-                    <View style={[styles.statusBadge, { backgroundColor: statusColor(o.status || '') + '22', borderColor: statusColor(o.status || '') }]}>
-                      <Text style={[styles.statusBadgeText, { color: statusColor(o.status || '') }]}>{o.status || 'unknown'}</Text>
+            <TouchableOpacity
+              key={o.id}
+              style={[styles.listItem, { flexDirection: 'column', alignItems: 'stretch' }]}
+              onPress={() => toggleOrderExpand(o.id)}
+              activeOpacity={0.85}
+            >
+              {/* Order header */}
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                    <Text style={[styles.listItemTitle]}>Order #{o.id}</Text>
+                    <View style={{ backgroundColor: statusColor + '22', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1, borderColor: statusColor }}>
+                      <Text style={{ color: statusColor, fontSize: 11, fontWeight: '700' }}>{statusLabel}</Text>
                     </View>
+                    {total > 0 && (
+                      <Text style={{ color: '#54DFB6', fontWeight: '800', fontSize: 13 }}>{'$' + total.toFixed(2)}</Text>
+                    )}
                   </View>
-                  <Text style={styles.listItemSub}>{o.user_name || 'Unknown'}{o.user_email ? ' - ' + o.user_email : ''}</Text>
-                  <View style={{ flexDirection: 'row', gap: 12, marginTop: 2 }}>
-                    <Text style={[styles.listItemMeta, { color: C.TEAL, fontWeight: '700' }]}>${Number(o.total ?? 0).toFixed(2)}</Text>
+                  <Text style={styles.listItemSub}>{customerName}</Text>
+                  {customerEmail && customerName !== customerEmail && (
+                    <Text style={styles.listItemMeta}>{customerEmail}</Text>
+                  )}
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 2 }}>
                     <Text style={styles.listItemMeta}>{items.length} item{items.length !== 1 ? 's' : ''}</Text>
                     <Text style={styles.listItemMeta}>{o.created_at ? new Date(o.created_at).toLocaleDateString() : ''}</Text>
+                    {o.tracking_number && (
+                      <Text style={[styles.listItemMeta, { color: '#54DFB6' }]}>🚚 {o.tracking_number}</Text>
+                    )}
                   </View>
                 </View>
-                <Text style={{ color: C.TEXT_MUTED, fontSize: 18, marginLeft: 8 }}>{isExpanded ? 'v' : '>'}</Text>
-              </TouchableOpacity>
+                <Text style={{ color: isExpanded ? '#F55B09' : '#8B9AB0', fontSize: 20, marginLeft: 8 }}>
+                  {isExpanded ? '▼' : '▶'}
+                </Text>
+              </View>
 
-              {isExpanded && items.length > 0 && (
-                <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.DIVIDER }}>
-                  <Text style={{ color: C.TEXT_MUTED, fontSize: 12, marginBottom: 6 }}>Items purchased:</Text>
-                  {items.map((item: any, idx: number) => (
-                    <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
-                      <Text style={{ color: C.TEXT_SECONDARY, fontSize: 13, flex: 1 }}>{item.name || item.product_name || 'Item ' + (idx + 1)}</Text>
-                      <Text style={{ color: C.TEAL, fontSize: 13, fontWeight: '600' }}>${Number(item.price || 0).toFixed(2)}</Text>
+              {/* Expanded detail */}
+              {isExpanded && (
+                <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: '#ffffff10', paddingTop: 12 }}>
+
+                  {/* Items */}
+                  <Text style={{ color: '#8B9AB0', fontSize: 12, marginBottom: 8 }}>📦 Items Ordered:</Text>
+                  {items.length === 0 ? (
+                    <Text style={{ color: '#8B9AB0', fontSize: 13, fontStyle: 'italic' }}>No item details</Text>
+                  ) : items.map((item, i) => (
+                    <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4, borderBottomWidth: i < items.length - 1 ? 1 : 0, borderBottomColor: '#ffffff08' }}>
+                      <Text style={{ color: '#EAECEF', flex: 1, fontSize: 14 }}>
+                        {item.title || item.name || item.product_name || ('Item ' + (i + 1))}
+                        {item.quantity > 1 ? ' x' + item.quantity : ''}
+                      </Text>
+                      <Text style={{ color: '#54DFB6', fontWeight: '700', fontSize: 14 }}>
+                        {'$' + Number((item.price || 0) * (item.quantity || 1)).toFixed(2)}
+                      </Text>
                     </View>
                   ))}
-                </View>
-              )}
-              {isExpanded && items.length === 0 && (
-                <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: C.DIVIDER }}>
-                  <Text style={{ color: C.TEXT_MUTED, fontSize: 12 }}>No item details available.</Text>
-                </View>
-              )}
 
-              {/* Fulfillment actions - only shown when expanded */}
-              {isExpanded && (
-                <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.DIVIDER }}>
-                  <Text style={{ color: C.TEXT, fontWeight: '700', marginBottom: 8, fontSize: 13 }}>
-                    ðŸ“‹ Order Actions
-                  </Text>
-
-                  {/* Status workflow */}
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-                    {(o.status === 'pending') && (
-                      <GradientButton
-                        label="âœ… Mark Paid"
-                        variant="teal"
-                        size="sm"
-                        onPress={async () => {
-                          try {
-                            await adminMarkOrderPaid(o.id);
-                            const d = await adminGetOrders();
-                            setOrders(d?.orders || []);
-                            Alert.alert('Updated', 'Order marked as paid.');
-                          } catch (e: any) { Alert.alert('Error', e.message); }
-                        }}
-                      />
-                    )}
-                    {(o.status === 'paid' || o.status === 'pending') && (
-                      <GradientButton
-                        label="ðŸ“¦ Mark Packed"
-                        variant="outline"
-                        size="sm"
-                        onPress={async () => {
-                          try {
-                            await adminProcessOrder(o.id);
-                            const d = await adminGetOrders();
-                            setOrders(d?.orders || []);
-                            Alert.alert('Updated', 'Order marked as packed/ready to ship.');
-                          } catch (e: any) { Alert.alert('Error', e.message); }
-                        }}
-                      />
-                    )}
-                  </View>
-
-                  {/* Tracking number input + Ship button */}
-                  {(o.status === 'paid' || o.status === 'processed' || o.status === 'fulfilled') && (
-                    <View>
-                      <Text style={{ color: C.TEXT_MUTED, fontSize: 12, marginBottom: 6 }}>
-                        ðŸšš Tracking Number {o.tracking_number ? '(current: ' + o.tracking_number + ')' : ''}
-                      </Text>
-                      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-                        <TextInput
-                          style={[styles.input, { flex: 1 }]}
-                          placeholder={o.tracking_number || 'e.g. 1Z999AA10123456784'}
-                          placeholderTextColor={C.TEXT_MUTED}
-                          value={trackingInput[o.id] ?? ''}
-                          onChangeText={v => setTrackingInput(t => ({ ...t, [o.id]: v }))}
-                        />
-                      </View>
-                      <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-                        {o.status !== 'fulfilled' && (
-                          <GradientButton
-                            label="ðŸšš Mark Shipped"
-                            variant="primary"
-                            size="sm"
-                            onPress={async () => {
-                              try {
-                                const tracking = trackingInput[o.id] || '';
-                                await adminFulfillOrder(o.id, tracking);
-                                const d = await adminGetOrders();
-                                setOrders(d?.orders || []);
-                                Alert.alert('Shipped!', tracking ? 'Order marked as shipped. Tracking: ' + tracking : 'Order marked as shipped.');
-                              } catch (e: any) { Alert.alert('Error', e.message); }
-                            }}
-                          />
-                        )}
-                        {o.status === 'fulfilled' && trackingInput[o.id] && (
-                          <GradientButton
-                            label="Update Tracking"
-                            variant="outline"
-                            size="sm"
-                            onPress={async () => {
-                              try {
-                                await adminUpdateTracking(o.id, trackingInput[o.id]);
-                                const d = await adminGetOrders();
-                                setOrders(d?.orders || []);
-                                Alert.alert('Updated', 'Tracking number updated.');
-                              } catch (e: any) { Alert.alert('Error', e.message); }
-                            }}
-                          />
-                        )}
-                      </View>
-                    </View>
-                  )}
+                  {/* Shipping address */}
+                  {o.shipping_address_json && (() => {
+                    try {
+                      const addr = typeof o.shipping_address_json === 'string' ? JSON.parse(o.shipping_address_json) : o.shipping_address_json;
+                      return (
+                        <View style={{ marginTop: 12, backgroundColor: '#2C2F40', borderRadius: 8, padding: 10 }}>
+                          <Text style={{ color: '#8B9AB0', fontSize: 11, marginBottom: 4 }}>🚚 SHIP TO:</Text>
+                          {[customerName, addr.line1, addr.line2, [addr.city, addr.state].filter(Boolean).join(', ') + (addr.postal_code ? ' ' + addr.postal_code : ''), addr.country].filter(Boolean).map((line, i) => (
+                            <Text key={i} style={{ color: '#EAECEF', fontSize: 13 }}>{line}</Text>
+                          ))}
+                        </View>
+                      );
+                    } catch { return null; }
+                  })()}
 
                   {/* Stripe link */}
                   {o.stripe_payment_url && (
-                    <TouchableOpacity
-                      style={{ marginTop: 10 }}
-                      onPress={() => { if (typeof window !== 'undefined') (window as any).open(o.stripe_payment_url, '_blank'); }}
-                    >
-                      <Text style={{ color: C.TEAL, fontSize: 13 }}>ðŸ”— View payment in Stripe Dashboard</Text>
+                    <TouchableOpacity style={{ marginTop: 10 }} onPress={() => { if (typeof window !== 'undefined') (window as any).open(o.stripe_payment_url, '_blank'); }}>
+                      <Text style={{ color: '#54DFB6', fontSize: 13 }}>🔗 View in Stripe Dashboard</Text>
                     </TouchableOpacity>
                   )}
 
+                  {/* Order actions */}
+                  <Text style={{ color: '#EAECEF', fontWeight: '700', fontSize: 13, marginTop: 16, marginBottom: 8 }}>📋 Order Actions</Text>
+
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                    {o.status === 'pending' && (
+                      <GradientButton label="✅ Mark Paid" variant="teal" size="sm" onPress={async () => {
+                        try { await adminMarkOrderPaid(o.id); const d = await adminGetOrders(); setOrders(d?.orders || []); Alert.alert('Updated', 'Marked as paid.'); } catch (e: any) { Alert.alert('Error', e.message); }
+                      }} />
+                    )}
+                    {(o.status === 'paid' || o.status === 'pending') && (
+                      <GradientButton label="📦 Mark Packed" variant="outline" size="sm" onPress={async () => {
+                        try { await adminProcessOrder(o.id); const d = await adminGetOrders(); setOrders(d?.orders || []); Alert.alert('Updated', 'Marked as packed.'); } catch (e: any) { Alert.alert('Error', e.message); }
+                      }} />
+                    )}
+                  </View>
+
+                  {/* Tracking + ship */}
+                  <Text style={{ color: '#8B9AB0', fontSize: 12, marginBottom: 6 }}>
+                    📍 Tracking Number {o.tracking_number ? '(current: ' + o.tracking_number + ')' : '(enter to mark shipped)'}
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                    <TextInput
+                      style={[styles.input, { flex: 1 }]}
+                      placeholder={o.tracking_number || 'e.g. 1Z999AA10123456784'}
+                      placeholderTextColor={C.TEXT_MUTED}
+                      value={trackingInput[o.id] ?? ''}
+                      onChangeText={v => setTrackingInput(t => ({ ...t, [o.id]: v }))}
+                    />
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                    {o.status !== 'fulfilled' && (
+                      <GradientButton label="🚚 Mark Shipped" variant="primary" size="sm" onPress={async () => {
+                        try {
+                          const tracking = trackingInput[o.id] || '';
+                          await adminFulfillOrder(o.id, tracking);
+                          const d = await adminGetOrders();
+                          setOrders(d?.orders || []);
+                          Alert.alert('Shipped!', tracking ? 'Tracking: ' + tracking : 'Order marked as shipped.');
+                        } catch (e: any) { Alert.alert('Error', e.message); }
+                      }} />
+                    )}
+                    {trackingInput[o.id] && o.status === 'fulfilled' && (
+                      <GradientButton label="📍 Update Tracking" variant="outline" size="sm" onPress={async () => {
+                        try { await adminUpdateTracking(o.id, trackingInput[o.id]); const d = await adminGetOrders(); setOrders(d?.orders || []); Alert.alert('Updated', 'Tracking updated.'); } catch (e: any) { Alert.alert('Error', e.message); }
+                      }} />
+                    )}
+                  </View>
+
                   {o.fulfilled_at && (
-                    <Text style={{ color: C.TEXT_MUTED, fontSize: 11, marginTop: 8 }}>
+                    <Text style={{ color: '#8B9AB0', fontSize: 11, marginTop: 8 }}>
                       Fulfilled: {new Date(o.fulfilled_at).toLocaleString()}
                     </Text>
                   )}
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
           );
         })}
-        {filtered.length === 0 && <Text style={styles.emptyText}>No orders found.</Text>}
+
+        {filtered.length === 0 && (
+          <Text style={styles.emptyText}>{orders.length === 0 ? 'No orders yet.' : 'No orders match your search.'}</Text>
+        )}
       </View>
     );
   };
@@ -1842,4 +1858,4 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: { fontSize: 11, fontWeight: '700' },
   priceRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-});
+})

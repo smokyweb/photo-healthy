@@ -33,7 +33,7 @@ node C:\Temp\deploy-quick.js
 // C:\Temp\deploy-bundles.js
 const SftpClient = require('C:/Users/kevin/AppData/Roaming/npm/node_modules/ssh2-sftp-client');
 const fs = require('fs');
-const CONFIG = { host: 'server.bluestoneapps.com', port: 22004, username: 'photobai', password: '5J=G0)PKG%ybVK%d' };
+const CONFIG = { host: 'server.bluestoneapps.com', port: 22004, username: 'photobai', password: '[SFTP_PASSWORD]' };
 const REMOTE = '/home3/photobai/public_html';
 async function main() {
   const s = new SftpClient();
