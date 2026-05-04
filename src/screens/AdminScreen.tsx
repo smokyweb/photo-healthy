@@ -94,7 +94,7 @@ export default function AdminScreen() {
   const [productGalleryPreviews, setProductGalleryPreviews] = useState<string[]>([]);
   const [uploadingProductImg, setUploadingProductImg] = useState(false);
   const [productForm, setProductForm] = useState({
-    name: '', description: '', price: '', is_pro_only: false, featured: false, emoji: '', image_url: '',
+    name: '', description: '', price: '', is_pro_only: false, featured: false, emoji: '', image_url: '', sizes: '',
   });
 
   // Admin access check
@@ -1098,6 +1098,7 @@ export default function AdminScreen() {
             <Input label="Description" value={productForm.description} onChangeText={v => setProductForm(f => ({ ...f, description: v }))} multiline numberOfLines={3} />
             <Input label="Price *" value={productForm.price} onChangeText={v => setProductForm(f => ({ ...f, price: v }))} keyboardType="numeric" placeholder="29.99" />
             <Input label="Emoji (optional)" value={productForm.emoji} onChangeText={v => setProductForm(f => ({ ...f, emoji: v }))} placeholder="e.g. ðŸ“·" />
+            <Input label="Sizes (comma-separated, e.g. S,M,L,XL)" value={productForm.sizes || ''} onChangeText={v => setProductForm(f => ({ ...f, sizes: v }))} placeholder="S, M, L, XL, XXL" />
 
             {/* Featured Image */}
             <Text style={styles.fieldGroupLabel}>ðŸ–¼ Featured Image</Text>
@@ -1219,6 +1220,7 @@ export default function AdminScreen() {
               </View>
             ) : null}
             <Input label="Or paste image URL" value={productEditForm.image_url || ''} onChangeText={v => setProductEditForm((f: any) => ({ ...f, image_url: v }))} placeholder="https://..." />
+            <Input label="Sizes (comma-separated, e.g. S,M,L,XL)" value={productEditForm.sizes || ''} onChangeText={v => setProductEditForm((f: any) => ({ ...f, sizes: v }))} placeholder="S, M, L, XL, XXL" />
             <View style={styles.switchRow}>
               <Text style={styles.switchLabel}>Featured</Text>
               <Switch value={!!productEditForm.featured} onValueChange={v => setProductEditForm((f: any) => ({ ...f, featured: v }))} trackColor={{ true: C.TEAL }} />

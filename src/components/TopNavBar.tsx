@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Platform, useWindowDimensions,
-  Modal, ScrollView,
+  ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -69,6 +69,7 @@ export default function TopNavBar() {
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity onPress={() => handleNav('Cart')} style={{ position: 'relative', marginRight: 8, padding: 6 }}>
                 <Text style={{ fontSize: 20 }}>🛒</Text>
+              <Text style={{ color: C.TEXT, fontSize: 12, fontWeight: '700', marginTop: 2 }}>Cart</Text>
                 {itemCount > 0 && (
                   <View style={{ position: 'absolute', top: 0, right: 0, backgroundColor: '#F55B09', borderRadius: 8, width: 16, height: 16, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{itemCount}</Text>
@@ -87,7 +88,8 @@ export default function TopNavBar() {
           // Mobile: cart icon + hamburger
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <TouchableOpacity onPress={() => handleNav('Cart')} style={{ position: 'relative', padding: 6 }}>
-              <Text style={{ fontSize: 22 }}>🛒</Text>
+              <Text style={{ fontSize: 20 }}>🛒</Text>
+            <Text style={{ color: C.TEXT, fontSize: 11, fontWeight: '700' }}>Cart</Text>
               {itemCount > 0 && (
                 <View style={{ position: 'absolute', top: 2, right: 2, backgroundColor: '#F55B09', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 }}>
                   <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{itemCount}</Text>
@@ -103,10 +105,14 @@ export default function TopNavBar() {
         )}
       </View>
 
-      {/* Mobile menu modal */}
-      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
-        <TouchableOpacity style={styles.menuBackdrop} activeOpacity={1} onPress={() => setMenuOpen(false)}>
+      {/* Mobile drawer overlay */}
+      {menuOpen && (
+        <View style={styles.menuBackdrop} pointerEvents="box-none">
+          <TouchableOpacity style={styles.backdropTap} activeOpacity={1} onPress={() => setMenuOpen(false)} />
           <View style={styles.menuPanel}>
+            <TouchableOpacity style={styles.menuClose} onPress={() => setMenuOpen(false)}>
+              <Text style={{ color: C.TEXT, fontSize: 22, fontWeight: '700' }}>✕</Text>
+            </TouchableOpacity>
             <ScrollView>
               {NAV_LINKS.map(l => (
                 <TouchableOpacity key={l.label} style={styles.menuItem} onPress={() => handleNav(l.screen, l.params)}>
@@ -140,8 +146,8 @@ export default function TopNavBar() {
               )}
             </ScrollView>
           </View>
-        </TouchableOpacity>
-      </Modal>
+        </View>
+      )}
     </View>
   );
 }
@@ -157,7 +163,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     // Respect iOS notch/status bar
     paddingTop: Platform.OS === 'web' ? 12 : 44,
-    zIndex: 100,
+    zIndex: 50,
     // Do NOT use position:fixed - let it flow naturally with the page
   } as any,
   logoWrap: { marginRight: 24 },
@@ -175,8 +181,10 @@ const styles = StyleSheet.create({
   adminBtnText: { color: C.TEAL, fontSize: 13, fontWeight: '700' },
   hamburger: { padding: 8, gap: 5, justifyContent: 'center' },
   hamLine: { width: 22, height: 2, backgroundColor: C.TEXT, borderRadius: 2 },
-  menuBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' },
-  menuPanel: { position: 'absolute', top: 0, right: 0, bottom: 0, width: 280, backgroundColor: C.CARD_BG, paddingTop: 60 },
+  menuBackdrop: { position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, backgroundColor: 'transparent' },
+  backdropTap: { position: 'absolute' as any, top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)' },
+  menuPanel: { position: 'absolute' as any, top: 0, right: 0, bottom: 0, width: 280, backgroundColor: C.CARD_BG, paddingTop: 50, zIndex: 10001, shadowColor: '#000', shadowOffset: { width: -4, height: 0 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 20 },
+  menuClose: { paddingHorizontal: 20, paddingVertical: 14, alignItems: 'flex-end' },
   menuItem: { paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: C.CARD_BORDER },
   menuItemText: { color: C.TEXT, fontSize: 16, fontWeight: '500' },
   menuDivider: { height: 1, backgroundColor: C.CARD_BORDER, marginVertical: 8 },

@@ -44,6 +44,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   item: { flex: 1, alignItems: 'center', gap: 3 },
-  icon: { fontSize: 22 },
+  icon: { fontSize: 22, fontFamily: 'System' },
   label: { color: C.TEXT_MUTED, fontSize: 10, fontWeight: '600' },
 });

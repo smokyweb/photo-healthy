@@ -32,7 +32,8 @@ export default function ShopScreen() {
 
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [cartAdded, setCartAdded] = useState<number | null>(null); // id of last added product
+  const [cartAdded, setCartAdded] = useState<number | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
@@ -83,7 +84,8 @@ export default function ShopScreen() {
     });
     // Visual feedback - highlight the button briefly
     setCartAdded(product.id);
-    setTimeout(() => setCartAdded(null), 2000);
+    setToastMsg((product.title || product.name || 'Item').slice(0, 28));
+    setTimeout(() => { setCartAdded(null); setToastMsg(null); }, 2500);
   };
 
   const numFeaturedCols = isDesktop ? 4 : isTablet ? 2 : 1;
@@ -103,6 +105,13 @@ export default function ShopScreen() {
         />
       }
     >
+      {toastMsg !== null && (
+        <View style={{ position: 'fixed' as any, top: 80, left: 0, right: 0, alignItems: 'center', zIndex: 9999, pointerEvents: 'none' as any }}>
+          <View style={{ backgroundColor: '#16a34a', borderRadius: 28, paddingVertical: 13, paddingHorizontal: 28, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 12 }}>
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>✓ Added: {toastMsg}</Text>
+          </View>
+        </View>
+      )}
       {/* Page Header */}
       <View style={styles.pageHeader}>
         <View style={styles.headerRow}>
@@ -205,7 +214,7 @@ export default function ShopScreen() {
                       <Text style={styles.productName} numberOfLines={2}>{item.title}</Text>
                       <Text style={styles.price}>${Number(item.price).toFixed(2)}</Text>
                       <GradientButton
-                        label={isPro ? '⭐ Pro Only' : 'Add to Cart'}
+                        label={isPro ? '⭐ Pro Only' : cartAdded === item.id ? '✓ Added!' : '🛒 Add to Cart'}
                         onPress={() => handleAddToCart(item)}
                         disabled={isPro}
                         style={styles.addBtn}
@@ -262,7 +271,7 @@ export default function ShopScreen() {
                       <Text style={styles.productName} numberOfLines={2}>{item.title}</Text>
                       <Text style={styles.price}>${Number(item.price).toFixed(2)}</Text>
                       <GradientButton
-                        label={isPro ? '⭐ Pro Only' : 'Add to Cart'}
+                        label={isPro ? '⭐ Pro Only' : cartAdded === item.id ? '✓ Added!' : '🛒 Add to Cart'}
                         onPress={() => handleAddToCart(item)}
                         disabled={isPro}
                         variant="outline"

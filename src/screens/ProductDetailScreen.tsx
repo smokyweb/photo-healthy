@@ -27,6 +27,7 @@ export default function ProductDetailScreen() {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [added, setAdded] = useState(false);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
 
   useEffect(() => {
@@ -152,6 +153,33 @@ export default function ProductDetailScreen() {
             <Text style={styles.qtyTotal}>= ${(price * qty).toFixed(2)}</Text>
           </View>
 
+          {/* Size picker */}
+          {product.sizes && product.sizes.trim() !== '' && (
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ color: '#8B9AB0', fontSize: 13, fontWeight: '600', marginBottom: 8 }}>Size {selectedSize ? '— ' + selectedSize : '(select one)'}</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {product.sizes.split(',').map((sz: string) => {
+                  const s = sz.trim();
+                  const active = selectedSize === s;
+                  return (
+                    <TouchableOpacity
+                      key={s}
+                      onPress={() => setSelectedSize(active ? null : s)}
+                      style={{
+                        paddingHorizontal: 16, paddingVertical: 8,
+                        borderRadius: 8,
+                        borderWidth: 2,
+                        borderColor: active ? '#F55B09' : 'rgba(255,255,255,0.15)',
+                        backgroundColor: active ? 'rgba(245,91,9,0.15)' : 'transparent',
+                      }}
+                    >
+                      <Text style={{ color: active ? '#F55B09' : '#EAECEF', fontWeight: active ? '700' : '500', fontSize: 14 }}>{s}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          )}
           <GradientButton
             label={added ? '✓ Added to Cart!' : 'Add to Cart'}
             variant={added ? 'teal' : 'primary'}

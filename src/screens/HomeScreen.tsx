@@ -888,8 +888,8 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
   },
-  featuredImgWrap: { position: 'relative' },
-  featuredImg: { width: '100%', aspectRatio: 16 / 9 },
+  featuredImgWrap: { position: 'relative', maxWidth: 480 },
+  featuredImg: { width: '100%', height: 220 },
   featuredInfo: { padding: 16 },
 
   // How It Works

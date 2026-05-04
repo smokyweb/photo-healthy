@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <!-- iOS Safari: respect safe area so nav doesn't overlap status bar -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Photo Healthy — Capture, Share, Thrive</title>
+  <title>Photo Healthy â€” Capture, Share, Thrive</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -70,7 +70,7 @@
     * { -webkit-tap-highlight-color: transparent; }
     /* Ensure text doesn't get too small on mobile */
     @media (max-width: 480px) {
-      html { font-size: 16px; }
+      html { font-size: 17px; }
     }
     /* Scrollable horizontal lists look better on touch */
     /* Slim scrollbars site-wide - orange accent */
@@ -82,6 +82,14 @@
     /* Horizontal scroll containers */
     [data-horizontal-scroll], div[style*="overflow-x"] {
       -webkit-overflow-scrolling: touch;
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=block" rel="stylesheet">
+  <style>
+    /* Force emoji rendering with system emoji font stack */
+    * { font-variant-emoji: emoji; }
+    .emoji-text {
+      font-family: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'Android Emoji', sans-serif !important;
     }
   </style>
 </head>

@@ -21,6 +21,7 @@ import RegisterScreen from './src/screens/RegisterScreen';
 import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
 import ChallengeDetailScreen from './src/screens/ChallengeDetailScreen';
 import SubmitPhotoScreen from './src/screens/SubmitPhotoScreen';
+import UserSubmissionsScreen from './src/screens/UserSubmissionsScreen';
 import SubmissionDetailScreen from './src/screens/SubmissionDetailScreen';
 import ShopScreen from './src/screens/ShopScreen';
 import ProductDetailScreen from './src/screens/ProductDetailScreen';
@@ -60,6 +61,7 @@ const linking = {
       ChallengeDetail: 'challenge/:challengeId',
       SubmitPhoto: 'challenge/:challengeId/submit',
       SubmissionDetail: 'submission/:submissionId',
+  UserSubmissions: 'user/:userId/submissions',
       Shop: 'shop',
       ProductDetail: 'shop/product/:id',
       Cart: 'cart',
@@ -85,9 +87,10 @@ function MainTabs() {
   const isDesktop = Platform.OS === 'web' && width >= 768;
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, flexDirection: 'column' }}>
       {Platform.OS === 'web' && <TopNavBar />}
-    <Tab.Navigator
+      <View style={{ flex: 1 }}>
+        <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarStyle: isDesktop
@@ -110,6 +113,7 @@ function MainTabs() {
       <Tab.Screen name="CommunityTab" component={CommunityScreen} options={{ title: 'Community', tabBarLabel: 'Community', tabBarIcon: ({ color, size }) => <Text style={{ fontSize: size || 20, color }}>👥</Text> }} />
       <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: 'Profile', tabBarLabel: 'Profile', tabBarIcon: ({ color, size }) => <Text style={{ fontSize: size || 20, color }}>👤</Text> }} />
     </Tab.Navigator>
+      </View>
     </View>
   );
 }
@@ -150,6 +154,7 @@ function AppNavigator() {
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         <Stack.Screen name="ChallengeDetail">{(props) => <OuterScreenWrapper><ChallengeDetailScreen {...props} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="SubmitPhoto">{(props) => <OuterScreenWrapper><SubmitPhotoScreen {...props} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="UserSubmissions">{(p) => <OuterScreenWrapper><UserSubmissionsScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="SubmissionDetail">{(p) => <OuterScreenWrapper><SubmissionDetailScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="Shop">{(p) => <OuterScreenWrapper><ShopScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="ProductDetail">{(p) => <OuterScreenWrapper><ProductDetailScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>

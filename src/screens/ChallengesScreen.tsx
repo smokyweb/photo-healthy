@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
-    height: 300,  // Taller so image is visible
+    height: 240,  // Compact featured banner
     position: 'relative',
     backgroundColor: C.CARD_BG,
   },
