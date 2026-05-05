@@ -123,7 +123,7 @@ export default function SubmitPhotoScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>â† Cancel</Text>
+            <Text style={styles.backText}>← Cancel</Text>
           </TouchableOpacity>
           <Text style={styles.heading}>Submit Photos</Text>
           <View style={{ width: 60 }} />

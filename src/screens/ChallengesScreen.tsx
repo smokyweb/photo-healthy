@@ -132,37 +132,30 @@ export default function ChallengesScreen() {
             onPress={() => navigation.navigate('ChallengeDetail', { challengeId: featured.id, id: featured.id })}
             activeOpacity={0.92}
           >
-            {imgUri ? (
-              <Image source={{ uri: imgUri }} style={styles.featuredImg} resizeMode="cover" />
-            ) : (
-              <View style={[styles.featuredImg, { backgroundColor: C.CARD_BG2, justifyContent: 'center', alignItems: 'center' }]}>
-                <Text style={{ fontSize: 48 }}>📸</Text>
-              </View>
-            )}
-            <View style={styles.featuredOverlay}>
-              <View style={styles.featuredBadge}>
-                <Text style={styles.featuredBadgeText}>⭐ Featured Challenge</Text>
+            {/* Side-by-side layout: image left, info right */}
+            <View style={styles.featuredImgWrap}>
+              {imgUri ? (
+                <Image source={{ uri: imgUri }} style={styles.featuredImg} resizeMode="cover" />
+              ) : (
+                <View style={[styles.featuredImg, { backgroundColor: C.CARD_BG2, justifyContent: 'center', alignItems: 'center' }]}>
+                  <Text style={{ fontSize: 48 }}>📸</Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.featuredInfoPanel}>
+              <View style={styles.featuredActiveBadge}>
+                <Text style={{ color: '#22c55e', fontSize: 11, fontWeight: '800', marginRight: 4 }}>●</Text>
+                <Text style={styles.featuredActiveBadgeText}>Active Challenge</Text>
               </View>
               <Text style={styles.featuredTitle} numberOfLines={2}>{featured.title}</Text>
-              <View style={styles.featuredMeta}>
-                {daysLeft !== null && (
-                  <Text style={styles.featuredMetaText}>🗓 {daysLeft} days left</Text>
-                )}
-                {featured.submission_count != null && (
-                  <Text style={styles.featuredMetaText}>📷 {featured.submission_count} submissions</Text>
-                )}
-                {featured.feeling_category && (
-                  <Text style={styles.featuredMetaText}>💙 {featured.feeling_category.split(',')[0].trim()}</Text>
-                )}
+              {featured.description ? <Text style={styles.featuredDescText} numberOfLines={3}>{featured.description}</Text> : null}
+              <View style={styles.featuredStatsGrid}>
+                {daysLeft !== null && <View style={styles.featuredStatCell}><Text style={styles.featuredStatLabel}>ENDS IN</Text><Text style={styles.featuredStatVal}>{daysLeft}d</Text></View>}
+                {featured.submission_count != null && <View style={styles.featuredStatCell}><Text style={styles.featuredStatLabel}>ENTRIES</Text><Text style={styles.featuredStatVal}>{featured.submission_count}</Text></View>}
+                {featured.feeling_category && <View style={styles.featuredStatCell}><Text style={styles.featuredStatLabel}>FEELING</Text><Text style={styles.featuredStatVal} numberOfLines={1}>{featured.feeling_category.split(',')[0].trim()}</Text></View>}
+                {featured.movement_category && <View style={styles.featuredStatCell}><Text style={styles.featuredStatLabel}>MOVEMENT</Text><Text style={styles.featuredStatVal} numberOfLines={1}>{featured.movement_category.split(',')[0].trim()}</Text></View>}
               </View>
-              <View style={{ marginTop: 12, alignSelf: 'flex-start' }}>
-                <GradientButton
-                  label="View Challenge →"
-                  variant="primary"
-                  size="sm"
-                  onPress={() => navigation.navigate('ChallengeDetail', { challengeId: featured.id, id: featured.id })}
-                />
-              </View>
+              <GradientButton label="View Challenge" variant="primary" size="sm" onPress={() => navigation.navigate('ChallengeDetail', { challengeId: featured.id, id: featured.id })} style={{ marginTop: 12, alignSelf: 'flex-start' } as any} />
             </View>
           </TouchableOpacity>
         );
@@ -267,33 +260,51 @@ const styles = StyleSheet.create({
 
   // Featured Banner
   featuredBanner: {
+    flexDirection: 'row',
     marginHorizontal: 12,
     marginBottom: 12,
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
-    height: 240,  // Compact featured banner
-    position: 'relative',
+    minHeight: 200,
+    backgroundColor: C.CARD_BG,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+  },
+  featuredImg: { width: '100%', height: '100%', minHeight: 200 },
+  featuredImgWrap: { flex: 1, minHeight: 200 },
+  featuredInfoPanel: {
+    flex: 1,
+    padding: 14,
+    justifyContent: 'space-between',
     backgroundColor: C.CARD_BG,
   },
-  featuredImg: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
-    top: 0,
-    left: 0,
+  featuredActiveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#22c55e22',
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#22c55e55',
   },
-  featuredOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    // Tall gradient - only covers bottom 60% so top 40% shows the image clearly
-    paddingTop: 80,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 40%, rgba(0,0,0,0.4) 75%, transparent 100%)' as any,
-    backgroundColor: 'rgba(0,0,0,0.2)',
+  featuredActiveBadgeText: { color: '#22c55e', fontSize: 12, fontWeight: '700' },
+  featuredDescText: { color: C.TEXT_SECONDARY, fontSize: 12, lineHeight: 17, marginTop: 4, marginBottom: 8 },
+  featuredStatsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 4 },
+  featuredStatCell: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: C.CARD_BG2,
+    borderRadius: 6,
+    padding: 6,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
   },
+  featuredStatLabel: { color: C.TEXT_MUTED, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, marginBottom: 1 },
+  featuredStatVal: { color: C.TEXT, fontSize: 14, fontWeight: '700' },
+  featuredOverlay: {},  // kept for compatibility
   featuredBadge: {
     alignSelf: 'flex-start',
     borderRadius: borderRadius.pill,

@@ -62,6 +62,7 @@ export default function AdminScreen() {
   const [orderSearch, setOrderSearch] = useState('');
   const [orderFilter, setOrderFilter] = useState<'All'|'Pending'|'Completed'|'Refunded'>('All');
   const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
+  const [trackingInput, setTrackingInput] = useState<Record<number, string>>({});
 
   const [settings, setSettings] = useState<any>({});
 
@@ -750,7 +751,7 @@ export default function AdminScreen() {
                 {u.submission_count ? ' - ' + u.submission_count + ' submissions' : ''}
               </Text>
             </View>
-            <Text style={{ color: C.TEXT_MUTED, fontSize: 18 }}>â€º</Text>
+            <Text style={{ color: C.TEXT_MUTED, fontSize: 18 }}>›</Text>
           </TouchableOpacity>
         ))}
         {filtered.length === 0 && (
@@ -1093,15 +1094,15 @@ export default function AdminScreen() {
         {/* New product form */}
         {showProductForm && (
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>ðŸ›’ New Product</Text>
+            <Text style={styles.formTitle}>🛒 New Product</Text>
             <Input label="Name *" value={productForm.name} onChangeText={v => setProductForm(f => ({ ...f, name: v }))} />
             <Input label="Description" value={productForm.description} onChangeText={v => setProductForm(f => ({ ...f, description: v }))} multiline numberOfLines={3} />
             <Input label="Price *" value={productForm.price} onChangeText={v => setProductForm(f => ({ ...f, price: v }))} keyboardType="numeric" placeholder="29.99" />
-            <Input label="Emoji (optional)" value={productForm.emoji} onChangeText={v => setProductForm(f => ({ ...f, emoji: v }))} placeholder="e.g. ðŸ“·" />
+            <Input label="Emoji (optional)" value={productForm.emoji} onChangeText={v => setProductForm(f => ({ ...f, emoji: v }))} placeholder="e.g. 📷" />
             <Input label="Sizes (comma-separated, e.g. S,M,L,XL)" value={productForm.sizes || ''} onChangeText={v => setProductForm(f => ({ ...f, sizes: v }))} placeholder="S, M, L, XL, XXL" />
 
             {/* Featured Image */}
-            <Text style={styles.fieldGroupLabel}>ðŸ–¼ Featured Image</Text>
+            <Text style={styles.fieldGroupLabel}>🖼 Featured Image</Text>
             {typeof document !== 'undefined' && (
               <input
                 type="file" accept="image/*"
@@ -1125,7 +1126,7 @@ export default function AdminScreen() {
             )}
 
             {/* Gallery Images */}
-            <Text style={styles.fieldGroupLabel}>ðŸ“¸ Gallery Images (optional, up to 5)</Text>
+            <Text style={styles.fieldGroupLabel}>📸 Gallery Images (optional, up to 5)</Text>
             {typeof document !== 'undefined' && productGalleryFiles.length < 5 && (
               <input
                 type="file" accept="image/*" multiple
@@ -1147,7 +1148,7 @@ export default function AdminScreen() {
                     style={{ position: 'absolute', top: 2, right: 2, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}
                     onPress={() => { setProductGalleryFiles(f => f.filter((_,j)=>j!==i)); setProductGalleryPreviews(p => p.filter((_,j)=>j!==i)); }}
                   >
-                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>âœ•</Text>
+                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>✕</Text>
                   </TouchableOpacity>
                 </View>
               ))}
@@ -1196,7 +1197,7 @@ export default function AdminScreen() {
             <Input label="Description" value={productEditForm.description || ''} onChangeText={v => setProductEditForm((f: any) => ({ ...f, description: v }))} multiline numberOfLines={2} />
             <Input label="Price *" value={String(productEditForm.price || '')} onChangeText={v => setProductEditForm((f: any) => ({ ...f, price: v }))} keyboardType="numeric" />
             <Input label="Emoji (optional)" value={productEditForm.emoji || ''} onChangeText={v => setProductEditForm((f: any) => ({ ...f, emoji: v }))} />
-            <Text style={styles.fieldGroupLabel}>ðŸ–¼ Featured Image</Text>
+            <Text style={styles.fieldGroupLabel}>🖼 Featured Image</Text>
             {typeof document !== 'undefined' && (
               <input
                 type="file" accept="image/*"
