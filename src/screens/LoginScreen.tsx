@@ -25,6 +25,7 @@ export default function LoginScreen() {
     }
     setError('');
     setLoading(true);
+    const cleanEmail = email.trim().toLowerCase();
     try {
       await login(cleanEmail, password);
       navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
