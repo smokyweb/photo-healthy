@@ -221,7 +221,7 @@ export default function ChallengeDetailScreen() {
                 val: challenge.movement_category || challenge.movement_tag || 'â€”',
               },
               {
-                label: daysLeft !== null ? 'Days Left' : 'Status',
+                label: daysLeft !== null ? 'Submissions End' : 'Status',
                 val: daysLeft !== null ? String(daysLeft) : (challenge.status || 'â€”'),
               },
             ].map(({ label, val }) => (
@@ -253,7 +253,7 @@ export default function ChallengeDetailScreen() {
           {isActive && isEnrolled && !personalDeadlineExpired && (
             <>
               <View style={styles.daysLeftBadge}>
-                <Text style={styles.daysLeftText}>📅 {personalDaysLeft} day{personalDaysLeft !== 1 ? 's' : ''} left to complete</Text>
+                <Text style={styles.daysLeftText}>📅 Your personal deadline: {personalDaysLeft} day{personalDaysLeft !== 1 ? 's' : ''} left</Text>
               </View>
               <GradientButton
                 label={remainingSubmissions === 0 ? 'Monthly Limit Reached' : 'Submit Photos'}

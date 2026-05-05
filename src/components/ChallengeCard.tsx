@@ -86,14 +86,14 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
         </View>
         {daysLeft !== null && !isEnded && (
           <View style={styles.daysLeftBadge}>
-            <Text style={styles.daysLeftText}>{daysLeft}d left</Text>
+            <Text style={styles.daysLeftText}>Ends in {daysLeft}d</Text>
           </View>
         )}
         {challenge.user_challenge && (
           <View style={styles.enrolledBadge}>
             <Text style={styles.enrolledBadgeText}>
               {(challenge.user_challenge.days_remaining ?? 0) >= 0
-                ? `📅 ${Math.max(0, challenge.user_challenge.days_remaining ?? 0)}d personal`
+                ? `📅 ${Math.max(0, challenge.user_challenge.days_remaining ?? 0)}d (your deadline)`
                 : '⏰ Expired'}
             </Text>
           </View>
@@ -129,7 +129,7 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
             <Text style={styles.stat}>📷 {challenge.submission_count} submissions</Text>
           )}
           {daysLeft !== null && !isEnded && (
-            <Text style={styles.stat}>⏳ {daysLeft} days left</Text>
+            <Text style={styles.stat}>⏳ Submissions end in {daysLeft}d</Text>
           )}
           {isEnded && (
             <Text style={[styles.stat, { color: C.TEXT_MUTED }]}>Challenge ended</Text>

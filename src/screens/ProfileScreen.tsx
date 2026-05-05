@@ -42,7 +42,7 @@ export default function ProfileScreen() {
       const [sData, subData, submissionsData, myChallengesData] = await Promise.allSettled([
         getUserStats(),
         getSubscriptionStatus(),
-        getSubmissions({ limit: '6', userId: String(user.id) }),
+        getSubmissions({ limit: '6', userId: String(user.id), user_id: String(user.id) }),
         getMyChallenges(),
       ]);
       if (sData.status === 'fulfilled') setStats(sData.value || {});
@@ -227,7 +227,7 @@ export default function ProfileScreen() {
                 <Text style={styles.actionIcon}>{btn.icon}</Text>
               </View>
               <Text style={styles.actionLabel}>{btn.label}</Text>
-              <Text style={styles.actionArrow}>â€º</Text>
+              <Text style={styles.actionArrow}>›</Text>
             </TouchableOpacity>
           ))}
           {(user.role === 'admin' || user.is_admin) && (
@@ -240,21 +240,23 @@ export default function ProfileScreen() {
                 <Text style={styles.actionIcon}>{'\uD83D\uDEE1\uFE0F'}</Text>
               </View>
               <Text style={styles.actionLabel}>Admin Panel</Text>
-              <Text style={styles.actionArrow}>â€º</Text>
+              <Text style={styles.actionArrow}>›</Text>
             </TouchableOpacity>
           )}
         </View>
       </View>
 
       {/* Recent Submissions */}
-      {recentSubmissions.length > 0 && (
-        <View style={styles.submissionsSection}>
+      <View style={styles.submissionsSection}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>My Recent Photos</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Gallery' as never)}>
-              <Text style={styles.seeAll}>See all â†’</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('UserSubmissions' as never, { userId: user.id, userName: user.name } as never)}>
+              <Text style={styles.seeAll}>See all →</Text>
             </TouchableOpacity>
           </View>
+          {recentSubmissions.length === 0 && (
+            <Text style={{ color: '#C0C7D1', fontSize: 14, textAlign: 'center', paddingVertical: 16 }}>No photos yet — submit to a challenge to get started!</Text>
+          )}
           <View style={[styles.submissionsGrid, isDesktop && { gap: 10 }]}>
             {recentSubmissions.slice(0, 6).map((s: any) => (
               <TouchableOpacity
@@ -263,9 +265,9 @@ export default function ProfileScreen() {
                 onPress={() => navigation.navigate('SubmissionDetail' as never, { submissionId: s.id, id: s.id } as never)}
                 activeOpacity={0.85}
               >
-                {(s.image_url || s.photo_url) ? (
+                {(s.image_url || s.photo_url || s.photo1_url) ? (
                   <Image
-                    source={{ uri: fullUrl(s.image_url || s.photo_url) }}
+                    source={{ uri: fullUrl(s.image_url || s.photo_url || s.photo1_url) || '' }}
                     style={styles.submissionImg}
                     resizeMode="cover"
                   />
@@ -280,8 +282,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             ))}
           </View>
-        </View>
-      )}
+      </View>
 
       {/* Sign Out */}
       <View style={styles.signOutSection}>
@@ -323,7 +324,7 @@ const statStyles = StyleSheet.create({
     marginBottom: 3,
   },
   highlight: { color: '#FFD000' },
-  label: { color: C.TEXT_MUTED, fontSize: 11, textAlign: 'center', fontFamily: "'Inter', sans-serif" },
+  label: { color: C.TEXT_SECONDARY, fontSize: 13, textAlign: 'center', fontWeight: '500', fontFamily: "'Inter', sans-serif" },
 });
 
 const styles = StyleSheet.create({
@@ -359,7 +360,7 @@ const styles = StyleSheet.create({
   avatarFallback: { width: '100%', height: '100%', backgroundColor: C.ORANGE, alignItems: 'center', justifyContent: 'center' },
   avatarInitials: { color: '#fff', fontSize: 34, fontWeight: '800' },
   profileName: { color: C.TEXT, fontSize: 22, fontWeight: '800', fontFamily: "'Lexend', sans-serif", marginBottom: 4 },
-  profileEmail: { color: C.TEXT_MUTED, fontSize: 14, marginBottom: 10 },
+  profileEmail: { color: C.TEXT_SECONDARY, fontSize: 14, marginBottom: 10 },
   proBadge: {
     backgroundColor: C.ORANGE + '22', borderWidth: 1, borderColor: C.ORANGE + '66',
     borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5,
@@ -381,10 +382,10 @@ const styles = StyleSheet.create({
     backgroundColor: C.CARD_BG, borderRadius: 16,
     padding: 14, borderWidth: 1, borderColor: C.CARD_BORDER, gap: 12,
   },
-  actionIconWrap: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  actionIcon: { fontSize: 20 },
+  actionIconWrap: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  actionIcon: { fontSize: 22, color: '#fff', fontFamily: "'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif" } as any,
   actionLabel: { flex: 1, color: C.TEXT, fontSize: 15, fontWeight: '600' },
-  actionArrow: { color: C.TEXT_MUTED, fontSize: 20, fontWeight: '300' },
+  actionArrow: { color: C.TEXT_SECONDARY, fontSize: 20, fontWeight: '400' },
 
   submissionsSection: { marginHorizontal: 16, marginTop: 24 },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
@@ -394,7 +395,7 @@ const styles = StyleSheet.create({
   submissionImg: { width: '100%', height: '100%' },
   submissionPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: C.CARD_BG2 },
   submissionOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end', padding: 5, backgroundColor: 'rgba(0,0,0,0.15)' },
-  submissionLikes: { color: '#fff', fontSize: 11, fontWeight: '600' },
+  submissionLikes: { color: '#fff', fontSize: 12, fontWeight: '700' },
 
   myChallengesSection: { marginHorizontal: 16, marginTop: 24 },
   challengeTabRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
@@ -404,9 +405,9 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: C.CARD_BORDER,
   },
   challengeTabActive: { backgroundColor: C.ORANGE + '22', borderColor: C.ORANGE },
-  challengeTabText: { color: C.TEXT_MUTED, fontSize: 13, fontWeight: '600' },
+  challengeTabText: { color: C.TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
   challengeTabTextActive: { color: C.ORANGE },
-  noChallengesText: { color: C.TEXT_MUTED, fontSize: 14, textAlign: 'center', paddingVertical: 16 },
+  noChallengesText: { color: C.TEXT_SECONDARY, fontSize: 14, textAlign: 'center', paddingVertical: 16 },
   challengeItem: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: C.CARD_BG, borderRadius: 12,
@@ -415,14 +416,14 @@ const styles = StyleSheet.create({
   },
   challengeItemPast: { opacity: 0.65 },
   challengeItemTitle: { color: C.TEXT, fontSize: 14, fontWeight: '700', marginBottom: 3 },
-  challengeItemMeta: { color: C.TEXT_MUTED, fontSize: 12 },
+  challengeItemMeta: { color: C.TEXT_SECONDARY, fontSize: 13, fontWeight: '500' },
   daysLeftPill: {
     backgroundColor: C.TEAL + '22', borderRadius: 20,
     paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: C.TEAL + '55',
   },
   completedPill: { backgroundColor: '#22c55e22', borderColor: '#22c55e55' },
   expiredPill: { backgroundColor: C.TEXT_MUTED + '22', borderColor: C.TEXT_MUTED + '55' },
-  daysLeftPillText: { color: C.TEAL, fontSize: 12, fontWeight: '700' },
+  daysLeftPillText: { color: C.TEAL, fontSize: 13, fontWeight: '700' },
 
   signOutSection: { marginHorizontal: 16, marginTop: 20, marginBottom: 24 },
   signOutBtn: {
