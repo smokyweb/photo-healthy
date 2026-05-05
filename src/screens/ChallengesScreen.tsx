@@ -203,7 +203,7 @@ export default function ChallengesScreen() {
       </View>
 
       {/* Category Filter Pills */}
-      <Text style={{ color: C.TEXT_MUTED, fontSize: 11, paddingHorizontal: 14, marginTop: 2 }}>Swipe for categories ›</Text>
+      <Text style={{ color: C.TEXT_SECONDARY, fontSize: 12, paddingHorizontal: 14, marginTop: 2 }}>Swipe for categories ›</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={true}
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     backgroundImage: 'linear-gradient(90deg, #F55B09, #FFD000)' as any,
     backgroundColor: C.ORANGE,
   },
-  featuredBadgeText: { color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  featuredBadgeText: { color: '#fff', fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
   featuredTitle: {
     color: '#fff',
     fontSize: 22,
@@ -327,8 +327,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
   },
-  featuredChipText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  featuredMetaText: { color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: '500' },
+  featuredChipText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  featuredMetaText: { color: 'rgba(255,255,255,0.95)', fontSize: 13, fontWeight: '500' },
 
   // Search
   searchWrap: {
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     borderColor: C.CARD_BORDER,
   },
   catChipActive: { backgroundColor: C.TEAL + '22', borderColor: C.TEAL },
-  catText: { color: C.TEXT_MUTED, fontSize: 12, fontWeight: '500' },
+  catText: { color: C.TEXT_SECONDARY, fontSize: 13, fontWeight: '500' },
   catTextActive: { color: C.TEAL, fontWeight: '700' },
 
   // Results bar
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 6,
   },
-  resultsText: { color: C.TEXT_MUTED, fontSize: 12 },
+  resultsText: { color: C.TEXT_SECONDARY, fontSize: 13 },
 
   // List/Grid
   list: { padding: 12, paddingTop: 4 },

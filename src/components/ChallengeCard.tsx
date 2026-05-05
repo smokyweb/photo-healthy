@@ -177,14 +177,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  statusBadgeText: { fontSize: 10, fontWeight: '800' },
+  statusBadgeText: { fontSize: 12, fontWeight: '800' },
   proBadge: {
     backgroundColor: C.ORANGE_MID,
     borderRadius: borderRadius.sm,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  proBadgeText: { color: '#000', fontSize: 10, fontWeight: '800' },
+  proBadgeText: { color: '#000', fontSize: 12, fontWeight: '800' },
   daysLeftBadge: {
     position: 'absolute',
     top: 10,
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 3,
   },
-  daysLeftText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  daysLeftText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   enrolledBadge: {
     position: 'absolute',
     bottom: 10,
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 3,
   },
-  enrolledBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  enrolledBadgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 
   // Body
   body: { padding: 14 },
@@ -237,10 +237,10 @@ const styles = StyleSheet.create({
     backgroundColor: C.ORANGE + '1A',
     borderColor: C.ORANGE + '55',
   },
-  tagText: { color: C.TEAL, fontSize: 11, fontWeight: '600' },
+  tagText: { color: C.TEAL, fontSize: 12, fontWeight: '600' },
   tagCategoryText: { color: C.ORANGE },
 
   // Stats
   statsRow: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
-  stat: { color: C.TEXT_MUTED, fontSize: 12, fontFamily: "'Inter', sans-serif" },
+  stat: { color: C.TEXT_SECONDARY, fontSize: 13, fontFamily: "'Inter', sans-serif" },
 });

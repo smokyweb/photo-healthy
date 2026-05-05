@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     color: C.TEXT_MUTED,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   subInfo: { padding: 8 },
-  subUser: { color: C.TEXT_MUTED, fontSize: 11 },
+  subUser: { color: C.TEXT_SECONDARY, fontSize: 13 },
   subTitle: {
     color: C.TEXT,
     fontSize: 12,
@@ -583,7 +583,7 @@ const styles = StyleSheet.create({
     fontFamily: "'Inter', sans-serif",
   } as any,
   subMeta: { flexDirection: 'row', gap: 8, marginTop: 4 },
-  subMetaText: { color: C.TEXT_MUTED, fontSize: 11 },
+  subMetaText: { color: C.TEXT_SECONDARY, fontSize: 13 },
 
   // Empty state
   emptyWrap: { alignItems: 'center', paddingVertical: 48 },
