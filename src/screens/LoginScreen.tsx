@@ -1,179 +1,334 @@
-import { validateForm, sanitize } from '../utils/validation';
 import React, { useState } from 'react';
-import {
-  View, Text, StyleSheet, Image, KeyboardAvoidingView,
-  Platform, ScrollView, TouchableOpacity, Alert,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, Image, useWindowDimensions } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import Input from '../components/Input';
-import GradientButton from '../components/GradientButton';
-import { C, borderRadius, fonts, spacing } from '../theme';
+import { C } from '../theme';
 
-export default function LoginScreen() {
-  const navigation = useNavigation<any>();
+const SIGNIN_HERO = require('../../assets/theme-fin_02-signin-bg.png');
+const EYE_ICON =
+  'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 512 512%27%3E%3Cpath d=%27M48 256s80-144 208-144 208 144 208 144-80 144-208 144S48 256 48 256z%27 fill=%27none%27 stroke=%27%237B8396%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%2732%27/%3E%3Ccircle cx=%27256%27 cy=%27256%27 r=%2764%27 fill=%27none%27 stroke=%27%237B8396%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%2732%27/%3E%3C/svg%3E")';
+
+const LoginScreen = ({ navigation }: any) => {
   const { login } = useAuth();
+  const { width, height } = useWindowDimensions();
+  const isDesktop = width >= 900;
+  const panelHeight = isDesktop ? Math.max(height, 720) : undefined;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email.trim() || !password) {
-      setError('Please enter your email and password.');
-      return;
-    }
-    setError('');
+    if (!email || !password) { setError('Please fill in all fields'); return; }
     setLoading(true);
-    const cleanEmail = email.trim().toLowerCase();
+    setError('');
     try {
-      await login(cleanEmail, password);
-      navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+      await login(email, password);
+      navigation.navigate('Main');
     } catch (e: any) {
-      setError(e.message || 'Login failed. Please try again.');
+      setError(e.message || 'Login failed');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
+    <ScrollView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      contentContainerStyle={[styles.scrollContent, isDesktop && styles.scrollContentDesktop]}
     >
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        {/* Hero */}
-        <View style={styles.hero}>
-          <Image
-            source={{ uri: '/assets/cityscape.jpg' }}
-            style={styles.heroImage}
-            resizeMode="cover"
-          />
-          <View style={styles.heroOverlay} />
-          <View style={styles.logoWrap}>
-            <Text style={styles.logoText}>📸 PhotoHealthy</Text>
-          </View>
+      <View style={[styles.authPanel, isDesktop && styles.authPanelDesktop, isDesktop && { minHeight: panelHeight }]}>
+        <View style={[styles.hero, isDesktop && styles.heroDesktop, isDesktop && { height: panelHeight }]}>
+          <Image source={SIGNIN_HERO} style={styles.heroImage} resizeMode={isDesktop ? 'contain' : 'cover'} />
         </View>
 
-        {/* Form */}
-        <View style={styles.form}>
-          <Text style={styles.heading}>Glad you're here</Text>
-          <Text style={styles.subheading}>Sign in to your account</Text>
+        <View style={[styles.formWrap, isDesktop && styles.formWrapDesktop]}>
+          <Text style={styles.cardTitle}>Glad you're here</Text>
+          <View style={styles.titleAccent} />
+          <Text style={styles.cardSubtitle}>Continue Your Journey</Text>
 
-          {error ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
+          {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <Input
-            label="Email"
+          <TextInput
+            style={styles.input}
+            placeholder="Enter email address"
+            placeholderTextColor="#8A91A5"
             value={email}
             onChangeText={setEmail}
-            placeholder="you@example.com"
-            keyboardType="email-address"
             autoCapitalize="none"
-          />
-          <Input
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Your password"
-            secureTextEntry
+            keyboardType="email-address"
           />
 
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ResetPassword')}
-            style={styles.forgotWrap}
-          >
-            <Text style={styles.forgotText}>Forgot password?</Text>
-          </TouchableOpacity>
-
-          <GradientButton
-            label="Sign In"
-            onPress={handleLogin}
-            loading={loading}
-            style={styles.signInBtn}
-          />
-
-          <View style={styles.dividerRow}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.divider} />
+          <Text style={styles.fieldLabel}>Password</Text>
+          <View style={styles.passwordWrap}>
+            <TextInput
+              style={[styles.input, styles.passwordInput]}
+              placeholder="Enter password"
+              placeholderTextColor="#8A91A5"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity
+              style={styles.eyeBtn}
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <View style={[styles.eyeIcon, showPassword && styles.eyeIconActive]} />
+            </TouchableOpacity>
           </View>
 
-          <GradientButton
-            label="Create Account"
-            onPress={() => navigation.navigate('Register')}
-            variant="outline"
-          />
+          <View style={styles.optionsRow}>
+            <TouchableOpacity
+              style={styles.rememberRow}
+              onPress={() => setRememberMe(!rememberMe)}
+            >
+              <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                {rememberMe && <Text style={styles.checkMark}>✓</Text>}
+              </View>
+              <Text style={styles.rememberText}>Remember Me</Text>
+            </TouchableOpacity>
+            <TouchableOpacity>
+              <Text style={styles.forgotText}>Get New Password</Text>
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Main')}
-            style={styles.guestWrap}
-          >
-            <Text style={styles.guestText}>Continue as guest</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={styles.signInBtn}
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.signInText}>Sign In</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.signUpBtn}
+              onPress={() => navigation.navigate('Register')}
+            >
+              <Text style={styles.signUpText}>Sign Up</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+      </View>
+    </ScrollView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.BG },
-  scroll: { flexGrow: 1 },
-  hero: { height: 260, position: 'relative' },
-  heroImage: { width: '100%', height: '100%' },
-  heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(32,35,51,0.55)',
+  container: { flex: 1, backgroundColor: '#161616' },
+  scrollContent: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
   },
-  logoWrap: {
-    position: 'absolute',
-    bottom: 20,
-    left: 24,
+  scrollContentDesktop: {
+    alignItems: 'stretch',
+    justifyContent: 'flex-start',
+    paddingVertical: 0,
   },
-  logoText: {
-    color: C.WHITE,
-    fontSize: 22,
-    fontWeight: '800',
-    fontFamily: "'Lexend', sans-serif",
+  authPanel: {
+    width: '100%',
+    maxWidth: 430,
+    minHeight: 900,
+    backgroundColor: '#202333',
+    overflow: 'hidden',
   },
-  form: {
+  authPanelDesktop: {
+    maxWidth: '100%',
+    flexDirection: 'row',
+    alignSelf: 'stretch',
+  } as any,
+
+  hero: {
+    width: '100%',
+    height: 430,
+    overflow: 'hidden',
+    backgroundColor: '#111827',
+  },
+  heroDesktop: {
     flex: 1,
-    backgroundColor: C.BG,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    marginTop: -24,
-    padding: 24,
+    width: '50%',
+    backgroundColor: '#202333',
+  } as any,
+  heroImage: {
+    width: '100%',
+    height: '100%',
   },
-  heading: {
-    ...fonts.displayXL,
+
+  formWrap: {
+    paddingHorizontal: 24,
+    paddingTop: 40,
+  },
+  formWrapDesktop: {
+    width: '50%',
+    minWidth: 0,
+    maxWidth: '50%',
+    justifyContent: 'center',
+    paddingHorizontal: 64,
+    paddingTop: 0,
+    paddingBottom: 0,
+  } as any,
+  cardTitle: {
+    fontFamily: 'Lexend',
+    fontSize: 23,
+    lineHeight: 28,
+    fontWeight: '800',
+    fontStyle: 'normal',
     color: C.TEXT,
-    fontSize: 28,
-    marginBottom: 6,
+    marginBottom: 7,
   },
-  subheading: {
-    color: C.TEXT_SECONDARY,
-    fontSize: 15,
-    marginBottom: 24,
-  },
-  errorBox: {
-    backgroundColor: C.DANGER + '22',
-    borderRadius: borderRadius.md,
-    padding: 12,
+  titleAccent: {
+    width: 15,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#54DFB6',
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: C.DANGER + '55',
   },
-  errorText: { color: C.DANGER, fontSize: 14 },
-  forgotWrap: { alignItems: 'flex-end', marginBottom: 20 },
-  forgotText: { color: C.ORANGE, fontSize: 13 },
-  signInBtn: { marginBottom: 20 },
-  dividerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, gap: 12 },
-  divider: { flex: 1, height: 1, backgroundColor: C.DIVIDER },
-  dividerText: { color: C.TEXT_MUTED, fontSize: 13 },
-  guestWrap: { alignItems: 'center', marginTop: 16 },
-  guestText: { color: C.TEXT_MUTED, fontSize: 13 },
+  cardSubtitle: {
+    fontSize: 13,
+    fontFamily: 'Lexend',
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontStyle: 'normal',
+    marginBottom: 12,
+  },
+  error: {
+    color: C.ERROR,
+    marginBottom: 10,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
+  input: {
+    height: 52,
+    backgroundColor: '#3B3E4F',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    fontSize: 11,
+    fontFamily: 'Lexend',
+    fontWeight: '700',
+    color: C.TEXT,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#575B6E',
+  } as any,
+  fieldLabel: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontFamily: 'Lexend',
+    fontWeight: '700',
+    fontStyle: 'normal',
+    marginBottom: 10,
+  },
+  passwordWrap: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 25,
+  },
+  passwordInput: {
+    flex: 1,
+    marginBottom: 0,
+    paddingRight: 46,
+  },
+  eyeBtn: {
+    position: 'absolute',
+    right: 14,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eyeIcon: {
+    width: 20,
+    height: 20,
+    backgroundImage: EYE_ICON,
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: '20px 20px',
+  } as any,
+  eyeIconActive: {
+    opacity: 0.78,
+  },
+
+  optionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 27,
+  },
+  rememberRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  checkbox: {
+    width: 14,
+    height: 14,
+    borderRadius: 2,
+    backgroundColor: '#54DFB6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#54DFB6',
+  },
+  checkMark: { color: '#FFFFFF', fontSize: 10, fontWeight: '900', lineHeight: 12 },
+  rememberText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontFamily: 'Inter',
+    fontWeight: '500',
+    fontStyle: 'normal',
+  },
+  forgotText: {
+    color: '#54DFB6',
+    fontSize: 13,
+    fontFamily: 'Inter',
+    fontWeight: '500',
+    fontStyle: 'normal',
+    textDecorationLine: 'underline',
+  },
+
+  buttonRow: { flexDirection: 'row', gap: 19 },
+  signInBtn: {
+    flex: 1,
+    height: 52,
+    backgroundColor: '#FF6B00',
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  signInText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontFamily: 'Lexend',
+    fontWeight: '800',
+    fontStyle: 'normal',
+  },
+  signUpBtn: {
+    flex: 1,
+    height: 52,
+    backgroundColor: '#29B6E0',
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+    backgroundImage: 'linear-gradient(95deg, #FFD000 0%, #29B6E0 72%)',
+  } as any,
+  signUpText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontFamily: 'Lexend',
+    fontWeight: '800',
+    fontStyle: 'normal',
+  },
+
 });
+
+export default LoginScreen;

@@ -1,172 +1,309 @@
-import { validateForm, sanitize } from '../utils/validation';
 import React, { useState } from 'react';
-import {
-  View, Text, StyleSheet, Image, KeyboardAvoidingView,
-  Platform, ScrollView, TouchableOpacity,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, Image, useWindowDimensions } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import Input from '../components/Input';
-import GradientButton from '../components/GradientButton';
-import { C, borderRadius, fonts } from '../theme';
+import { C } from '../theme';
 
-export default function RegisterScreen() {
-  const navigation = useNavigation<any>();
+const SIGNIN_HERO = require('../../assets/theme-fin_02-signin-bg.png');
+const EYE_ICON =
+  'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 512 512%27%3E%3Cpath d=%27M48 256s80-144 208-144 208 144 208 144-80 144-208 144S48 256 48 256z%27 fill=%27none%27 stroke=%27%237B8396%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%2732%27/%3E%3Ccircle cx=%27256%27 cy=%27256%27 r=%2764%27 fill=%27none%27 stroke=%27%237B8396%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%2732%27/%3E%3C/svg%3E")';
+
+const RegisterScreen = ({ navigation }: any) => {
   const { register } = useAuth();
+  const { width, height } = useWindowDimensions();
+  const isDesktop = width >= 900;
+  const panelHeight = isDesktop ? Math.max(height, 780) : undefined;
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!name.trim() || !email.trim() || !password || !confirm) {
-      setError('Please fill in all fields.');
-      return;
-    }
-    if (password !== confirm) {
-      setError('Passwords do not match.');
-      return;
-    }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
-      return;
-    }
-    setError('');
+    if (!name || !email || !password || !confirmPassword) { setError('Please fill in all fields'); return; }
+    if (password !== confirmPassword) { setError('Passwords do not match'); return; }
+    if (password.length < 6) { setError('Password must be at least 6 characters'); return; }
     setLoading(true);
+    setError('');
     try {
-      await register(cleanName, cleanEmail, password);
-      navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+      await register(name, email, password);
+      navigation.navigate('Main');
     } catch (e: any) {
-      setError(e.message || 'Registration failed. Please try again.');
+      setError(e.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
+    <ScrollView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      contentContainerStyle={[styles.scrollContent, isDesktop && styles.scrollContentDesktop]}
     >
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        {/* Hero */}
-        <View style={styles.hero}>
-          <Image
-            source={{ uri: '/assets/cityscape.jpg' }}
-            style={styles.heroImage}
-            resizeMode="cover"
-          />
-          <View style={styles.heroOverlay} />
-          <View style={styles.logoWrap}>
-            <Text style={styles.logoText}>📸 PhotoHealthy</Text>
-          </View>
+      <View style={[styles.authPanel, isDesktop && styles.authPanelDesktop, isDesktop && { minHeight: panelHeight }]}>
+        <View style={[styles.hero, isDesktop && styles.heroDesktop, isDesktop && { height: panelHeight }]}>
+          <Image source={SIGNIN_HERO} style={styles.heroImage} resizeMode={isDesktop ? 'contain' : 'cover'} />
         </View>
 
-        {/* Form */}
-        <View style={styles.form}>
-          <TouchableOpacity
-            onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Login')}
-            style={{ marginBottom: 16 }}
-          >
-            <Text style={{ color: C.ORANGE, fontSize: 14, fontWeight: '600' }}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.heading}>Join the Community</Text>
-          <Text style={styles.subheading}>Create your free account</Text>
+        <View style={[styles.formWrap, isDesktop && styles.formWrapDesktop]}>
+          <Text style={styles.cardTitle}>Create your account</Text>
+          <View style={styles.titleAccent} />
+          <Text style={styles.cardSubtitle}>Start Your Photo Journey</Text>
 
-          {error ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
+          {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <Input
-            label="Name"
+          <Text style={styles.fieldLabel}>Full Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter full name"
+            placeholderTextColor="#8A91A5"
             value={name}
             onChangeText={setName}
-            placeholder="Your name"
-            autoCapitalize="words"
           />
-          <Input
-            label="Email"
+
+          <Text style={styles.fieldLabel}>Email</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter email address"
+            placeholderTextColor="#8A91A5"
             value={email}
             onChangeText={setEmail}
-            placeholder="you@example.com"
+            autoCapitalize="none"
             keyboardType="email-address"
           />
-          <Input
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Choose a password"
-            secureTextEntry
-          />
-          <Input
-            label="Confirm Password"
-            value={confirm}
-            onChangeText={setConfirm}
-            placeholder="Confirm your password"
-            secureTextEntry
-          />
 
-          <GradientButton
-            label="Create Account"
-            onPress={handleRegister}
-            loading={loading}
-            style={{ marginTop: 8, marginBottom: 20 }}
-          />
+          <Text style={styles.fieldLabel}>Password</Text>
+          <View style={styles.passwordWrap}>
+            <TextInput
+              style={[styles.input, styles.passwordInput]}
+              placeholder="Enter password"
+              placeholderTextColor="#8A91A5"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity
+              style={styles.eyeBtn}
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <View style={[styles.eyeIcon, showPassword && styles.eyeIconActive]} />
+            </TouchableOpacity>
+          </View>
 
-          <Text style={{ color: C.TEXT_MUTED, fontSize: 12, textAlign: 'center', marginBottom: 16, lineHeight: 18 }}>
-            By creating an account, you agree to our{' '}
-            <Text style={{ color: C.ORANGE, textDecorationLine: 'underline' }} onPress={() => navigation.navigate('Legal', { section: 'terms' })}>Terms of Service</Text>
-            {' '}and{' '}
-            <Text style={{ color: C.ORANGE, textDecorationLine: 'underline' }} onPress={() => navigation.navigate('Legal', { section: 'privacy' })}>Privacy Policy</Text>
-          </Text>
+          <Text style={styles.fieldLabel}>Confirm Password</Text>
+          <View style={styles.passwordWrap}>
+            <TextInput
+              style={[styles.input, styles.passwordInput]}
+              placeholder="Confirm password"
+              placeholderTextColor="#8A91A5"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry={!showConfirmPassword}
+            />
+            <TouchableOpacity
+              style={styles.eyeBtn}
+              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+            >
+              <View style={[styles.eyeIcon, showConfirmPassword && styles.eyeIconActive]} />
+            </TouchableOpacity>
+          </View>
 
-          <View style={styles.loginRow}>
-            <Text style={styles.loginText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.loginLink}>Sign In</Text>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={styles.signUpBtn}
+              onPress={handleRegister}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Sign Up</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.signInBtn}
+              onPress={() => navigation.navigate('Login')}
+            >
+              <Text style={styles.buttonText}>Sign In</Text>
             </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </View>
+    </ScrollView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.BG },
-  scroll: { flexGrow: 1 },
-  hero: { height: 220, position: 'relative' },
-  heroImage: { width: '100%', height: '100%' },
-  heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(32,35,51,0.55)',
+  container: { flex: 1, backgroundColor: '#161616' },
+  scrollContent: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
   },
-  logoWrap: { position: 'absolute', bottom: 20, left: 24 },
-  logoText: { color: C.WHITE, fontSize: 22, fontWeight: '800' },
-  form: {
+  scrollContentDesktop: {
+    alignItems: 'stretch',
+    justifyContent: 'flex-start',
+    paddingVertical: 0,
+  },
+  authPanel: {
+    width: '100%',
+    maxWidth: 430,
+    minHeight: 960,
+    backgroundColor: '#202333',
+    overflow: 'hidden',
+  },
+  authPanelDesktop: {
+    maxWidth: '100%',
+    flexDirection: 'row',
+    alignSelf: 'stretch',
+  } as any,
+  hero: {
+    width: '100%',
+    height: 360,
+    overflow: 'hidden',
+    backgroundColor: '#111827',
+  },
+  heroDesktop: {
     flex: 1,
-    backgroundColor: C.BG,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    marginTop: -24,
-    padding: 24,
+    width: '50%',
+    backgroundColor: '#202333',
+  } as any,
+  heroImage: {
+    width: '100%',
+    height: '100%',
   },
-  heading: { ...fonts.displayXL, color: C.TEXT, fontSize: 26, marginBottom: 6 },
-  subheading: { color: C.TEXT_SECONDARY, fontSize: 15, marginBottom: 24 },
-  errorBox: {
-    backgroundColor: C.DANGER + '22',
-    borderRadius: 8,
-    padding: 12,
+  formWrap: {
+    paddingHorizontal: 24,
+    paddingTop: 36,
+    paddingBottom: 40,
+  },
+  formWrapDesktop: {
+    width: '50%',
+    minWidth: 0,
+    maxWidth: '50%',
+    justifyContent: 'center',
+    paddingHorizontal: 64,
+    paddingTop: 0,
+    paddingBottom: 0,
+  } as any,
+  cardTitle: {
+    fontFamily: 'Lexend',
+    fontSize: 23,
+    lineHeight: 28,
+    fontWeight: '800',
+    fontStyle: 'normal',
+    color: C.TEXT,
+    marginBottom: 7,
+  },
+  titleAccent: {
+    width: 15,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#54DFB6',
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: C.DANGER + '55',
   },
-  errorText: { color: C.DANGER, fontSize: 14 },
-  loginRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 8 },
-  loginText: { color: C.TEXT_MUTED, fontSize: 14 },
-  loginLink: { color: C.ORANGE, fontSize: 14, fontWeight: '600' },
+  cardSubtitle: {
+    fontSize: 13,
+    fontFamily: 'Lexend',
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontStyle: 'normal',
+    marginBottom: 12,
+  },
+  error: {
+    color: C.ERROR,
+    marginBottom: 10,
+    fontSize: 13,
+    fontFamily: 'Lexend',
+    fontWeight: '700',
+  },
+  fieldLabel: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontFamily: 'Lexend',
+    fontWeight: '700',
+    fontStyle: 'normal',
+    marginBottom: 10,
+  },
+  input: {
+    height: 52,
+    backgroundColor: '#3B3E4F',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    fontSize: 11,
+    fontFamily: 'Lexend',
+    fontWeight: '700',
+    color: C.TEXT,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#575B6E',
+  } as any,
+  passwordWrap: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  passwordInput: {
+    flex: 1,
+    marginBottom: 0,
+    paddingRight: 46,
+  },
+  eyeBtn: {
+    position: 'absolute',
+    right: 14,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eyeIcon: {
+    width: 20,
+    height: 20,
+    backgroundImage: EYE_ICON,
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: '20px 20px',
+  } as any,
+  eyeIconActive: {
+    opacity: 0.78,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 19,
+    marginTop: 10,
+  },
+  signUpBtn: {
+    flex: 1,
+    height: 52,
+    backgroundColor: '#FF6B00',
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  signInBtn: {
+    flex: 1,
+    height: 52,
+    backgroundColor: '#29B6E0',
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+    backgroundImage: 'linear-gradient(95deg, #FFD000 0%, #29B6E0 72%)',
+  } as any,
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontFamily: 'Lexend',
+    fontWeight: '800',
+    fontStyle: 'normal',
+  },
 });
+
+export default RegisterScreen;
