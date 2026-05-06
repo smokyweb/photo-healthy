@@ -256,12 +256,12 @@ function AppNavigator() {
           options={{ headerShown: true, title: 'Subscription', headerStyle: { backgroundColor: C.BG }, headerTintColor: C.TEXT }} />
         <Stack.Screen name="Admin" component={AdminScreen} />
         <Stack.Screen name="Gallery" component={GalleryScreen} />
-      <Stack.Screen name="About">{(p: any) => <OuterScreenWrapper><AboutScreen /></OuterScreenWrapper>}</Stack.Screen>
-      <Stack.Screen name="FAQ">{(p: any) => <OuterScreenWrapper><FAQScreen /></OuterScreenWrapper>}</Stack.Screen>
-      <Stack.Screen name="Legal">{(p: any) => <OuterScreenWrapper><LegalScreen /></OuterScreenWrapper>}</Stack.Screen>
-      <Stack.Screen name="HowItWorks">{(p: any) => <OuterScreenWrapper><HowItWorksScreen /></OuterScreenWrapper>}</Stack.Screen>
-      <Stack.Screen name="Partners">{(p: any) => <OuterScreenWrapper><PartnersScreen /></OuterScreenWrapper>}</Stack.Screen>
-      <Stack.Screen name="Contact">{(p: any) => <OuterScreenWrapper><ContactScreen /></OuterScreenWrapper>}</Stack.Screen>
+      <Stack.Screen name="About" component={AboutScreen} />
+      <Stack.Screen name="FAQ" component={FAQScreen} />
+      <Stack.Screen name="Legal" component={LegalScreen} />
+      <Stack.Screen name="HowItWorks" component={HowItWorksScreen} />
+      <Stack.Screen name="Partners" component={PartnersScreen} />
+      <Stack.Screen name="Contact" component={ContactScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -147,16 +147,17 @@ const calcStreak = (submissions: any[], userId: number): number => {
   return streak;
 };
 
-const goPlaceholderLink = () => {
-  if (typeof window !== 'undefined') {
-    window.location.hash = '#';
-  }
+const FOOTER_ROUTES: Record<string,string> = {
+  'About Us': 'About', 'FAQ': 'FAQ', 'Shop': 'Shop', 'Contact': 'Contact',
+  'Partners': 'Partners', 'Privacy Policy': 'Legal', 'Terms of Service': 'Legal',
+  'Community Guidelines': 'Legal', 'How It Works': 'HowItWorks',
+  'Challenges': 'Main', 'Gallery': 'Gallery', 'Sign Up': 'Register', 'Log In': 'Login',
 };
 
-const FooterLink = ({ label }: { label: string }) => (
+const FooterLink = ({ label }: { label: string }) => { const nav = useNavigation<any>(); return (
   <Pressable
     accessibilityRole="link"
-    onPress={goPlaceholderLink}
+    onPress={() => { const r = FOOTER_ROUTES[label]; if (r) nav.navigate(r as never); }}
     style={({ hovered }: any) => [
       bottom.footerLinkTouch,
       hovered && bottom.footerLinkTouchHovered,
@@ -168,7 +169,7 @@ const FooterLink = ({ label }: { label: string }) => (
       </Text>
     )}
   </Pressable>
-);
+);; }
 
 const FooterSocialLink = ({ name, label }: { name: string; label: string }) => (
   <Pressable
