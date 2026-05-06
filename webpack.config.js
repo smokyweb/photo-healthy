@@ -40,7 +40,7 @@ module.exports = {
       },
       {
         test: /\.(png|jpg|gif|svg|ico)$/,
-        use: { loader: 'url-loader', options: { limit: 8192 } },
+        use: { loader: 'url-loader', options: { limit: 8192, esModule: false } },
       },
     ],
   },
@@ -52,5 +52,8 @@ module.exports = {
   ],
   optimization: {
     minimize: true,
+  },
+  devServer: {
+    historyApiFallback: true,
   },
 };
