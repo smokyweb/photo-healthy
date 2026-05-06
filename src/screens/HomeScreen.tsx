@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   Image,
   ImageBackground,
@@ -12,7 +13,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../services/api';
+import * as api from '../services/api';
 import { C } from '../theme';
 
 const LOGO_IMG = require('../../assets/logo.png');
@@ -24,6 +25,10 @@ const PHOTO7_OCEAN = require('../../assets/photo7-ocean-sunset.png');
 const PHOTO8_ALLEY = require('../../assets/photo8-dark-alley.png');
 const PHOTO9_CLOUDS = require('../../assets/photo9-mountain-clouds.png');
 
+const API_BASE_URL = 'https://photoai.betaplanets.com';
+const fullUrl = (url?: string | null) =>
+  url ? (url.startsWith('http') ? url : `${API_BASE_URL}${url}`) : '';
+
 const PAGE_MAX_WIDTH = 1120;
 const FONT_LEXEND = 'Lexend';
 const FONT_INTER = 'Inter';
@@ -34,6 +39,14 @@ const type = {
   button: { fontFamily: FONT_LEXEND, fontStyle: 'normal' as const, fontWeight: '800' as const },
   subtext: { fontFamily: FONT_INTER, fontStyle: 'normal' as const, fontWeight: '500' as const },
 };
+const ORANGE_GRADIENT = 'linear-gradient(90deg, #F55B09 0%, #FFD000 100%)';
+const ORANGE_GRADIENT_135 = 'linear-gradient(135deg, #F55B09 0%, #FFD000 100%)';
+const orangeGradientText = {
+  backgroundImage: ORANGE_GRADIENT,
+  WebkitBackgroundClip: 'text',
+  backgroundClip: 'text',
+  color: 'transparent',
+} as any;
 
 const ionIcon = (name: string, color: string) => {
   const stroke = `stroke="${color}" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"`;
@@ -134,6 +147,45 @@ const calcStreak = (submissions: any[], userId: number): number => {
   return streak;
 };
 
+const goPlaceholderLink = () => {
+  if (typeof window !== 'undefined') {
+    window.location.hash = '#';
+  }
+};
+
+const FooterLink = ({ label }: { label: string }) => (
+  <Pressable
+    accessibilityRole="link"
+    onPress={goPlaceholderLink}
+    style={({ hovered }: any) => [
+      bottom.footerLinkTouch,
+      hovered && bottom.footerLinkTouchHovered,
+    ]}
+  >
+    {({ hovered }: any) => (
+      <Text style={[bottom.footerLink, hovered && bottom.footerLinkHovered]}>
+        {label}
+      </Text>
+    )}
+  </Pressable>
+);
+
+const FooterSocialLink = ({ name, label }: { name: string; label: string }) => (
+  <Pressable
+    accessibilityRole="link"
+    accessibilityLabel={label}
+    onPress={goPlaceholderLink}
+    style={({ hovered }: any) => [
+      bottom.socialLink,
+      hovered && bottom.socialLinkHovered,
+    ]}
+  >
+    {({ hovered }: any) => (
+      <IconGlyph name={name} color={hovered ? '#FFFFFF' : C.TEXT_SECONDARY} size={20} />
+    )}
+  </Pressable>
+);
+
 const HomeBottomSections = ({ isMobile, onHowItWorksLayout }: { isMobile: boolean; onHowItWorksLayout?: (e: any) => void }) => {
   const howItems = [
     {
@@ -190,22 +242,22 @@ const HomeBottomSections = ({ isMobile, onHowItWorksLayout }: { isMobile: boolea
           <View style={[bottom.footerCol, isMobile && bottom.footerColMobile]}>
             <Text style={bottom.footerColTitle}>Company</Text>
             {['About Us', 'FAQ', 'Shop', 'Contact', 'Partners'].map((item) => (
-              <Text key={item} style={bottom.footerLink}>{item}</Text>
+              <FooterLink key={item} label={item} />
             ))}
           </View>
 
           <View style={[bottom.footerCol, isMobile && bottom.footerColMobile]}>
             <Text style={bottom.footerColTitle}>Legal</Text>
             {['Privacy Policy', 'Terms of Service', 'Cookie Policy', 'GDPR'].map((item) => (
-              <Text key={item} style={bottom.footerLink}>{item}</Text>
+              <FooterLink key={item} label={item} />
             ))}
           </View>
 
           <View style={[bottom.footerCol, isMobile && bottom.footerColMobile]}>
             <Text style={bottom.footerColTitle}>Connect</Text>
             <View style={bottom.socialRow}>
-              <IconGlyph name="instagram" color={C.TEXT_SECONDARY} size={20} />
-              <IconGlyph name="facebook" color={C.TEXT_SECONDARY} size={20} />
+              <FooterSocialLink name="instagram" label="Instagram" />
+              <FooterSocialLink name="facebook" label="Facebook" />
             </View>
           </View>
         </View>
@@ -244,7 +296,7 @@ const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navig
     {featured && (
       <View style={li.section}>
         <View style={li.challengeCard}>
-          <Image source={featured.cover_image_url ? { uri: featured.cover_image_url } : PHOTO5_URBAN} style={li.challengeCover} resizeMode="cover" />
+          <Image source={featured.cover_image_url ? { uri: fullUrl(featured.cover_image_url) } : PHOTO5_URBAN} style={li.challengeCover} resizeMode="cover" />
           <View style={li.challengeInfo}>
             <View style={li.challengeTitleRow}>
               <Text style={li.challengeTitle}>{featured.title}</Text>
@@ -333,7 +385,7 @@ const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navig
           style={li.communityCard}
           onPress={() => sub.photo1_url && navigation.navigate('SubmissionDetail', { id: sub.id })}
         >
-          <Image source={sub._localPhoto || { uri: sub.photo1_url }} style={li.communityImg} resizeMode="cover" />
+          <Image source={sub._localPhoto || { uri: fullUrl(sub.photo1_url) }} style={li.communityImg} resizeMode="cover" />
           <View style={li.communityInfo}>
             <Text style={li.communityUser}>@{sub.user_name || 'unknown'}</Text>
             <Text style={li.communityTitle}>{sub.title || 'Untitled'}</Text>
@@ -468,7 +520,7 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft,
           style={pm.submission}
           onPress={() => sub.photo1_url && navigation.navigate('SubmissionDetail', { id: sub.id })}
         >
-          <Image source={sub._localPhoto || { uri: sub.photo1_url }} style={pm.submissionImg} resizeMode="cover" />
+          <Image source={sub._localPhoto || { uri: fullUrl(sub.photo1_url) }} style={pm.submissionImg} resizeMode="cover" />
           <View style={pm.submissionBody}>
             <Text style={pm.userName}>@{sub.user_name}</Text>
             <Text style={pm.subTitle}>{sub.title}</Text>
@@ -713,7 +765,7 @@ const HomeScreen = () => {
                 </View>
                 <View style={[s.challengeRight, isMobile && { width: '100%' as any, height: 180 }]}>
                   <Image
-                    source={featured.cover_image_url ? { uri: featured.cover_image_url } : PHOTO9_CLOUDS}
+                    source={featured.cover_image_url ? { uri: fullUrl(featured.cover_image_url) } : PHOTO9_CLOUDS}
                     style={s.challengeImg}
                     resizeMode="cover"
                   />
@@ -734,7 +786,7 @@ const HomeScreen = () => {
                   style={[s.subCard, isMobile && { width: '47%' as any }]}
                   onPress={() => navigation.navigate('SubmissionDetail', { id: sub.id })}
                 >
-                  <Image source={{ uri: sub.photo1_url }} style={s.subImg} />
+                  <Image source={{ uri: fullUrl(sub.photo1_url) }} style={s.subImg} />
                   <View style={s.subInfo}>
                     <View style={s.subUserRow}>
                       <View style={s.subAvatar}>
@@ -843,7 +895,8 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 18,
     backgroundColor: C.ORANGE,
-  },
+    backgroundImage: ORANGE_GRADIENT,
+  } as any,
   signupHeaderText: {
     ...type.button,
     color: '#FFFFFF',
@@ -854,9 +907,10 @@ const s = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     backgroundColor: C.ORANGE,
+    backgroundImage: ORANGE_GRADIENT_135,
     justifyContent: 'center',
     alignItems: 'center',
-  },
+  } as any,
   avatarText: { ...type.label, color: '#fff', fontSize: 15 },
 
   // ===== HERO =====
@@ -936,9 +990,13 @@ const s = StyleSheet.create({
   },
   heroGood: {
     ...type.heading,
-    color: '#FF8C00',
+    ...orangeGradientText,
     fontStyle: 'italic',
-  },
+    display: 'inline-block',
+    paddingRight: 8,
+    paddingBottom: 2,
+    overflow: 'visible',
+  } as any,
   heroSub: {
     ...type.subtext,
     color: C.TEXT_SECONDARY,
@@ -969,7 +1027,7 @@ const s = StyleSheet.create({
     alignSelf: 'center',
   },
   getStartedBtn: {
-    backgroundImage: 'linear-gradient(135deg, #FF8C00, #FFA500)',
+    backgroundImage: ORANGE_GRADIENT_135,
     backgroundColor: C.ORANGE,
     borderRadius: 25,
     paddingVertical: 12,
@@ -1021,7 +1079,7 @@ const s = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 90,
-    backgroundColor: 'rgba(255, 140, 0, 0.12)',
+    backgroundColor: 'rgba(245, 91, 9, 0.12)',
   },
   heroLogo: {
     zIndex: 1,
@@ -1062,7 +1120,7 @@ const s = StyleSheet.create({
   },
   challengeLabel: {
     ...type.label,
-    color: C.ORANGE,
+    ...orangeGradientText,
     fontSize: 13,
     marginBottom: 8,
   },
@@ -1080,7 +1138,7 @@ const s = StyleSheet.create({
     marginBottom: 20,
   },
   submitBtn: {
-    backgroundImage: 'linear-gradient(135deg, #FF8C00, #FFA500)',
+    backgroundImage: ORANGE_GRADIENT_135,
     backgroundColor: C.ORANGE,
     borderRadius: 14,
     paddingVertical: 14,
@@ -1144,9 +1202,10 @@ const s = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     backgroundColor: C.ORANGE,
+    backgroundImage: ORANGE_GRADIENT_135,
     justifyContent: 'center',
     alignItems: 'center',
-  },
+  } as any,
   subAvatarText: { ...type.label, color: '#fff', fontSize: 11 },
   subUserName: {
     ...type.label,
@@ -1257,6 +1316,7 @@ const bottom = StyleSheet.create({
     height: 70,
     borderRadius: 35,
     backgroundColor: C.ORANGE,
+    backgroundImage: ORANGE_GRADIENT_135,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 18,
@@ -1264,7 +1324,7 @@ const bottom = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.26,
     shadowRadius: 18,
-  },
+  } as any,
   howTitle: {
     ...type.heading,
     color: C.TEXT,
@@ -1350,13 +1410,41 @@ const bottom = StyleSheet.create({
     color: C.TEXT_SECONDARY,
     fontSize: 11,
     lineHeight: 18,
-    marginBottom: 7,
+  },
+  footerLinkTouch: {
+    alignSelf: 'flex-start',
+    paddingVertical: 2,
+    marginBottom: 3,
+    cursor: 'pointer',
+  } as any,
+  footerLinkTouchHovered: {
+    transform: [{ translateX: 2 }],
+  },
+  footerLinkHovered: {
+    ...orangeGradientText,
+    textShadowColor: 'rgba(255, 208, 0, 0.32)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
   socialRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
+  socialLink: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+  } as any,
+  socialLinkHovered: {
+    backgroundColor: C.ORANGE,
+    backgroundImage: ORANGE_GRADIENT_135,
+    boxShadow: '0 0 14px rgba(255, 208, 0, 0.35)',
+    transform: [{ translateY: -1 }],
+  } as any,
   footerRule: {
     maxWidth: PAGE_MAX_WIDTH,
     width: '100%',
@@ -1404,12 +1492,12 @@ const pm = StyleSheet.create({
   alertPill: {
     backgroundColor: '#0A2235',
     borderWidth: 1,
-    borderColor: '#54DFB6',
+    borderColor: C.TEAL,
     borderRadius: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  alertText: { ...type.button, color: '#54DFB6', fontSize: 8 },
+  alertText: { ...type.button, color: C.TEAL, fontSize: 8 },
 
   challengeCard: {
     backgroundColor: '#272B40',
@@ -1424,7 +1512,7 @@ const pm = StyleSheet.create({
   challengeHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   challengeTitle: { ...type.heading, color: '#FFFFFF', fontSize: 13, flex: 1 },
   activePill: {
-    backgroundColor: '#54DFB6',
+    backgroundColor: C.TEAL,
     borderRadius: 10,
     paddingHorizontal: 9,
     paddingVertical: 4,
@@ -1448,8 +1536,8 @@ const pm = StyleSheet.create({
     borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF6B00',
-    backgroundImage: 'linear-gradient(90deg, #FF6B00 0%, #FFD000 100%)',
+    backgroundColor: '#F55B09',
+    backgroundImage: ORANGE_GRADIENT,
   } as any,
   submitText: { ...type.button, color: '#FFFFFF', fontSize: 10 },
 
@@ -1460,8 +1548,9 @@ const pm = StyleSheet.create({
     paddingHorizontal: 18,
     marginBottom: 12,
     overflow: 'hidden',
-    backgroundColor: '#9E7B24',
-    backgroundImage: 'linear-gradient(120deg, #9E7B24 0%, #352C27 100%)',
+    backgroundColor: C.CARD_BG2,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
   } as any,
   quoteText: { ...type.heading, color: '#FFFFFF', fontSize: 10, lineHeight: 14, textAlign: 'center' },
 
@@ -1484,7 +1573,7 @@ const pm = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 8,
   },
-  statIconText: { ...type.button, color: '#54DFB6', fontSize: 10 },
+  statIconText: { ...type.button, color: C.TEAL, fontSize: 10 },
   statValue: { ...type.heading, color: '#FFFFFF', fontSize: 13 },
   statLabel: { ...type.subtext, color: '#B7BDCB', fontSize: 8, lineHeight: 11, marginTop: 2 },
 
@@ -1499,7 +1588,7 @@ const pm = StyleSheet.create({
   },
   submissionImg: { width: '100%', height: 118, backgroundColor: '#1A1E30' },
   submissionBody: { padding: 10 },
-  userName: { ...type.label, color: '#54DFB6', fontSize: 10, marginBottom: 3 },
+  userName: { ...type.label, color: C.TEAL, fontSize: 10, marginBottom: 3 },
   subTitle: { ...type.subtext, color: '#FFFFFF', fontSize: 10, marginBottom: 7 },
   subStats: { flexDirection: 'row', gap: 12 },
   subStat: { ...type.subtext, color: '#C8CEDA', fontSize: 9 },
@@ -1553,7 +1642,7 @@ const li = StyleSheet.create({
   welcomeTitle: { ...type.heading, color: '#FFFFFF', fontSize: 22 },
   welcomeDate: { ...type.subtext, color: '#94A3B8', fontSize: 13, marginTop: 4 },
   noAlertsBadge: {
-    backgroundColor: '#06B6D4',
+    backgroundColor: C.TEAL,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -1578,7 +1667,7 @@ const li = StyleSheet.create({
   },
   challengeTitle: { ...type.heading, color: C.TEXT, fontSize: 20, flex: 1 },
   activeBadge: {
-    backgroundColor: '#22C55E',
+    backgroundColor: C.TEAL,
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -1612,7 +1701,7 @@ const li = StyleSheet.create({
 
   // Submit button
   submitBtn: {
-    backgroundImage: 'linear-gradient(135deg, #FF8C00, #FFA500)',
+    backgroundImage: ORANGE_GRADIENT_135,
     backgroundColor: C.ORANGE,
     borderRadius: 14,
     paddingVertical: 16,
@@ -1622,11 +1711,13 @@ const li = StyleSheet.create({
 
   // Quote banner
   quoteBanner: {
-    backgroundColor: '#0891B2',
+    backgroundColor: C.CARD_BG2,
     marginHorizontal: 20,
     marginBottom: 24,
     borderRadius: 14,
     padding: 20,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
   },
   quoteText: {
     ...type.subtext,

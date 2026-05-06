@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { C } from '../theme';
 
 const SIGNIN_HERO = require('../../assets/theme-fin_02-signin-bg.png');
+const ORANGE_GRADIENT = 'linear-gradient(90deg, #F55B09 0%, #FFD000 100%)';
 const EYE_ICON =
   'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 512 512%27%3E%3Cpath d=%27M48 256s80-144 208-144 208 144 208 144-80 144-208 144S48 256 48 256z%27 fill=%27none%27 stroke=%27%237B8396%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%2732%27/%3E%3Ccircle cx=%27256%27 cy=%27256%27 r=%2764%27 fill=%27none%27 stroke=%27%237B8396%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%2732%27/%3E%3C/svg%3E")';
 
@@ -43,6 +44,13 @@ const RegisterScreen = ({ navigation }: any) => {
       contentContainerStyle={[styles.scrollContent, isDesktop && styles.scrollContentDesktop]}
     >
       <View style={[styles.authPanel, isDesktop && styles.authPanelDesktop, isDesktop && { minHeight: panelHeight }]}>
+        <TouchableOpacity
+          style={[styles.backHomeBtn, !isDesktop && styles.backHomeBtnMobile]}
+          onPress={() => navigation.navigate('Main')}
+        >
+          <Text style={styles.backHomeText}>‹ Back to Home</Text>
+        </TouchableOpacity>
+
         <View style={[styles.hero, isDesktop && styles.heroDesktop, isDesktop && { height: panelHeight }]}>
           <Image source={SIGNIN_HERO} style={styles.heroImage} resizeMode={isDesktop ? 'contain' : 'cover'} />
         </View>
@@ -149,6 +157,7 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   authPanel: {
+    position: 'relative',
     width: '100%',
     maxWidth: 430,
     minHeight: 960,
@@ -174,6 +183,30 @@ const styles = StyleSheet.create({
   heroImage: {
     width: '100%',
     height: '100%',
+  },
+  backHomeBtn: {
+    position: 'absolute',
+    top: 18,
+    left: 16,
+    zIndex: 10,
+    minHeight: 36,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(84, 223, 182, 0.65)',
+    backgroundColor: 'rgba(10, 14, 26, 0.72)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backHomeBtnMobile: {
+    top: 10,
+  },
+  backHomeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontFamily: 'Lexend',
+    fontWeight: '800',
+    fontStyle: 'normal',
   },
   formWrap: {
     paddingHorizontal: 24,
@@ -279,13 +312,14 @@ const styles = StyleSheet.create({
   signUpBtn: {
     flex: 1,
     height: 52,
-    backgroundColor: '#FF6B00',
+    backgroundColor: '#F55B09',
+    backgroundImage: ORANGE_GRADIENT,
     borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
     borderTopRightRadius: 0,
     borderBottomRightRadius: 0,
-  },
+  } as any,
   signInBtn: {
     flex: 1,
     height: 52,

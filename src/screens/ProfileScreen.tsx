@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.TEAL + '22', borderRadius: 20,
     paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: C.TEAL + '55',
   },
-  completedPill: { backgroundColor: '#22c55e22', borderColor: '#22c55e55' },
+  completedPill: { backgroundColor: C.TEAL + '22', borderColor: C.TEAL + '55' },
   expiredPill: { backgroundColor: C.TEXT_MUTED + '22', borderColor: C.TEXT_MUTED + '55' },
   daysLeftPillText: { color: C.TEAL, fontSize: 13, fontWeight: '700' },
 

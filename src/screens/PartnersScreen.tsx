@@ -8,7 +8,7 @@ import { submitPartnerInquiry } from '../services/api';
 import Input from '../components/Input';
 import GradientButton from '../components/GradientButton';
 import AppFooter from '../components/AppFooter';
-import { C, borderRadius } from '../theme';
+import { C, borderRadius, brandGradients, fontFamilies } from '../theme';
 
 const TIERS = [
   {
@@ -291,7 +291,7 @@ function NewPartnerSections() {
                     value={val}
                     onChangeText={setter}
                     placeholder={ph}
-                    placeholderTextColor="#8B949E"
+                    placeholderTextColor={C.TEXT_MUTED}
                   />
                 </View>
               ))}
@@ -302,7 +302,7 @@ function NewPartnerSections() {
                   value={n2goals}
                   onChangeText={setN2goals}
                   placeholder="Tell us what kind of audience, experience, or campaign you want to create."
-                  placeholderTextColor="#8B949E"
+                  placeholderTextColor={C.TEXT_MUTED}
                   multiline
                   numberOfLines={5}
                 />
@@ -325,22 +325,22 @@ function NewPartnerSections() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#0D1117' },
+  screen: { backgroundColor: C.BG },
   hero: {
-    backgroundColor: '#0D1117',
+    backgroundColor: C.BG,
     padding: 24,
     paddingTop: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: C.CARD_BORDER,
   },
   back: { marginBottom: 16 },
   backText: { color: C.ORANGE, fontSize: 15 },
-  heroTitle: { color: C.WHITE, fontSize: 32, fontWeight: '900', marginBottom: 8 },
-  heroSubtitle: { color: '#8B9AAB', fontSize: 15, lineHeight: 22 },
+  heroTitle: { color: C.WHITE, fontSize: 32, fontWeight: '900', marginBottom: 8, fontFamily: fontFamilies.heading },
+  heroSubtitle: { color: C.TEXT_SECONDARY, fontSize: 15, lineHeight: 22, fontFamily: fontFamilies.body },
   section: { padding: 20 },
   sectionTitle: { color: C.WHITE, fontSize: 22, fontWeight: '800', marginBottom: 16 },
   tierCard: {
-    backgroundColor: '#161B22',
+    backgroundColor: C.CARD_BG,
     borderRadius: borderRadius.xl,
     borderWidth: 1.5,
     marginBottom: 14,
@@ -352,82 +352,82 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 14,
   },
-  tierName: { fontSize: 16, fontWeight: '800' },
-  tierPrice: { fontSize: 15, fontWeight: '700' },
-  perk: { color: '#8B9AAB', fontSize: 14, paddingHorizontal: 14, paddingVertical: 5, lineHeight: 20 },
+  tierName: { fontSize: 16, fontWeight: '800', fontFamily: fontFamilies.heading },
+  tierPrice: { fontSize: 15, fontWeight: '700', fontFamily: fontFamilies.heading },
+  perk: { color: C.TEXT_SECONDARY, fontSize: 14, paddingHorizontal: 14, paddingVertical: 5, lineHeight: 20, fontFamily: fontFamilies.body },
 });
 
 // ---- NEW SECTIONS STYLES ----
 const n2s = StyleSheet.create({
-  wrapper: { backgroundColor: '#0D1117' },
+  wrapper: { backgroundColor: C.BG },
 
   divider: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 32, gap: 12 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' },
+  dividerLine: { flex: 1, height: 1, backgroundColor: C.CARD_BORDER },
   dividerLabel: { color: '#F55B09', fontSize: 11, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase' as any },
 
   // Hero
   heroSection: { padding: 32, paddingTop: 0 },
   heroLeft: {},
-  heroBadge: { alignSelf: 'flex-start', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', borderRadius: borderRadius.pill, paddingHorizontal: 12, paddingVertical: 5, marginBottom: 20 },
-  heroBadgeText: { color: '#8B949E', fontSize: 12 },
-  heroHeading: { color: '#fff', fontSize: 32, fontWeight: '900', lineHeight: 40, marginBottom: 16, fontFamily: "'Lexend', sans-serif" },
-  heroDesc: { color: '#8B949E', fontSize: 15, lineHeight: 24, marginBottom: 24 },
+  heroBadge: { alignSelf: 'flex-start', borderWidth: 1, borderColor: C.CARD_BORDER, borderRadius: borderRadius.pill, paddingHorizontal: 12, paddingVertical: 5, marginBottom: 20 },
+  heroBadgeText: { color: C.TEXT_SECONDARY, fontSize: 12, fontFamily: fontFamilies.body },
+  heroHeading: { color: C.TEXT, fontSize: 32, fontWeight: '900', lineHeight: 40, marginBottom: 16, fontFamily: fontFamilies.heading },
+  heroDesc: { color: C.TEXT_SECONDARY, fontSize: 15, lineHeight: 24, marginBottom: 24, fontFamily: fontFamilies.body },
   heroButtons: {},
-  btnPrimary: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: borderRadius.pill, backgroundImage: 'linear-gradient(90deg, #F55B09, #2DD4BF)' as any, backgroundColor: '#F55B09' },
-  btnPrimaryText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  btnOutline: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: borderRadius.pill, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
-  btnOutlineText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  btnPrimary: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: borderRadius.pill, backgroundImage: brandGradients.primaryCss, backgroundColor: C.ORANGE } as any,
+  btnPrimaryText: { color: C.WHITE, fontWeight: '800', fontSize: 14, fontFamily: fontFamilies.heading },
+  btnOutline: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: borderRadius.pill, borderWidth: 1, borderColor: C.CARD_BORDER },
+  btnOutlineText: { color: C.TEXT, fontWeight: '700', fontSize: 14, fontFamily: fontFamilies.heading },
   featureCols: {},
-  featureItem: { flex: 1, backgroundColor: '#161B22', borderRadius: borderRadius.lg, padding: 14, marginBottom: 8 },
-  featureTitle: { color: '#fff', fontSize: 13, fontWeight: '700', marginBottom: 3 },
-  featureSub: { color: '#8B949E', fontSize: 12 },
+  featureItem: { flex: 1, backgroundColor: C.CARD_BG, borderRadius: borderRadius.lg, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: C.CARD_BORDER },
+  featureTitle: { color: C.TEXT, fontSize: 13, fontWeight: '700', marginBottom: 3, fontFamily: fontFamilies.heading },
+  featureSub: { color: C.TEXT_SECONDARY, fontSize: 12, fontFamily: fontFamilies.body },
 
   // Flow card
-  flowCard: { backgroundColor: '#161B22', borderRadius: borderRadius.xl, padding: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginTop: 16 },
-  flowPreview: { color: '#8B949E', fontSize: 10, fontWeight: '700', letterSpacing: 2, marginBottom: 8 },
-  flowTitle: { color: '#fff', fontSize: 18, fontWeight: '800', fontFamily: "'Lexend', sans-serif" },
-  liveBadge: { backgroundColor: 'rgba(45,212,191,0.15)', borderWidth: 1, borderColor: '#2DD4BF', borderRadius: borderRadius.pill, paddingHorizontal: 8, paddingVertical: 3 },
-  liveBadgeText: { color: '#2DD4BF', fontSize: 11, fontWeight: '700' },
+  flowCard: { backgroundColor: C.CARD_BG, borderRadius: borderRadius.xl, padding: 24, borderWidth: 1, borderColor: C.CARD_BORDER, marginTop: 16 },
+  flowPreview: { color: C.TEXT_SECONDARY, fontSize: 10, fontWeight: '700', letterSpacing: 2, marginBottom: 8, fontFamily: fontFamilies.heading },
+  flowTitle: { color: C.TEXT, fontSize: 18, fontWeight: '800', fontFamily: fontFamilies.heading },
+  liveBadge: { backgroundColor: C.TEAL + '22', borderWidth: 1, borderColor: C.TEAL + '66', borderRadius: borderRadius.pill, paddingHorizontal: 8, paddingVertical: 3 },
+  liveBadgeText: { color: C.TEAL, fontSize: 11, fontWeight: '700', fontFamily: fontFamilies.heading },
   flowStep: { flexDirection: 'row', alignItems: 'flex-start', gap: 14, marginBottom: 4 },
   flowStepLeft: { alignItems: 'center', width: 32 },
   stepCircle: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F55B09', backgroundImage: 'linear-gradient(135deg, #F55B09, #FFD000)' as any, justifyContent: 'center', alignItems: 'center' },
   stepNum: { color: '#fff', fontWeight: '800', fontSize: 14 },
-  stepLine: { width: 2, height: 28, backgroundColor: '#F55B09', marginTop: 2, opacity: 0.4 },
-  stepText: { color: '#cbd5e1', fontSize: 14, flex: 1, paddingTop: 6, lineHeight: 20 },
+  stepLine: { width: 2, height: 28, backgroundColor: C.ORANGE, marginTop: 2, opacity: 0.4 },
+  stepText: { color: C.TEXT_SECONDARY, fontSize: 14, flex: 1, paddingTop: 6, lineHeight: 20, fontFamily: fontFamilies.body },
 
   // Tiers
   tiersSection: { padding: 32, paddingTop: 0 },
   sectionLabel: { color: '#F55B09', fontSize: 11, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase' as any, marginBottom: 12 },
-  tiersHeading: { color: '#fff', fontSize: 28, fontWeight: '800', marginBottom: 10, fontFamily: "'Lexend', sans-serif" },
-  tiersDesc: { color: '#8B949E', fontSize: 14, lineHeight: 22, marginBottom: 24 },
+  tiersHeading: { color: C.TEXT, fontSize: 28, fontWeight: '800', marginBottom: 10, fontFamily: fontFamilies.heading },
+  tiersDesc: { color: C.TEXT_SECONDARY, fontSize: 14, lineHeight: 22, marginBottom: 24, fontFamily: fontFamilies.body },
   tiersGrid: {},
-  tierCard: { backgroundColor: '#161B22', borderRadius: borderRadius.xl, padding: 24, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)' },
-  tierCardPopular: { borderColor: '#F55B09', borderWidth: 1.5 },
-  popularBadge: { alignSelf: 'flex-start', backgroundImage: 'linear-gradient(90deg,#F55B09,#FFD000)' as any, backgroundColor: '#F55B09', borderRadius: borderRadius.pill, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 12 },
-  popularBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
-  tierName: { color: '#fff', fontSize: 22, fontWeight: '800', marginBottom: 4, fontFamily: "'Lexend', sans-serif" },
-  tierPrice: { color: '#8B949E', fontSize: 15, marginBottom: 16 },
+  tierCard: { backgroundColor: C.CARD_BG, borderRadius: borderRadius.xl, padding: 24, marginBottom: 14, borderWidth: 1, borderColor: C.CARD_BORDER },
+  tierCardPopular: { borderColor: C.ORANGE, borderWidth: 1.5 },
+  popularBadge: { alignSelf: 'flex-start', backgroundImage: brandGradients.primaryCss, backgroundColor: C.ORANGE, borderRadius: borderRadius.pill, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 12 } as any,
+  popularBadgeText: { color: C.WHITE, fontSize: 10, fontWeight: '800', letterSpacing: 0, fontFamily: fontFamilies.heading },
+  tierName: { color: C.TEXT, fontSize: 22, fontWeight: '800', marginBottom: 4, fontFamily: fontFamilies.heading },
+  tierPrice: { color: C.TEXT_SECONDARY, fontSize: 15, marginBottom: 16, fontFamily: fontFamilies.body },
   perkRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 8 },
   perkDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#F55B09', marginTop: 6 },
-  perkText: { color: '#cbd5e1', fontSize: 14, flex: 1, lineHeight: 20 },
-  tierBtnPrimary: { marginTop: 16, paddingVertical: 12, borderRadius: borderRadius.pill, backgroundImage: 'linear-gradient(90deg,#F55B09,#2DD4BF)' as any, backgroundColor: '#F55B09', alignItems: 'center' },
-  tierBtnPrimaryText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  perkText: { color: C.TEXT_SECONDARY, fontSize: 14, flex: 1, lineHeight: 20, fontFamily: fontFamilies.body },
+  tierBtnPrimary: { marginTop: 16, paddingVertical: 12, borderRadius: borderRadius.pill, backgroundImage: brandGradients.primaryCss, backgroundColor: C.ORANGE, alignItems: 'center' } as any,
+  tierBtnPrimaryText: { color: C.WHITE, fontWeight: '800', fontSize: 14, fontFamily: fontFamilies.heading },
   tierBtnText: { marginTop: 16, paddingVertical: 8, alignItems: 'center' },
   tierBtnTextStyle: { color: '#fff', fontSize: 14, textDecorationLine: 'underline' as any },
 
   // Contact
   contactSection: { padding: 32, paddingTop: 0, paddingBottom: 40 },
   contactLeft: { marginBottom: 24 },
-  contactHeading: { color: '#fff', fontSize: 24, fontWeight: '800', lineHeight: 32, marginBottom: 12, fontFamily: "'Lexend', sans-serif" },
-  contactDesc: { color: '#8B949E', fontSize: 14, lineHeight: 22 },
-  formCard: { backgroundColor: '#161B22', borderRadius: borderRadius.xl, padding: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)' },
+  contactHeading: { color: C.TEXT, fontSize: 24, fontWeight: '800', lineHeight: 32, marginBottom: 12, fontFamily: fontFamilies.heading },
+  contactDesc: { color: C.TEXT_SECONDARY, fontSize: 14, lineHeight: 22, fontFamily: fontFamilies.body },
+  formCard: { backgroundColor: C.CARD_BG, borderRadius: borderRadius.xl, padding: 24, borderWidth: 1, borderColor: C.CARD_BORDER },
   fieldWrap: { marginBottom: 16 },
   fieldLabel: { color: '#fff', fontSize: 13, fontWeight: '700', marginBottom: 6 },
-  fieldInput: { backgroundColor: '#1C2128', borderRadius: borderRadius.lg, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: 14, paddingHorizontal: 14, paddingVertical: 10 },
+  fieldInput: { backgroundColor: C.INPUT_BG, borderRadius: borderRadius.lg, borderWidth: 1, borderColor: C.CARD_BORDER, color: C.TEXT, fontSize: 14, paddingHorizontal: 14, paddingVertical: 10, fontFamily: fontFamilies.body },
   fieldTextarea: { height: 110, textAlignVertical: 'top' as any, paddingTop: 10 },
-  submitBtn: { marginTop: 8, paddingVertical: 14, borderRadius: borderRadius.pill, backgroundImage: 'linear-gradient(90deg,#F55B09,#2DD4BF)' as any, backgroundColor: '#F55B09', alignItems: 'center' },
-  submitBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
-  formNote: { color: '#8B949E', fontSize: 12, textAlign: 'center' as any, marginTop: 12 },
-  successBox: { backgroundColor: 'rgba(45,212,191,0.1)', borderWidth: 1, borderColor: '#2DD4BF', borderRadius: borderRadius.lg, padding: 20, alignItems: 'center' },
-  successText: { color: '#2DD4BF', fontSize: 16, fontWeight: '700', textAlign: 'center' as any },
+  submitBtn: { marginTop: 8, paddingVertical: 14, borderRadius: borderRadius.pill, backgroundImage: brandGradients.primaryCss, backgroundColor: C.ORANGE, alignItems: 'center' } as any,
+  submitBtnText: { color: C.WHITE, fontWeight: '800', fontSize: 16, fontFamily: fontFamilies.heading },
+  formNote: { color: C.TEXT_SECONDARY, fontSize: 12, textAlign: 'center' as any, marginTop: 12, fontFamily: fontFamilies.body },
+  successBox: { backgroundColor: C.TEAL + '1A', borderWidth: 1, borderColor: C.TEAL + '66', borderRadius: borderRadius.lg, padding: 20, alignItems: 'center' },
+  successText: { color: C.TEAL, fontSize: 16, fontWeight: '700', textAlign: 'center' as any, fontFamily: fontFamilies.heading },
 });

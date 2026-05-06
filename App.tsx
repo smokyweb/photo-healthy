@@ -24,6 +24,7 @@ import MyProgressScreen from './src/screens/MyProgressScreen';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 const APP_FONT_FAMILY = 'Lexend';
+const ORANGE_GRADIENT_135 = 'linear-gradient(135deg, #F55B09 0%, #FFD000 100%)';
 
 const applyDefaultFont = (Component: any) => {
   Component.defaultProps = Component.defaultProps || {};
@@ -279,6 +280,7 @@ const tabStyles = StyleSheet.create({
     height: 52,
     borderRadius: 26,
     backgroundColor: C.ORANGE,
+    backgroundImage: ORANGE_GRADIENT_135,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: -20,
@@ -287,6 +289,6 @@ const tabStyles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 8,
-  },
+  } as any,
   submitIcon: { color: '#FFFFFF', fontSize: 28, fontWeight: '700', marginTop: -2 },
 });

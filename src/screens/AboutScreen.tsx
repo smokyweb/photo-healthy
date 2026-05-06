@@ -5,7 +5,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import GradientButton from '../components/GradientButton';
 import AppFooter from '../components/AppFooter';
-import { C } from '../theme';
+import { C, brandGradients, fontFamilies } from '../theme';
 
 // ─── Design Tokens ───────────────────────────────────────────────────────────
 const MAX_WIDTH = 1100;
@@ -27,7 +27,7 @@ const VALUES = [
     desc: 'Real progress over perfection. We celebrate honest, everyday wellness moments big and small.',
   },
   {
-    color: '#A78BFA',
+    color: C.ORANGE_END,
     title: 'Celebrate Progress',
     desc: 'Every step forward is worth celebrating. We cheer each other on at every milestone along the way.',
   },
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: C.ORANGE,
     ...(Platform.OS === 'web'
-      ? { backgroundImage: 'linear-gradient(135deg, #F55B09 0%, #FFD000 100%)' }
+      ? { backgroundImage: brandGradients.primaryCss135 }
       : {}),
   },
   ctaTitle: {
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     textAlign: 'center',
     marginBottom: 8,
-    ...(Platform.OS === 'web' ? { fontFamily: "'Lexend', sans-serif" } : {}),
+    ...(Platform.OS === 'web' ? { fontFamily: fontFamilies.heading } : {}),
   },
   ctaSubtitle: {
     color: 'rgba(255,255,255,0.88)',

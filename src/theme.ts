@@ -35,6 +35,18 @@ export const gradients = {
   secondary: ['#FFD000', '#29B6E0'] as [string, string],
 };
 
+export const brandGradients = {
+  primaryCss: 'linear-gradient(90deg, #F55B09 0%, #FFD000 100%)',
+  primaryCss135: 'linear-gradient(135deg, #F55B09 0%, #FFD000 100%)',
+  secondaryCss: 'linear-gradient(90deg, #FFD000 0%, #29B6E0 100%)',
+  accentCss: 'linear-gradient(90deg, #54DFB6 0%, #29B6E0 100%)',
+};
+
+export const fontFamilies = {
+  heading: "'Lexend', sans-serif",
+  body: "'Inter', sans-serif",
+};
+
 export const borderRadius = { sm: 6, md: 8, lg: 12, xl: 16, pill: 999 };
 
 export const colors = {

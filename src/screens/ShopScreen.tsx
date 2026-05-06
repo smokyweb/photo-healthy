@@ -10,7 +10,7 @@ import { getProducts } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
-import { C, borderRadius } from '../theme';
+import { C, borderRadius, brandGradients, fontFamilies } from '../theme';
 
 const fullUrl = (u?: string) =>
   u ? (u.startsWith('http') ? u : 'https://photoai.betaplanets.com' + u) : null;
@@ -107,8 +107,8 @@ export default function ShopScreen() {
     >
       {toastMsg !== null && (
         <View style={{ position: 'fixed' as any, top: 80, left: 0, right: 0, alignItems: 'center', zIndex: 9999, pointerEvents: 'none' as any }}>
-          <View style={{ backgroundColor: '#16a34a', borderRadius: 28, paddingVertical: 13, paddingHorizontal: 28, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 12 }}>
-            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>✓ Added: {toastMsg}</Text>
+          <View style={{ backgroundColor: C.TEAL, borderRadius: 28, paddingVertical: 13, paddingHorizontal: 28, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 12 }}>
+            <Text style={{ color: C.BG, fontFamily: fontFamilies.heading, fontWeight: '800', fontSize: 15 }}>✓ Added: {toastMsg}</Text>
           </View>
         </View>
       )}
@@ -308,18 +308,19 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   headerLeft: {},
-  pageTitle: { color: C.TEXT, fontSize: 36, fontWeight: '900', marginBottom: 4 },
-  pageSubtitle: { color: C.TEXT_SECONDARY, fontSize: 15 },
+  pageTitle: { color: C.TEXT, fontSize: 36, fontWeight: '900', marginBottom: 4, fontFamily: fontFamilies.heading },
+  pageSubtitle: { color: C.TEXT_SECONDARY, fontSize: 15, fontFamily: fontFamilies.body },
   cartBtnActive: {
     borderColor: C.ORANGE,
   },
   cartBtn: {
     backgroundColor: C.ORANGE,
+    backgroundImage: brandGradients.primaryCss,
     borderRadius: borderRadius.pill,
     paddingHorizontal: 16,
     paddingVertical: 9,
-  },
-  cartBtnText: { color: C.WHITE, fontWeight: '700', fontSize: 14 },
+  } as any,
+  cartBtnText: { color: C.WHITE, fontWeight: '800', fontSize: 14, fontFamily: fontFamilies.heading },
 
   controls: {
     paddingHorizontal: 24,
@@ -340,7 +341,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
   },
-  dropdownText: { color: C.TEXT_SECONDARY, fontSize: 14 },
+  dropdownText: { color: C.TEXT_SECONDARY, fontSize: 14, fontFamily: fontFamilies.body },
   dropdownMenu: {
     position: 'absolute',
     top: 44,
@@ -356,7 +357,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   dropdownItem: { paddingHorizontal: 16, paddingVertical: 10 },
-  dropdownItemText: { color: C.TEXT_SECONDARY, fontSize: 14 },
+  dropdownItemText: { color: C.TEXT_SECONDARY, fontSize: 14, fontFamily: fontFamilies.body },
   dropdownItemActive: { color: C.ORANGE, fontWeight: '700' },
   searchWrapper: {},
   searchWrapperDesktop: { flex: 1, maxWidth: 320 },
@@ -399,21 +400,22 @@ const styles = StyleSheet.create({
     top: 8,
     left: 8,
     backgroundColor: C.ORANGE,
+    backgroundImage: brandGradients.primaryCss,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
-  },
-  featuredBadgeText: { color: C.WHITE, fontSize: 10, fontWeight: '800' },
+  } as any,
+  featuredBadgeText: { color: C.WHITE, fontSize: 10, fontWeight: '800', fontFamily: fontFamilies.heading },
   proBadge: {
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: '#7C3AED',
+    backgroundColor: C.TEAL,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  proBadgeText: { color: C.WHITE, fontSize: 10, fontWeight: '700' },
+  proBadgeText: { color: C.BG, fontSize: 10, fontWeight: '800', fontFamily: fontFamilies.heading },
   cardInfo: { padding: 12 },
   productName: {
     color: C.TEXT,
@@ -421,8 +423,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
     lineHeight: 18,
+    fontFamily: fontFamilies.heading,
   },
-  price: { color: C.ORANGE, fontSize: 17, fontWeight: '800', marginBottom: 8 },
+  price: { color: C.ORANGE, fontSize: 17, fontWeight: '800', marginBottom: 8, fontFamily: fontFamilies.heading },
   addBtn: { height: 36 },
 
   empty: { alignItems: 'center', paddingTop: 60, paddingBottom: 40 },

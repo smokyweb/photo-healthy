@@ -5,7 +5,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import GradientButton from '../components/GradientButton';
 import AppFooter from '../components/AppFooter';
-import { C } from '../theme';
+import { C, brandGradients, fontFamilies } from '../theme';
 
 // ─── Design Tokens ───────────────────────────────────────────────────────────
 const MAX_WIDTH = 1100;
@@ -32,7 +32,7 @@ const STEPS = [
   },
   {
     num: '3',
-    color: '#A78BFA',
+    color: C.ORANGE_END,
     title: 'Engage, Grow & Track Progress',
     body1: 'Like and comment on others\'  submissions, receive genuine encouragement, and build real connections.',
     body2: 'Use your personal dashboard to track your wellness journey and celebrate milestones along the way.',
@@ -51,7 +51,7 @@ const GUIDELINES = [
     desc: 'Real moments over perfection. Your genuine journey is what inspires others most.',
   },
   {
-    color: '#A78BFA',
+    color: C.ORANGE_END,
     title: 'Respect Privacy',
     desc: "Always get permission before sharing photos that include other people's faces.",
   },
@@ -66,7 +66,7 @@ const GUIDELINES = [
     desc: 'Avoid self-promotion or advertising. The community thrives on genuine sharing.',
   },
   {
-    color: '#A78BFA',
+    color: C.ORANGE_END,
     title: 'Celebrate Progress',
     desc: 'Every step forward counts. Acknowledge and cheer on the progress of your fellow members.',
   },
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: C.ORANGE,
     ...(Platform.OS === 'web'
-      ? { backgroundImage: 'linear-gradient(135deg, #F55B09 0%, #54DFB6 100%)' }
+      ? { backgroundImage: brandGradients.primaryCss135 }
       : {}),
   },
   heroTitle: {
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     textAlign: 'center',
     marginBottom: 12,
-    ...(Platform.OS === 'web' ? { fontFamily: "'Lexend', sans-serif" } : {}),
+    ...(Platform.OS === 'web' ? { fontFamily: fontFamilies.heading } : {}),
   },
   heroSubtitle: {
     color: 'rgba(255,255,255,0.92)',
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginBottom: 12,
     lineHeight: 30,
-    ...(Platform.OS === 'web' ? { fontFamily: "'Lexend', sans-serif" } : {}),
+    ...(Platform.OS === 'web' ? { fontFamily: fontFamilies.heading } : {}),
   },
   stepBody: {
     color: C.TEXT_SECONDARY,
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginBottom: 32,
     textAlign: 'center',
-    ...(Platform.OS === 'web' ? { fontFamily: "'Lexend', sans-serif" } : {}),
+    ...(Platform.OS === 'web' ? { fontFamily: fontFamilies.heading } : {}),
   },
   guidelinesGrid: { gap: 24 },
   guidelinesGridDesktop: { flexDirection: 'row', flexWrap: 'wrap' },
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     marginBottom: 8,
-    ...(Platform.OS === 'web' ? { fontFamily: "'Lexend', sans-serif" } : {}),
+    ...(Platform.OS === 'web' ? { fontFamily: fontFamilies.heading } : {}),
   },
   guidelineDesc: {
     color: C.TEXT_SECONDARY,
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: C.ORANGE,
     ...(Platform.OS === 'web'
-      ? { backgroundImage: 'linear-gradient(135deg, #F55B09 0%, #54DFB6 100%)' }
+      ? { backgroundImage: brandGradients.primaryCss135 }
       : {}),
   },
   ctaTitle: {
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     textAlign: 'center',
     marginBottom: 8,
-    ...(Platform.OS === 'web' ? { fontFamily: "'Lexend', sans-serif" } : {}),
+    ...(Platform.OS === 'web' ? { fontFamily: fontFamilies.heading } : {}),
   },
   ctaSubtitle: {
     color: 'rgba(255,255,255,0.88)',

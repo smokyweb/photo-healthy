@@ -1,6 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle, ActivityIndicator, Platform } from 'react-native';
-import { C, borderRadius } from '../theme';
+import { C, borderRadius, brandGradients, fontFamilies } from '../theme';
 
 interface Props {
   label: string;
@@ -16,9 +16,9 @@ interface Props {
 
 // Gradient configurations
 const GRADIENTS = {
-  primary: 'linear-gradient(90deg, #F55B09, #FFD000)',   // orange → yellow
-  secondary: 'linear-gradient(90deg, #FFD000, #29B6E0)', // yellow → cyan
-  teal: 'linear-gradient(90deg, #54DFB6, #29B6E0)',      // teal → cyan
+  primary: brandGradients.primaryCss,
+  secondary: brandGradients.secondaryCss,
+  teal: brandGradients.accentCss,
   danger: 'none',
   outline: 'none',
   'outline-teal': 'none',
@@ -97,7 +97,7 @@ export default function GradientButton({
 const styles = StyleSheet.create({
   text: {
     fontWeight: '800',
-    fontFamily: "'Lexend', sans-serif",
-    letterSpacing: 0.2,
+    fontFamily: fontFamilies.heading,
+    letterSpacing: 0,
   } as any,
 });

@@ -1,7 +1,4 @@
-﻿const BASE_URL =
-  typeof window !== 'undefined' && window.location.hostname === 'localhost'
-    ? 'http://localhost:3001'
-    : '';
+const BASE_URL = 'https://photoai.betaplanets.com';
 
 const TOKEN_KEY = 'ph_token';
 

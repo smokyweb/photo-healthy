@@ -6,7 +6,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { C, borderRadius } from '../theme';
+import { C, borderRadius, brandGradients, fontFamilies } from '../theme';
 
 const NAV_LINKS = [
   { label: 'Challenges', screen: 'Main', params: { screen: 'ChallengesTab' } },
@@ -71,7 +71,7 @@ export default function TopNavBar() {
                 <Text style={{ fontSize: 20 }}>🛒</Text>
               <Text style={{ color: C.TEXT, fontSize: 12, fontWeight: '700', marginTop: 2 }}>Cart</Text>
                 {itemCount > 0 && (
-                  <View style={{ position: 'absolute', top: 0, right: 0, backgroundColor: '#F55B09', borderRadius: 8, width: 16, height: 16, alignItems: 'center', justifyContent: 'center' }}>
+                  <View style={{ position: 'absolute', top: 0, right: 0, backgroundColor: C.ORANGE, borderRadius: 8, width: 16, height: 16, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{itemCount}</Text>
                   </View>
                 )}
@@ -91,7 +91,7 @@ export default function TopNavBar() {
               <Text style={{ fontSize: 20 }}>🛒</Text>
             <Text style={{ color: C.TEXT, fontSize: 11, fontWeight: '700' }}>Cart</Text>
               {itemCount > 0 && (
-                <View style={{ position: 'absolute', top: 2, right: 2, backgroundColor: '#F55B09', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 }}>
+                <View style={{ position: 'absolute', top: 2, right: 2, backgroundColor: C.ORANGE, borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 }}>
                   <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{itemCount}</Text>
                 </View>
               )}
@@ -167,18 +167,18 @@ const styles = StyleSheet.create({
     // Do NOT use position:fixed - let it flow naturally with the page
   } as any,
   logoWrap: { marginRight: 24 },
-  logoText: { color: C.TEXT, fontSize: 18, fontWeight: '800', fontFamily: "'Lexend', sans-serif" } as any,
+  logoText: { color: C.TEXT, fontSize: 18, fontWeight: '800', fontFamily: fontFamilies.heading } as any,
   desktopLinks: { flex: 1, flexDirection: 'row', gap: 20, alignItems: 'center' },
-  navLink: { color: C.TEXT_SECONDARY, fontSize: 14, fontWeight: '500', fontFamily: "'Inter', sans-serif" } as any,
+  navLink: { color: C.TEXT_SECONDARY, fontSize: 14, fontWeight: '500', fontFamily: fontFamilies.body } as any,
   rightActions: { marginLeft: 'auto' as any },
   loginBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: borderRadius.pill, borderWidth: 1, borderColor: C.CARD_BORDER },
-  loginBtnText: { color: C.TEXT, fontSize: 14, fontWeight: '600' },
-  signupBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: borderRadius.pill, backgroundColor: C.ORANGE, backgroundImage: 'linear-gradient(90deg,#F55B09,#FFD000)' } as any,
-  signupBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  profileBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.ORANGE, justifyContent: 'center', alignItems: 'center' },
-  profileBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  loginBtnText: { color: C.TEXT, fontSize: 14, fontWeight: '700', fontFamily: fontFamilies.heading },
+  signupBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: borderRadius.pill, backgroundColor: C.ORANGE, backgroundImage: brandGradients.primaryCss } as any,
+  signupBtnText: { color: '#fff', fontSize: 14, fontWeight: '800', fontFamily: fontFamilies.heading },
+  profileBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.ORANGE, backgroundImage: brandGradients.primaryCss135, justifyContent: 'center', alignItems: 'center' } as any,
+  profileBtnText: { color: '#fff', fontSize: 15, fontWeight: '800', fontFamily: fontFamilies.heading },
   adminBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: borderRadius.pill, backgroundColor: C.TEAL + '22', borderWidth: 1, borderColor: C.TEAL + '55' },
-  adminBtnText: { color: C.TEAL, fontSize: 13, fontWeight: '700' },
+  adminBtnText: { color: C.TEAL, fontSize: 13, fontWeight: '700', fontFamily: fontFamilies.heading },
   hamburger: { padding: 8, gap: 5, justifyContent: 'center' },
   hamLine: { width: 22, height: 2, backgroundColor: C.TEXT, borderRadius: 2 },
   menuBackdrop: { position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, backgroundColor: 'transparent' },
@@ -186,6 +186,6 @@ const styles = StyleSheet.create({
   menuPanel: { position: 'absolute' as any, top: 0, right: 0, bottom: 0, width: 280, backgroundColor: C.CARD_BG, paddingTop: 50, zIndex: 10001, shadowColor: '#000', shadowOffset: { width: -4, height: 0 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 20 },
   menuClose: { paddingHorizontal: 20, paddingVertical: 14, alignItems: 'flex-end' },
   menuItem: { paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: C.CARD_BORDER },
-  menuItemText: { color: C.TEXT, fontSize: 16, fontWeight: '500' },
+  menuItemText: { color: C.TEXT, fontSize: 16, fontWeight: '500', fontFamily: fontFamilies.body },
   menuDivider: { height: 1, backgroundColor: C.CARD_BORDER, marginVertical: 8 },
 });

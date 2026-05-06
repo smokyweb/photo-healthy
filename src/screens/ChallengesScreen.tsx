@@ -144,7 +144,7 @@ export default function ChallengesScreen() {
             </View>
             <View style={styles.featuredInfoPanel}>
               <View style={styles.featuredActiveBadge}>
-                <Text style={{ color: '#22c55e', fontSize: 11, fontWeight: '800', marginRight: 4 }}>●</Text>
+                <Text style={{ color: C.TEAL, fontSize: 11, fontWeight: '800', marginRight: 4 }}>●</Text>
                 <Text style={styles.featuredActiveBadgeText}>Active Challenge</Text>
               </View>
               <Text style={styles.featuredTitle} numberOfLines={2}>{featured.title}</Text>
@@ -281,16 +281,16 @@ const styles = StyleSheet.create({
   featuredActiveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#22c55e22',
+    backgroundColor: C.TEAL + '22',
     borderRadius: 20,
     paddingHorizontal: 8,
     paddingVertical: 3,
     alignSelf: 'flex-start',
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#22c55e55',
+    borderColor: C.TEAL + '55',
   },
-  featuredActiveBadgeText: { color: '#22c55e', fontSize: 12, fontWeight: '700' },
+  featuredActiveBadgeText: { color: C.TEAL, fontSize: 12, fontWeight: '700' },
   featuredDescText: { color: C.TEXT_SECONDARY, fontSize: 12, lineHeight: 17, marginTop: 4, marginBottom: 8 },
   featuredStatsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 4 },
   featuredStatCell: {
