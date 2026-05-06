@@ -20,6 +20,12 @@ import AdminScreen from './src/screens/AdminScreen';
 import GalleryScreen from './src/screens/GalleryScreen';
 import EditProfileScreen from './src/screens/EditProfileScreen';
 import MyProgressScreen from './src/screens/MyProgressScreen';
+import AboutScreen from './src/screens/AboutScreen';
+import FAQScreen from './src/screens/FAQScreen';
+import LegalScreen from './src/screens/LegalScreen';
+import HowItWorksScreen from './src/screens/HowItWorksScreen';
+import PartnersScreen from './src/screens/PartnersScreen';
+import ContactScreen from './src/screens/ContactScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -250,6 +256,12 @@ function AppNavigator() {
           options={{ headerShown: true, title: 'Subscription', headerStyle: { backgroundColor: C.BG }, headerTintColor: C.TEXT }} />
         <Stack.Screen name="Admin" component={AdminScreen} />
         <Stack.Screen name="Gallery" component={GalleryScreen} />
+      <Stack.Screen name="About">{(p: any) => <OuterScreenWrapper><AboutScreen /></OuterScreenWrapper>}</Stack.Screen>
+      <Stack.Screen name="FAQ">{(p: any) => <OuterScreenWrapper><FAQScreen /></OuterScreenWrapper>}</Stack.Screen>
+      <Stack.Screen name="Legal">{(p: any) => <OuterScreenWrapper><LegalScreen /></OuterScreenWrapper>}</Stack.Screen>
+      <Stack.Screen name="HowItWorks">{(p: any) => <OuterScreenWrapper><HowItWorksScreen /></OuterScreenWrapper>}</Stack.Screen>
+      <Stack.Screen name="Partners">{(p: any) => <OuterScreenWrapper><PartnersScreen /></OuterScreenWrapper>}</Stack.Screen>
+      <Stack.Screen name="Contact">{(p: any) => <OuterScreenWrapper><ContactScreen /></OuterScreenWrapper>}</Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
   );

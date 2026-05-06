@@ -1,10 +1,12 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Linking, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../context/AuthContext';
 import { C, fontFamilies } from '../theme';
 
 export default function AppFooter() {
   const nav = useNavigation<any>();
+  const { user } = useAuth();
   const openLink = (url: string) => {
     if (Platform.OS === 'web') { window.open(url, '_blank'); }
     else { Linking.openURL(url); }
@@ -24,6 +26,7 @@ export default function AppFooter() {
             { label: 'How It Works', screen: 'HowItWorks' },
             { label: 'FAQ', screen: 'FAQ' },
             { label: 'Partners', screen: 'Partners' },
+            { label: 'Contact', screen: 'Contact' },
           ].map(l => (
             <TouchableOpacity key={l.label} onPress={() => nav.navigate(l.screen as any)}>
               <Text style={styles.link}>{l.label}</Text>
