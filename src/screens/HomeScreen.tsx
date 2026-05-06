@@ -152,6 +152,13 @@ const goPlaceholderLink = () => {
     window.location.hash = '#';
   }
 };
+
+const FOOT_ROUTES: Record<string,string> = {
+  'About Us': 'About', 'FAQ': 'FAQ', 'Shop': 'Shop', 'Contact': 'Contact',
+  'Partners': 'Partners', 'Privacy Policy': 'Legal', 'Terms of Service': 'Legal',
+  'Cookie Policy': 'Legal', 'GDPR': 'Legal', 'Community Guidelines': 'Legal',
+  'How It Works': 'HowItWorks', 'Gallery': 'Gallery', 'Sign Up': 'Register', 'Log In': 'Login',
+};
 
 const FooterLink = ({ label, onPress: fpPress }: { label: string; onPress?: () => void }) => (
   <Pressable
@@ -186,7 +193,7 @@ const FooterSocialLink = ({ name, label }: { name: string; label: string }) => (
   </Pressable>
 );
 
-const HomeBottomSections = ({ isMobile, onHowItWorksLayout }: { isMobile: boolean; onHowItWorksLayout?: (e: any) => void }) => {
+const HomeBottomSections = ({ isMobile, onHowItWorksLayout, onNav }: { isMobile: boolean; onHowItWorksLayout?: (e: any) => void }) => {
   const howItems = [
     {
       icon: 'trophy',
@@ -242,14 +249,14 @@ const HomeBottomSections = ({ isMobile, onHowItWorksLayout }: { isMobile: boolea
           <View style={[bottom.footerCol, isMobile && bottom.footerColMobile]}>
             <Text style={bottom.footerColTitle}>Company</Text>
             {['About Us', 'FAQ', 'Shop', 'Contact', 'Partners'].map((item) => (
-              <FooterLink key={item} label={item} onPress={() => footNav(item)} />
+              <FooterLink key={item} label={item} onPress={() => { const r = FOOT_ROUTES[item]; if (r && onNav) onNav(r); }} />
             ))}
           </View>
 
           <View style={[bottom.footerCol, isMobile && bottom.footerColMobile]}>
             <Text style={bottom.footerColTitle}>Legal</Text>
             {['Privacy Policy', 'Terms of Service', 'Cookie Policy', 'GDPR'].map((item) => (
-              <FooterLink key={item} label={item} onPress={() => footNav(item)} />
+              <FooterLink key={item} label={item} onPress={() => { const r = FOOT_ROUTES[item]; if (r && onNav) onNav(r); }} />
             ))}
           </View>
 
@@ -421,7 +428,7 @@ const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navig
       </View>
     </View>
 
-    <HomeBottomSections isMobile={false} />
+    <HomeBottomSections isMobile={false} onNav={(r) => navigation.navigate(r as never)} />
   </>
   );
 };
@@ -547,7 +554,7 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft,
           </TouchableOpacity>
         ))}
       </View>
-      <HomeBottomSections isMobile />
+      <HomeBottomSections isMobile onNav={(r) => navigation.navigate(r as never)} />
     </View>
   );
 };
@@ -556,12 +563,6 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft,
 const HomeScreen = () => {
   const navigation = useNavigation<any>();
 
-  const FOOT_ROUTES: Record<string,string> = {
-    'About Us': 'About', 'FAQ': 'FAQ', 'Shop': 'Shop', 'Contact': 'Contact',
-    'Partners': 'Partners', 'Privacy Policy': 'Legal', 'Terms of Service': 'Legal',
-    'Community Guidelines': 'Legal', 'How It Works': 'HowItWorks',
-    'Challenges': 'Main', 'Gallery': 'Gallery', 'Sign Up': 'Register', 'Log In': 'Login',
-  };
   const footNav = (label: string) => {
     const r = FOOT_ROUTES[label];
     if (r) navigation.navigate(r as never);
@@ -569,6 +570,13 @@ const HomeScreen = () => {
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
+  
+  const FOOT_ROUTES: Record<string,string> = {
+    'About Us': 'About', 'FAQ': 'FAQ', 'Shop': 'Shop', 'Contact': 'Contact',
+    'Partners': 'Partners', 'Privacy Policy': 'Legal', 'Terms of Service': 'Legal',
+    'Community Guidelines': 'Legal', 'How It Works': 'HowItWorks',
+    'Challenges': 'Main', 'Gallery': 'Gallery', 'Sign Up': 'Register', 'Log In': 'Login',
+  };
   const [challenges, setChallenges] = useState<any[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -836,6 +844,7 @@ const HomeScreen = () => {
           <HomeBottomSections
             isMobile={isMobile}
             onHowItWorksLayout={(e) => { howItWorksY.current = e.nativeEvent.layout.y; }}
+            onNav={(r) => navigation.navigate(r as never)}
           />
         </>
       )}
