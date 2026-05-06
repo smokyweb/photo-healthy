@@ -147,17 +147,16 @@ const calcStreak = (submissions: any[], userId: number): number => {
   return streak;
 };
 
-const FOOTER_ROUTES: Record<string,string> = {
-  'About Us': 'About', 'FAQ': 'FAQ', 'Shop': 'Shop', 'Contact': 'Contact',
-  'Partners': 'Partners', 'Privacy Policy': 'Legal', 'Terms of Service': 'Legal',
-  'Community Guidelines': 'Legal', 'How It Works': 'HowItWorks',
-  'Challenges': 'Main', 'Gallery': 'Gallery', 'Sign Up': 'Register', 'Log In': 'Login',
+const goPlaceholderLink = () => {
+  if (typeof window !== 'undefined') {
+    window.location.hash = '#';
+  }
 };
 
-const FooterLink = ({ label }: { label: string }) => { const nav = useNavigation<any>(); return (
+const FooterLink = ({ label, onPress: fpPress }: { label: string; onPress?: () => void }) => (
   <Pressable
     accessibilityRole="link"
-    onPress={() => { const r = FOOTER_ROUTES[label]; if (r) nav.navigate(r as never); }}
+    onPress={fpPress || goPlaceholderLink}
     style={({ hovered }: any) => [
       bottom.footerLinkTouch,
       hovered && bottom.footerLinkTouchHovered,
@@ -169,7 +168,7 @@ const FooterLink = ({ label }: { label: string }) => { const nav = useNavigation
       </Text>
     )}
   </Pressable>
-);; }
+);
 
 const FooterSocialLink = ({ name, label }: { name: string; label: string }) => (
   <Pressable
@@ -243,14 +242,14 @@ const HomeBottomSections = ({ isMobile, onHowItWorksLayout }: { isMobile: boolea
           <View style={[bottom.footerCol, isMobile && bottom.footerColMobile]}>
             <Text style={bottom.footerColTitle}>Company</Text>
             {['About Us', 'FAQ', 'Shop', 'Contact', 'Partners'].map((item) => (
-              <FooterLink key={item} label={item} />
+              <FooterLink key={item} label={item} onPress={() => footNav(item)} />
             ))}
           </View>
 
           <View style={[bottom.footerCol, isMobile && bottom.footerColMobile]}>
             <Text style={bottom.footerColTitle}>Legal</Text>
             {['Privacy Policy', 'Terms of Service', 'Cookie Policy', 'GDPR'].map((item) => (
-              <FooterLink key={item} label={item} />
+              <FooterLink key={item} label={item} onPress={() => footNav(item)} />
             ))}
           </View>
 
@@ -556,6 +555,17 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft,
 /* ========== MAIN HOME SCREEN ========== */
 const HomeScreen = () => {
   const navigation = useNavigation<any>();
+
+  const FOOT_ROUTES: Record<string,string> = {
+    'About Us': 'About', 'FAQ': 'FAQ', 'Shop': 'Shop', 'Contact': 'Contact',
+    'Partners': 'Partners', 'Privacy Policy': 'Legal', 'Terms of Service': 'Legal',
+    'Community Guidelines': 'Legal', 'How It Works': 'HowItWorks',
+    'Challenges': 'Main', 'Gallery': 'Gallery', 'Sign Up': 'Register', 'Log In': 'Login',
+  };
+  const footNav = (label: string) => {
+    const r = FOOT_ROUTES[label];
+    if (r) navigation.navigate(r as never);
+  };
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
