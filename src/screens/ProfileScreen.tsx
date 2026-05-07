@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { clearToken as clearStoredToken } from '../services/api';
 import { getUserStats, getSubscriptionStatus, getSubmissions, getMyChallenges } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -61,23 +62,9 @@ export default function ProfileScreen() {
   useFocusEffect(useCallback(() => { load(); }, [user]));
 
   const handleLogout = () => {
-    // Use window.confirm on web (Alert.alert unreliable on iOS Safari)
-    if (typeof window !== 'undefined' && window.confirm) {
-      if (window.confirm('Sign out of Photo Healthy?')) {
-        logout();
-        setTimeout(() => navigation.reset({ index: 0, routes: [{ name: 'Main' as never }] }), 100);
-      }
-    } else {
-      Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out', style: 'destructive', onPress: () => {
-            logout();
-            setTimeout(() => navigation.reset({ index: 0, routes: [{ name: 'Main' as never }] }), 100);
-          }
-        },
-      ]);
-    }
+    logout();
+    clearStoredToken();
+    navigation.reset({ index: 0, routes: [{ name: 'Main' as never }] });
   };
 
   const initials = user?.name
