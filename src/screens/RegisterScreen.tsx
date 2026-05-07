@@ -44,13 +44,6 @@ const RegisterScreen = ({ navigation }: any) => {
       contentContainerStyle={[styles.scrollContent, isDesktop && styles.scrollContentDesktop]}
     >
       <View style={[styles.authPanel, isDesktop && styles.authPanelDesktop, isDesktop && { minHeight: panelHeight }]}>
-        <TouchableOpacity
-          style={[styles.backHomeBtn, !isDesktop && styles.backHomeBtnMobile]}
-          onPress={() => navigation.navigate('Main')}
-        >
-          <Text style={styles.backHomeText}>‹ Back to Home</Text>
-        </TouchableOpacity>
-
         <View style={[styles.hero, isDesktop && styles.heroDesktop, isDesktop && { height: panelHeight }]}>
           <Image source={SIGNIN_HERO} style={styles.heroImage} resizeMode={isDesktop ? 'contain' : 'cover'} />
         </View>
@@ -137,6 +130,13 @@ const RegisterScreen = ({ navigation }: any) => {
               <Text style={styles.buttonText}>Sign In</Text>
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            style={[styles.backHomeBtn, !isDesktop && styles.backHomeBtnInFlow]}
+            onPress={() => navigation.navigate('Main')}
+          >
+            <Text style={styles.backHomeText}>‹ Back to Home</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </ScrollView>
