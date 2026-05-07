@@ -88,7 +88,6 @@ function MainTabs() {
 
   return (
     <View style={{ flex: 1, flexDirection: 'column' }}>
-      {Platform.OS === 'web' && <TopNavBar />}
       <View style={{ flex: 1 }}>
         <Tab.Navigator
       screenOptions={{

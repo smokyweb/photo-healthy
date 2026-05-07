@@ -671,6 +671,23 @@ const HomeScreen = () => {
             resizeMode="contain"
           />
         </View>
+        {!isMobile && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1, justifyContent: 'center' }}>
+            {[
+              { label: 'Challenges', route: 'Main', params: { screen: 'ChallengesTab' } },
+              { label: 'Community', route: 'Main', params: { screen: 'CommunityTab' } },
+              { label: 'Shop', route: 'Shop' },
+              { label: 'About', route: 'About' },
+              { label: 'How It Works', route: 'HowItWorks' },
+              { label: 'Partners', route: 'Partners' },
+              { label: 'FAQ', route: 'FAQ' },
+            ].map(({ label, route, params }) => (
+              <TouchableOpacity key={label} onPress={() => navigation.navigate(route as never, params as never)} style={{ paddingHorizontal: 10, paddingVertical: 6 }}>
+                <Text style={{ color: 'rgba(234,236,239,0.75)', fontSize: 13, fontWeight: '500' }}>{label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
         <View style={s.topRight}>
           {user && (
             <TouchableOpacity style={s.bellBtn}>
