@@ -1,12 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Linking, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth } from '../context/AuthContext';
-import { C, fontFamilies } from '../theme';
+import { C } from '../theme';
 
 export default function AppFooter() {
   const nav = useNavigation<any>();
-  const { user } = useAuth();
   const openLink = (url: string) => {
     if (Platform.OS === 'web') { window.open(url, '_blank'); }
     else { Linking.openURL(url); }
@@ -26,7 +24,6 @@ export default function AppFooter() {
             { label: 'How It Works', screen: 'HowItWorks' },
             { label: 'FAQ', screen: 'FAQ' },
             { label: 'Partners', screen: 'Partners' },
-            { label: 'Contact', screen: 'Contact' },
           ].map(l => (
             <TouchableOpacity key={l.label} onPress={() => nav.navigate(l.screen as any)}>
               <Text style={styles.link}>{l.label}</Text>
@@ -64,13 +61,13 @@ export default function AppFooter() {
 }
 
 const styles = StyleSheet.create({
-  footer: { backgroundColor: C.NAV_BG, borderTopWidth: 1, borderTopColor: C.CARD_BORDER, paddingTop: 40, paddingBottom: 24 },
+  footer: { backgroundColor: '#161b22', borderTopWidth: 1, borderTopColor: C.CARD_BORDER, paddingTop: 40, paddingBottom: 24 },
   cols: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 24, gap: 24, marginBottom: 32 },
   col: { minWidth: 140, flex: 1 },
-  brand: { color: C.TEXT, fontSize: 17, fontWeight: '800', marginBottom: 4, fontFamily: fontFamilies.heading },
-  tagline: { color: C.TEXT_MUTED, fontSize: 12, fontFamily: fontFamilies.body },
-  colTitle: { color: C.TEXT, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0, marginBottom: 12, fontFamily: fontFamilies.heading },
-  link: { color: C.TEXT_SECONDARY, fontSize: 13, marginBottom: 8, lineHeight: 20, fontFamily: fontFamilies.body },
+  brand: { color: C.TEXT, fontSize: 17, fontWeight: '800', marginBottom: 4 },
+  tagline: { color: C.TEXT_MUTED, fontSize: 12 },
+  colTitle: { color: C.TEXT, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 },
+  link: { color: C.TEXT_SECONDARY, fontSize: 13, marginBottom: 8, lineHeight: 20 },
   bottom: { borderTopWidth: 1, borderTopColor: C.CARD_BORDER, paddingTop: 20, paddingHorizontal: 24 },
-  copy: { color: C.TEXT_MUTED, fontSize: 12, fontFamily: fontFamilies.body },
+  copy: { color: C.TEXT_MUTED, fontSize: 12 },
 });

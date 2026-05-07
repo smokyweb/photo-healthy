@@ -61,16 +61,23 @@ export default function ProfileScreen() {
   useFocusEffect(useCallback(() => { load(); }, [user]));
 
   const handleLogout = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out', style: 'destructive', onPress: () => {
-          logout();
-          // Navigate to login after logout
-          setTimeout(() => navigation.reset({ index: 0, routes: [{ name: 'Main' as never }] }), 100);
-        }
-      },
-    ]);
+    // Use window.confirm on web (Alert.alert unreliable on iOS Safari)
+    if (typeof window !== 'undefined' && window.confirm) {
+      if (window.confirm('Sign out of Photo Healthy?')) {
+        logout();
+        setTimeout(() => navigation.reset({ index: 0, routes: [{ name: 'Main' as never }] }), 100);
+      }
+    } else {
+      Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out', style: 'destructive', onPress: () => {
+            logout();
+            setTimeout(() => navigation.reset({ index: 0, routes: [{ name: 'Main' as never }] }), 100);
+          }
+        },
+      ]);
+    }
   };
 
   const initials = user?.name
