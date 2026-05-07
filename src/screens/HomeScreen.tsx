@@ -832,7 +832,7 @@ const HomeScreen = () => {
             {recent.length > 0 && (
               <TouchableOpacity
                 style={[s.getStartedBtn, { alignSelf: 'center', marginTop: 20, paddingHorizontal: 40 }]}
-                onPress={() => navigation.navigate(user ? 'ChallengesTab' : 'Login')}
+                onPress={() => navigation.navigate('Main', { screen: 'CommunityTab' } as never)}
               >
                 <Text style={s.getStartedText}>Browse All</Text>
               </TouchableOpacity>
