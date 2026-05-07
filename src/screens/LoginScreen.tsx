@@ -115,7 +115,7 @@ const LoginScreen = ({ navigation }: any) => {
           </View>
 
           <TouchableOpacity
-            style={[styles.backHomeBtn, { alignSelf: 'center', marginTop: 16 }]}
+            style={[styles.backHomeBtn, !isDesktop && styles.backHomeBtnInFlow]}
             onPress={() => navigation.navigate('Main')}
           >
             <Text style={styles.backHomeText}>‹ Back to Home</Text>
@@ -185,6 +185,13 @@ const styles = StyleSheet.create({
   },
   backHomeBtnMobile: {
     top: 10,
+  },
+  backHomeBtnInFlow: {
+    position: 'relative',
+    top: 'auto' as any,
+    left: 'auto' as any,
+    alignSelf: 'center',
+    marginTop: 20,
   },
   backHomeText: {
     color: '#FFFFFF',
