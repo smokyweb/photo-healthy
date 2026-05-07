@@ -201,6 +201,13 @@ const styles = StyleSheet.create({
   backHomeBtnMobile: {
     top: 10,
   },
+  backHomeBtnInFlow: {
+    position: 'relative',
+    top: 'auto' as any,
+    left: 'auto' as any,
+    alignSelf: 'center',
+    marginTop: 20,
+  },
   backHomeText: {
     color: '#FFFFFF',
     fontSize: 12,
