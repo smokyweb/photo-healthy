@@ -14,6 +14,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import * as api from '../services/api';
+import { getPublicSettings } from '../services/api';
 import { C } from '../theme';
 
 const LOGO_IMG = require('../../assets/logo.png');
@@ -357,7 +358,7 @@ const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navig
     {/* Motivation Quote Banner */}
     <View style={li.quoteBanner}>
       <Text style={li.quoteText}>
-        Every photo tells a story. Make yours worth telling.
+        {motivationalQuote}
       </Text>
     </View>
 
@@ -564,7 +565,13 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft,
 /* ========== MAIN HOME SCREEN ========== */
 const HomeScreen = () => {
   const navigation = useNavigation<any>();
-  setFooterNav((r: string) => navigation.navigate(r as never));
+
+  const [motivationalQuote, setMotivationalQuote] = useState('Every photo tells a story. Make yours worth telling.');
+  React.useEffect(() => {
+    getPublicSettings().then((data: any) => {
+      if (data?.settings?.motivational_quote) setMotivationalQuote(data.settings.motivational_quote);
+    }).catch(() => {});
+  }, []);  setFooterNav((r: string) => navigation.navigate(r as never));
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;

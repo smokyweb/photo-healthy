@@ -1585,6 +1585,15 @@ export default function AdminScreen() {
         keyboardType="numeric"
       />
 
+      <Input
+        label="Motivational Quote (shown on home page)"
+        value={settings.motivational_quote || ''}
+        onChangeText={v => setSettings((s: any) => ({ ...s, motivational_quote: v }))}
+        multiline
+        numberOfLines={2}
+        placeholder="Every photo tells a story..."
+      />
+
       {/* Shipping Settings */}
       <View style={[styles.formCard, { marginTop: 20 }]}>
         <Text style={styles.formTitle}>🚚 Shipping Rates</Text>
