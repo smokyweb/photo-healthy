@@ -279,7 +279,7 @@ const HomeBottomSections = ({ isMobile, onHowItWorksLayout }: { isMobile: boolea
   );
 };
 
-const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navigation, recent, streak }: any) => {
+const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navigation, recent, streak, motivationalQuote }: any) => {
   const firstName = (user.name || 'User').split(' ')[0];
   const today = formatDate(new Date());
 
@@ -436,7 +436,7 @@ const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navig
   );
 };
 
-const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navigation, recent, streak }: any) => {
+const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navigation, recent, streak, motivationalQuote }: any) => {
   const firstName = (user?.name || 'User').split(' ')[0];
   const challenge = featured || {
     title: 'Golden Hour Magic',
@@ -673,6 +673,7 @@ const HomeScreen = () => {
           navigation={navigation}
           recent={recent}
           streak={calcStreak(submissions, user?.id || 0)}
+          motivationalQuote={motivationalQuote}
         />
       ) : user ? (
         /* ===== LOGGED-IN CONTENT ===== */
