@@ -567,20 +567,20 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft,
 const HomeScreen = () => {
   const navigation = useNavigation<any>();
 
-  const [motivationalQuote, setMotivationalQuote] = useState('Every photo tells a story. Make yours worth telling.');
+  const [motivationalQuote, setMotivationalQuote] = useState('The secret of getting ahead is getting started. — Mark Twain');
   const [quoteAuthor, setQuoteAuthor] = useState('');
   React.useEffect(() => {
     fetch('https://motivational-spark-api.vercel.app/api/quotes/random')
       .then(r => r.json())
       .then((data: any) => {
-        if (data?.quote) setMotivationalQuote(data.quote);
-        if (data?.author && data.author !== 'null') setQuoteAuthor(data.author);
+        const q = data?.quote || data?.text || data?.content || (Array.isArray(data) ? data[0]?.quote : null);
+        const a = data?.author || data?.name || '';
+        if (q) {
+          setMotivationalQuote(q);
+          setQuoteAuthor(a && a !== 'null' ? a : '');
+        }
       })
-      .catch(() => {
-        // Fallback quote
-        setMotivationalQuote('Every photo tells a story. Make yours worth telling.');
-        setQuoteAuthor('');
-      });
+      .catch(() => {});
   }, []);  setFooterNav((r: string) => navigation.navigate(r as never));
   const { user } = useAuth();
   const { width } = useWindowDimensions();
