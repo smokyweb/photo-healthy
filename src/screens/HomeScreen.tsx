@@ -662,64 +662,7 @@ const HomeScreen = () => {
     <ScrollView ref={scrollRef} style={s.root} contentContainerStyle={{ paddingBottom: 0 }}>
       <StarField />
 
-      {/* Top bar */}
-      <View style={s.topBar}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Image
-            source={LOGO_IMG}
-            style={[s.headerLogo, isMobile && s.headerLogoMobile]}
-            resizeMode="contain"
-          />
-        </View>
-        {!isMobile && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1, justifyContent: 'center' }}>
-            {[
-              { label: 'Challenges', route: 'Main', params: { screen: 'ChallengesTab' } },
-              { label: 'Community', route: 'Main', params: { screen: 'CommunityTab' } },
-              { label: 'Shop', route: 'Shop' },
-              { label: 'About', route: 'About' },
-              { label: 'How It Works', route: 'HowItWorks' },
-              { label: 'Partners', route: 'Partners' },
-              { label: 'FAQ', route: 'FAQ' },
-            ].map(({ label, route, params }) => (
-              <TouchableOpacity key={label} onPress={() => navigation.navigate(route as never, params as never)} style={{ paddingHorizontal: 10, paddingVertical: 6 }}>
-                <Text style={{ color: 'rgba(234,236,239,0.75)', fontSize: 13, fontWeight: '500' }}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-        <View style={s.topRight}>
-          {user && (
-            <TouchableOpacity style={s.bellBtn}>
-              <Text style={{ fontSize: 18 }}>🔔</Text>
-            </TouchableOpacity>
-          )}
-          {user && (
-            <TouchableOpacity style={s.bellBtn}>
-              <Text style={{ fontSize: 20, color: C.TEXT }}>☰</Text>
-            </TouchableOpacity>
-          )}
-          {user ? (
-            <TouchableOpacity onPress={() => navigation.navigate('ProfileTab')}>
-              <View style={s.avatarCircle}>
-                <Text style={s.avatarText}>
-                  {(user.name || 'U')[0].toUpperCase()}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ) : (
-            <View style={s.authButtons}>
-              <TouchableOpacity style={s.loginHeaderBtn} onPress={() => navigation.navigate('Login')}>
-                <Text style={s.loginHeaderText}>Log In</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.signupHeaderBtn} onPress={() => navigation.navigate('Register')}>
-                <Text style={s.signupHeaderText}>Sign Up</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      </View>
-
+      
       {user && isMobile ? (
         <MobileLoggedInHome
           user={user}

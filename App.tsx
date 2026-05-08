@@ -89,7 +89,8 @@ function MainTabs() {
   return (
     <View style={{ flex: 1, flexDirection: 'column' }}>
       <View style={{ flex: 1 }}>
-        <Tab.Navigator
+        <TopNavBar />
+      <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarStyle: isDesktop
