@@ -697,6 +697,8 @@ const HomeScreen = () => {
           navigation={navigation}
           recent={recent}
           streak={calcStreak(submissions, user?.id || 0)}
+          motivationalQuote={motivationalQuote}
+          quoteAuthor={quoteAuthor}
         />
       ) : (
         /* ===== PUBLIC CONTENT (hero, stats, challenge, submissions, how-it-works) ===== */
