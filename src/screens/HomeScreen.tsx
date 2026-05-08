@@ -570,26 +570,17 @@ const HomeScreen = () => {
   const [motivationalQuote, setMotivationalQuote] = useState('Every photo tells a story. Make yours worth telling.');
   const [quoteAuthor, setQuoteAuthor] = useState('');
   React.useEffect(() => {
-    const QUOTES = [
-      { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
-      { text: "Movement is medicine for creating change in a person's physical, emotional, and mental states.", author: "Carol Welch" },
-      { text: "Take care of your body. It's the only place you have to live.", author: "Jim Rohn" },
-      { text: "Every photo tells a story. Make yours worth telling.", author: "" },
-      { text: "Wellness is the complete integration of body, mind, and spirit.", author: "Greg Anderson" },
-      { text: "Small steps every day lead to big changes.", author: "" },
-      { text: "A healthy outside starts from the inside.", author: "Robert Urich" },
-      { text: "The groundwork for all happiness is good health.", author: "Leigh Hunt" },
-      { text: "Your body can stand almost anything. It's your mind that you have to convince.", author: "" },
-      { text: "The first wealth is health.", author: "Ralph Waldo Emerson" },
-      { text: "To keep the body in good health is a duty, otherwise we shall not be able to keep our mind strong and clear.", author: "Buddha" },
-      { text: "Physical fitness is not only one of the most important keys to a healthy body, it is the basis of dynamic and creative intellectual activity.", author: "John F. Kennedy" },
-      { text: "The human body is the best picture of the human soul.", author: "Ludwig Wittgenstein" },
-      { text: "Happiness is the highest form of health.", author: "Dalai Lama" },
-      { text: "Your wellness journey is uniquely yours. Celebrate every step.", author: "" },
-    ];
-    const pick = QUOTES[Math.floor(Math.random() * QUOTES.length)];
-    setMotivationalQuote(pick.text);
-    setQuoteAuthor(pick.author);
+    fetch('https://motivational-spark-api.vercel.app/api/quotes/random')
+      .then(r => r.json())
+      .then((data: any) => {
+        if (data?.quote) setMotivationalQuote(data.quote);
+        if (data?.author && data.author !== 'null') setQuoteAuthor(data.author);
+      })
+      .catch(() => {
+        // Fallback quote
+        setMotivationalQuote('Every photo tells a story. Make yours worth telling.');
+        setQuoteAuthor('');
+      });
   }, []);  setFooterNav((r: string) => navigation.navigate(r as never));
   const { user } = useAuth();
   const { width } = useWindowDimensions();
