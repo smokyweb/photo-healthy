@@ -279,7 +279,7 @@ const HomeBottomSections = ({ isMobile, onHowItWorksLayout }: { isMobile: boolea
   );
 };
 
-const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navigation, recent, streak, motivationalQuote }: any) => {
+const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navigation, recent, streak, motivationalQuote, quoteAuthor }: any) => {
   const firstName = (user.name || 'User').split(' ')[0];
   const today = formatDate(new Date());
 
@@ -360,23 +360,24 @@ const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navig
       <Text style={li.quoteText}>
         {motivationalQuote}
       </Text>
+      {quoteAuthor ? <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 8, fontStyle: 'normal' }}>— {quoteAuthor}</Text> : null}
     </View>
 
     {/* Stats Row (3 cards) */}
     <View style={li.section}>
       <View style={li.statsRow}>
         <View style={li.statCard}>
-          <Text style={[li.statIcon, {fontSize:20}]}>{"Photos"}</Text>
+          <Text style={[li.statIcon, {fontSize:20, color:'#fff'}]}>{"Photos"}</Text>
           <Text style={li.statNum}>{submissions.filter((s: any) => s.user_id === user?.id).length}</Text>
           <Text style={li.statLabel}>Photos Submitted</Text>
         </View>
         <View style={li.statCard}>
-          <Text style={[li.statIcon, {fontSize:20}]}>{"Streak"}</Text>
+          <Text style={[li.statIcon, {fontSize:20, color:'#fff'}]}>{"Streak"}</Text>
           <Text style={[li.statNum, { color: streak > 0 ? C.ORANGE : C.TEXT }]}>{streak}</Text>
           <Text style={li.statLabel}>Day Streak</Text>
         </View>
         <View style={li.statCard}>
-          <Text style={[li.statIcon, {fontSize:20}]}>{"Challenges"}</Text>
+          <Text style={[li.statIcon, {fontSize:20, color:'#fff'}]}>{"Challenges"}</Text>
           <Text style={li.statNum}>{challenges.length}</Text>
           <Text style={li.statLabel}>Total Challenges</Text>
         </View>
@@ -567,10 +568,18 @@ const HomeScreen = () => {
   const navigation = useNavigation<any>();
 
   const [motivationalQuote, setMotivationalQuote] = useState('Every photo tells a story. Make yours worth telling.');
+  const [quoteAuthor, setQuoteAuthor] = useState('');
   React.useEffect(() => {
-    getPublicSettings().then((data: any) => {
-      if (data?.settings?.motivational_quote) setMotivationalQuote(data.settings.motivational_quote);
-    }).catch(() => {});
+    fetch('https://type.fit/api/quotes')
+      .then(r => r.json())
+      .then((quotes: any[]) => {
+        if (quotes && quotes.length > 0) {
+          const pick = quotes[Math.floor(Math.random() * quotes.length)];
+          setMotivationalQuote(pick.text || pick.quote || '');
+          setQuoteAuthor(pick.author && pick.author !== 'null' && pick.author !== 'type.fit' ? pick.author : '');
+        }
+      })
+      .catch(() => {});
   }, []);  setFooterNav((r: string) => navigation.navigate(r as never));
   const { user } = useAuth();
   const { width } = useWindowDimensions();
@@ -674,6 +683,7 @@ const HomeScreen = () => {
           recent={recent}
           streak={calcStreak(submissions, user?.id || 0)}
           motivationalQuote={motivationalQuote}
+          quoteAuthor={quoteAuthor}
         />
       ) : user ? (
         /* ===== LOGGED-IN CONTENT ===== */
@@ -1080,7 +1090,7 @@ const s = StyleSheet.create({
     borderColor: C.CARD_BORDER,
   },
   statNum: { ...type.heading, color: C.TEXT, fontSize: 22 },
-  statLabel: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 12, marginTop: 4 },
+  statLabel: { ...type.subtext, color: '#FFFFFF', fontSize: 12, marginTop: 4 },
 
   // ===== CHALLENGE CARD =====
   challengeCard: {
