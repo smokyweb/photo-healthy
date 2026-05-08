@@ -155,7 +155,7 @@ export default function ChallengesScreen() {
                 {featured.feeling_category && <View style={styles.featuredStatCell}><Text style={styles.featuredStatLabel}>FEELING</Text><Text style={styles.featuredStatVal} numberOfLines={1}>{featured.feeling_category.split(',')[0].trim()}</Text></View>}
                 {featured.movement_category && <View style={styles.featuredStatCell}><Text style={styles.featuredStatLabel}>MOVEMENT</Text><Text style={styles.featuredStatVal} numberOfLines={1}>{featured.movement_category.split(',')[0].trim()}</Text></View>}
               </View>
-              <GradientButton label="View Challenge" variant="primary" size="sm" onPress={() => navigation.navigate('ChallengeDetail', { challengeId: featured.id, id: featured.id })} style={{ marginTop: 12, alignSelf: 'flex-start' } as any} />
+              <GradientButton label="View Challenge" variant="primary" size="sm" pill={false} onPress={() => navigation.navigate('ChallengeDetail', { challengeId: featured.id, id: featured.id })} style={{ marginTop: 12, alignSelf: 'flex-start' } as any} />
             </View>
           </TouchableOpacity>
         );

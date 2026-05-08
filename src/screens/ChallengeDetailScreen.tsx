@@ -266,7 +266,7 @@ export default function ChallengeDetailScreen() {
           {isActive && isEnrolled && personalDeadlineExpired && (
             <GradientButton
               label="Challenge Expired"
-              variant="outline"
+              variant="outline" pill={false}
               onPress={() => {}}
               style={[styles.actionBtn, { opacity: 0.5 }]}
             />
@@ -276,7 +276,7 @@ export default function ChallengeDetailScreen() {
           {!!challenge?.is_pro_only && !isPro && user && (
             <GradientButton
               label="Upgrade to Pro ⭐"
-              variant="outline"
+              variant="outline" pill={false}
               onPress={() => navigation.navigate('Subscription')}
               style={styles.actionBtn}
             />
@@ -286,7 +286,7 @@ export default function ChallengeDetailScreen() {
           {hasPartner && (
             <GradientButton
               label="Visit Partner →"
-              variant="outline-teal"
+              variant="outline-teal" pill={false}
               onPress={() => Linking.openURL(challenge.partner_url)}
               style={styles.actionBtn}
             />

@@ -253,10 +253,10 @@ const styles = StyleSheet.create({
   viewBtnWrap: {
     paddingHorizontal: 14,
     paddingBottom: 14,
-    paddingTop: 4,
+    paddingTop: 12,
   },
   viewBtn: {
-    borderRadius: 20,
+    borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 18,
     alignItems: 'center',
