@@ -507,7 +507,7 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft,
       </View>
 
       <View style={pm.quote}>
-        <Text style={pm.quoteText}>This is my reflection color. This is a reminder to grow.</Text>
+        <Text style={pm.quoteText}>{motivationalQuote}</Text>
       </View>
 
       <View style={pm.statRow}>
@@ -1541,7 +1541,7 @@ const pm = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
   } as any,
-  quoteText: { ...type.heading, color: '#FFFFFF', fontSize: 10, lineHeight: 14, textAlign: 'center' },
+  quoteText: { ...type.subtext, color: '#FFFFFF', fontSize: 15, fontStyle: 'italic', lineHeight: 22, textAlign: 'center' },
 
   statRow: { flexDirection: 'row', gap: 10, marginBottom: 18 },
   statCard: {
