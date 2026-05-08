@@ -137,7 +137,7 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
         </View>
         {/* View Challenge button */}
         <View style={styles.viewBtnWrap}>
-          <TouchableOpacity style={styles.viewBtn} activeOpacity={0.85}>
+          <TouchableOpacity style={styles.viewBtn} activeOpacity={0.85} onPress={onPress}>
             <Text style={styles.viewBtnText}>View Challenge →</Text>
           </TouchableOpacity>
         </View>
