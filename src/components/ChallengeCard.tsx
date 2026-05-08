@@ -135,6 +135,12 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
             <Text style={[styles.stat, { color: C.TEXT_MUTED }]}>Challenge ended</Text>
           )}
         </View>
+        {/* View Challenge button */}
+        <View style={styles.viewBtnWrap}>
+          <TouchableOpacity style={styles.viewBtn} activeOpacity={0.85}>
+            <Text style={styles.viewBtnText}>View Challenge →</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -243,4 +249,24 @@ const styles = StyleSheet.create({
   // Stats
   statsRow: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
   stat: { color: C.TEXT_SECONDARY, fontSize: 13, fontFamily: "'Inter', sans-serif" },
+
+  viewBtnWrap: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    paddingTop: 4,
+  },
+  viewBtn: {
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundImage: 'linear-gradient(90deg, #F55B09 0%, #FFD000 100%)' as any,
+    backgroundColor: '#F55B09',
+  },
+  viewBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
 });
