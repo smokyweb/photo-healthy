@@ -100,7 +100,9 @@ export default function TopNavBar() {
 
       {/* Mobile drawer */}
       {isMobile && menuOpen && (
-        <View style={styles.drawer}>
+        <>
+          <TouchableOpacity style={styles.drawerBackdrop} onPress={() => setMenuOpen(false)} activeOpacity={1} />
+          <View style={styles.drawer}>
           {NAV_LINKS.map(l => (
             <TouchableOpacity key={l.label} style={styles.drawerItem} onPress={() => nav(l.screen, l.params)}>
               <Text style={styles.drawerText}>{l.label}</Text>
@@ -113,6 +115,7 @@ export default function TopNavBar() {
             </TouchableOpacity>
           )}
         </View>
+        </>
       )}
     </View>
   );
@@ -152,12 +155,32 @@ const styles = StyleSheet.create({
   loginText: { color: '#54DFB6', fontSize: 12, fontWeight: '700' },
   signupBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 18, backgroundColor: '#F55B09', backgroundImage: ORANGE_GRADIENT } as any,
   signupText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  drawerBackdrop: {
+    position: 'fixed' as any,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9998,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
   drawer: {
+    position: 'fixed' as any,
+    top: 64,
+    left: 0,
+    right: 0,
+    zIndex: 9999,
     backgroundColor: 'rgba(10,14,26,0.98)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(148,163,184,0.12)',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    borderBottomColor: 'rgba(148,163,184,0.2)',
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 20,
   },
   drawerItem: { paddingVertical: 12 },
   drawerText: { color: 'rgba(234,236,239,0.85)', fontSize: 15, fontWeight: '500' },
