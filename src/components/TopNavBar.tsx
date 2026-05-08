@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, Image, TouchableOpacity, StyleSheet,
-  useWindowDimensions, ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -60,7 +60,6 @@ export default function TopNavBar() {
 
         {/* Right side */}
         <View style={styles.rightSide}>
-          {/* Cart */}
           {itemCount > 0 && (
             <TouchableOpacity style={styles.cartBtn} onPress={() => nav('Cart')}>
               <Text style={styles.cartText}>🛒 {itemCount}</Text>
@@ -68,18 +67,22 @@ export default function TopNavBar() {
           )}
 
           {user ? (
-            <>
+            <View style={styles.rightSide}>
               <TouchableOpacity onPress={() => nav('Main', { screen: 'ProfileTab' })}>
                 <View style={styles.avatar}>
                   <Text style={styles.avatarText}>{initials}</Text>
                 </View>
               </TouchableOpacity>
               {isMobile && (
-                <TouchableOpacity onPress={() => setMenuOpen(!menuOpen)} style={styles.menuBtn}>
-                  <Text style={{ fontSize: 20, color: C.TEXT }}>{menuOpen ? '✕' : '☰'}</Text>
+                <TouchableOpacity
+                  onPress={() => setMenuOpen(v => !v)}
+                  style={styles.menuBtn}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={{ fontSize: 22, color: '#fff' }}>{menuOpen ? '✕' : '☰'}</Text>
                 </TouchableOpacity>
               )}
-            </>
+            </View>
           ) : (
             <View style={styles.authBtns}>
               <TouchableOpacity style={styles.loginBtn} onPress={() => nav('Login')}>
@@ -89,8 +92,12 @@ export default function TopNavBar() {
                 <Text style={styles.signupText}>Sign Up</Text>
               </TouchableOpacity>
               {isMobile && (
-                <TouchableOpacity onPress={() => setMenuOpen(!menuOpen)} style={styles.menuBtn}>
-                  <Text style={{ fontSize: 20, color: C.TEXT }}>{menuOpen ? '✕' : '☰'}</Text>
+                <TouchableOpacity
+                  onPress={() => setMenuOpen(v => !v)}
+                  style={styles.menuBtn}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={{ fontSize: 22, color: '#fff' }}>{menuOpen ? '✕' : '☰'}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -98,24 +105,22 @@ export default function TopNavBar() {
         </View>
       </View>
 
-      {/* Mobile drawer */}
+      {/* Mobile drawer — inline below bar, no position:fixed needed */}
       {isMobile && menuOpen && (
-        <>
-          <TouchableOpacity style={styles.drawerBackdrop} onPress={() => setMenuOpen(false)} activeOpacity={1} />
-          <View style={styles.drawer}>
+        <View style={styles.drawer}>
           {NAV_LINKS.map(l => (
             <TouchableOpacity key={l.label} style={styles.drawerItem} onPress={() => nav(l.screen, l.params)}>
               <Text style={styles.drawerText}>{l.label}</Text>
             </TouchableOpacity>
           ))}
+          <View style={styles.drawerDivider} />
           {user && (
-            <TouchableOpacity style={[styles.drawerItem, { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)', marginTop: 8, paddingTop: 16 }]}
+            <TouchableOpacity style={styles.drawerItem}
               onPress={() => { setMenuOpen(false); logout(); navigation.reset({ index: 0, routes: [{ name: 'Main' as never }] }); }}>
               <Text style={[styles.drawerText, { color: '#ef4444' }]}>Sign Out</Text>
             </TouchableOpacity>
           )}
         </View>
-        </>
       )}
     </View>
   );
@@ -128,9 +133,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: 'rgba(10,14,26,0.95)',
+    backgroundColor: 'rgba(10,14,26,0.97)',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(148,163,184,0.12)',
+    zIndex: 100,
   },
   logoWrap: { flexShrink: 0 },
   logo: { width: 44, height: 44 },
@@ -146,42 +152,24 @@ const styles = StyleSheet.create({
   navLinkText: { color: 'rgba(234,236,239,0.75)', fontSize: 13, fontWeight: '500' },
   rightSide: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   cartBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: 'rgba(245,91,9,0.15)', borderWidth: 1, borderColor: 'rgba(245,91,9,0.4)' },
-  cartText: { color: C.ORANGE, fontSize: 13, fontWeight: '600' },
-  avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: C.ORANGE, alignItems: 'center', justifyContent: 'center' },
+  cartText: { color: '#F55B09', fontSize: 13, fontWeight: '600' },
+  avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#F55B09', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#fff', fontSize: 13, fontWeight: '800' },
-  menuBtn: { padding: 6 },
+  menuBtn: { padding: 6, marginLeft: 4 },
   authBtns: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   loginBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 18, borderWidth: 1, borderColor: '#54DFB6' },
   loginText: { color: '#54DFB6', fontSize: 12, fontWeight: '700' },
   signupBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 18, backgroundColor: '#F55B09', backgroundImage: ORANGE_GRADIENT } as any,
   signupText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  drawerBackdrop: {
-    position: 'fixed' as any,
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 9998,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
   drawer: {
-    position: 'fixed' as any,
-    top: 64,
-    left: 0,
-    right: 0,
-    zIndex: 9999,
     backgroundColor: 'rgba(10,14,26,0.98)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(148,163,184,0.2)',
+    borderBottomColor: 'rgba(148,163,184,0.15)',
     paddingHorizontal: 24,
-    paddingTop: 8,
-    paddingBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 20,
+    paddingVertical: 8,
+    zIndex: 99,
   },
-  drawerItem: { paddingVertical: 12 },
-  drawerText: { color: 'rgba(234,236,239,0.85)', fontSize: 15, fontWeight: '500' },
+  drawerItem: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
+  drawerText: { color: 'rgba(234,236,239,0.9)', fontSize: 16, fontWeight: '500' },
+  drawerDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 8 },
 });
