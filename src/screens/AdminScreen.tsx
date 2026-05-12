@@ -1503,20 +1503,27 @@ export default function AdminScreen() {
                     </View>
                   ))}
 
-                  {/* Shipping address */}
-                  {o.shipping_address_json && (() => {
-                    try {
-                      const addr = typeof o.shipping_address_json === 'string' ? JSON.parse(o.shipping_address_json) : o.shipping_address_json;
-                      return (
-                        <View style={{ marginTop: 12, backgroundColor: '#2C2F40', borderRadius: 8, padding: 10 }}>
-                          <Text style={{ color: '#8B9AB0', fontSize: 11, marginBottom: 4 }}>🚚 SHIP TO:</Text>
-                          {[customerName, addr.line1, addr.line2, [addr.city, addr.state].filter(Boolean).join(', ') + (addr.postal_code ? ' ' + addr.postal_code : ''), addr.country].filter(Boolean).map((line, i) => (
-                            <Text key={i} style={{ color: '#EAECEF', fontSize: 13 }}>{line}</Text>
-                          ))}
-                        </View>
-                      );
-                    } catch { return null; }
-                  })()}
+                  {/* Customer contact + shipping info */}
+                  <View style={{ marginTop: 12, backgroundColor: '#2C2F40', borderRadius: 8, padding: 12, gap: 6 }}>
+                    <Text style={{ color: '#8B9AB0', fontSize: 11, fontWeight: '700', marginBottom: 4 }}>CUSTOMER INFO</Text>
+                    {(o.customer_name || o.user_name) && <Text style={{ color: '#EAECEF', fontSize: 14, fontWeight: '700' }}>{o.customer_name || o.user_name}</Text>}
+                    {(o.customer_email || o.user_email) && <Text style={{ color: '#54DFB6', fontSize: 13 }}>{o.customer_email || o.user_email}</Text>}
+                    {o.shipping_method && <Text style={{ color: '#8B9AB0', fontSize: 12 }}>Shipping: {o.shipping_method}</Text>}
+                    {o.shipping_address_json ? (() => {
+                      try {
+                        const addr = typeof o.shipping_address_json === 'string' ? JSON.parse(o.shipping_address_json) : o.shipping_address_json;
+                        const lines = [addr.name, addr.line1, addr.line2, [addr.city, addr.state].filter(Boolean).join(', ') + (addr.postal_code ? ' ' + addr.postal_code : ''), addr.country].filter(Boolean);
+                        return lines.length > 0 ? (
+                          <View style={{ marginTop: 4, borderTopWidth: 1, borderTopColor: '#ffffff10', paddingTop: 8 }}>
+                            <Text style={{ color: '#8B9AB0', fontSize: 11, marginBottom: 4 }}>SHIP TO:</Text>
+                            {lines.map((ln, i) => <Text key={i} style={{ color: '#EAECEF', fontSize: 13 }}>{ln}</Text>)}
+                          </View>
+                        ) : null;
+                      } catch { return null; }
+                    })() : (
+                      <Text style={{ color: '#8B9AB0', fontSize: 12, fontStyle: 'italic', marginTop: 4 }}>Shipping address not captured — check Stripe for full details</Text>
+                    )}
+                  </View>
 
                   {/* Stripe link */}
                   {o.stripe_payment_url && (
