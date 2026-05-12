@@ -624,7 +624,15 @@ export default function AdminScreen() {
           <Text style={styles.emptyText}>No {userDetailTab.toLowerCase()} found.</Text>
         ) : userDetailTab === 'Submissions' ? (
           userActivity.submissions.map((s: any) => (
-            <View key={s.id} style={styles.submissionItem}>
+            <TouchableOpacity key={s.id} style={styles.submissionItem} activeOpacity={0.8}
+              onPress={() => {
+                // Normalize field names for the detail view (user submissions use photo1_url)
+                const normalized = { ...s, image_url: s.image_url || s.photo1_url };
+                setSelectedSubmission(normalized);
+                loadSubmissionComments(s.id);
+                setActiveTab('Submissions');
+              }}
+            >
               {s.photo1_url ? (
                 <Image source={{ uri: s.photo1_url.startsWith('http') ? s.photo1_url : 'https://photoai.betaplanets.com' + s.photo1_url }} style={styles.thumbImage} resizeMode="cover" />
               ) : (
@@ -637,7 +645,7 @@ export default function AdminScreen() {
                 {s.challenge_title ? <Text style={styles.listItemSub}>{s.challenge_title}</Text> : null}
                 <Text style={styles.listItemMeta}>{s.created_at ? new Date(s.created_at).toLocaleDateString() : ''}</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           ))
         ) : userDetailTab === 'Orders' ? (
           userActivity.orders.map((o: any) => (
