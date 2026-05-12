@@ -26,6 +26,7 @@ export default function SubmitPhotoScreen() {
   const [miles, setMiles] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
   // Use a hidden file input rendered in the DOM for iOS compatibility
@@ -87,11 +88,15 @@ export default function SubmitPhotoScreen() {
       if (uploadedUrls[0]) payload.image_url = uploadedUrls[0];
 
       await createSubmission(payload);
-      Alert.alert(
-        'âœ… Submitted!',
-        'Your photo has been shared with the community.',
-        [{ text: 'View Challenges', onPress: () => navigation.goBack() }]
-      );
+      // Show success and navigate to challenge detail
+      setSuccess(true);
+      setTimeout(() => {
+        if (challengeId) {
+          navigation.replace('ChallengeDetail' as never, { challengeId, id: challengeId } as never);
+        } else {
+          navigation.goBack();
+        }
+      }, 2000);
     } catch (e: any) {
       setError(e.message || 'Submission failed. Please try again.');
     } finally {
@@ -125,6 +130,12 @@ export default function SubmitPhotoScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Text style={styles.backText}>← Cancel</Text>
           </TouchableOpacity>
+      {success && (
+        <View style={{ backgroundColor: '#22c55e', padding: 16, borderRadius: 10, marginBottom: 16, alignItems: 'center' }}>
+          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>✅ Photo Submitted!</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: 4 }}>Taking you to the challenge...</Text>
+        </View>
+      )}
           <Text style={styles.heading}>Submit Photos</Text>
           <View style={{ width: 60 }} />
         </View>
