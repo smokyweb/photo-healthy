@@ -63,6 +63,7 @@ export default function AdminScreen() {
   const [orderFilter, setOrderFilter] = useState<string>('Active');
   const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
   const [trackingInput, setTrackingInput] = useState<Record<number, string>>({});
+  const [trackingMsg, setTrackingMsg] = useState<Record<number, string>>({});
 
   const [settings, setSettings] = useState<any>({});
 
@@ -1510,16 +1511,19 @@ export default function AdminScreen() {
                           await adminFulfillOrder(o.id, tracking);
                           const d = await adminGetOrders();
                           setOrders(d?.orders || []);
-                          Alert.alert('Shipped!', tracking ? 'Tracking: ' + tracking : 'Order marked as shipped.');
+                          setTrackingMsg(m => ({ ...m, [o.id]: '\u2713 Marked shipped!' + (tracking ? ' Tracking: ' + tracking : '') }));setTimeout(() => setTrackingMsg(m => { const n={...m}; delete n[o.id]; return n; }), 4000);
                         } catch (e: any) { Alert.alert('Error', e.message); }
                       }} />
                     )}
-                    {trackingInput[o.id] && o.status === 'fulfilled' && (
+                    {trackingInput[o.id] && !(['refunded','cancelled','failed'].includes(o.status)) && (
                       <GradientButton label="📍 Update Tracking" variant="outline" size="sm" onPress={async () => {
-                        try { await adminUpdateTracking(o.id, trackingInput[o.id]); const d = await adminGetOrders(); setOrders(d?.orders || []); Alert.alert('Updated', 'Tracking updated.'); } catch (e: any) { Alert.alert('Error', e.message); }
+                        try { await adminUpdateTracking(o.id, trackingInput[o.id]); const d = await adminGetOrders(); setOrders(d?.orders || []); setTrackingMsg(m => ({ ...m, [o.id]: '✓ Tracking updated!' })); setTimeout(() => setTrackingMsg(m => { const n={...m}; delete n[o.id]; return n; }), 4000); } catch (e: any) { setTrackingMsg(m => ({ ...m, [o.id]: 'Error: ' + e.message })); }
                       }} />
                     )}
                   </View>
+                  {trackingMsg[o.id] && (
+                    <Text style={{ color: trackingMsg[o.id].startsWith('Error') ? '#ef4444' : '#22c55e', fontSize: 12, marginTop: 6, fontWeight: '600' }}>{trackingMsg[o.id]}</Text>
+                  )}
 
                   {o.fulfilled_at && (
                     <Text style={{ color: '#8B9AB0', fontSize: 11, marginTop: 8 }}>
