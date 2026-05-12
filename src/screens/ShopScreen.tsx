@@ -64,8 +64,9 @@ export default function ShopScreen() {
   const featuredProducts = filteredProducts.filter((p: any) => p.is_featured || p.featured);
   const allProducts = filteredProducts;
 
+  const isPro = user?.subscription_status === 'active' || user?.role === 'pro';
   const handleAddToCart = (product: any) => {
-    if (product.is_pro_only && user?.subscription_status !== 'active') {
+    if (product.is_pro_only && !isPro) {
       Alert.alert(
         'Pro Members Only',
         'This item is available for Pro members. Upgrade to access exclusive products.',
@@ -214,7 +215,7 @@ export default function ShopScreen() {
                       <Text style={styles.productName} numberOfLines={2}>{item.title}</Text>
                       <Text style={styles.price}>${Number(item.price).toFixed(2)}</Text>
                       <GradientButton
-                        label={isPro ? '⭐ Pro Only' : cartAdded === item.id ? '✓ Added!' : '🛒 Add to Cart'}
+                        label={item.is_pro_only && !isPro ? '⭐ Pro Only' : cartAdded === item.id ? '✓ Added!' : '🛒 Add to Cart'}
                         onPress={() => handleAddToCart(item)}
                         disabled={isPro}
                         style={styles.addBtn}
@@ -271,7 +272,7 @@ export default function ShopScreen() {
                       <Text style={styles.productName} numberOfLines={2}>{item.title}</Text>
                       <Text style={styles.price}>${Number(item.price).toFixed(2)}</Text>
                       <GradientButton
-                        label={isPro ? '⭐ Pro Only' : cartAdded === item.id ? '✓ Added!' : '🛒 Add to Cart'}
+                        label={item.is_pro_only && !isPro ? '⭐ Pro Only' : cartAdded === item.id ? '✓ Added!' : '🛒 Add to Cart'}
                         onPress={() => handleAddToCart(item)}
                         disabled={isPro}
                         variant="outline"
