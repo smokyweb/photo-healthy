@@ -60,7 +60,7 @@ export default function AdminScreen() {
 
   const [orders, setOrders] = useState<any[]>([]);
   const [orderSearch, setOrderSearch] = useState('');
-  const [orderFilter, setOrderFilter] = useState<'All'|'Pending'|'Completed'|'Refunded'>('All');
+  const [orderFilter, setOrderFilter] = useState<string>('Active');
   const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
   const [trackingInput, setTrackingInput] = useState<Record<number, string>>({});
 
@@ -1317,7 +1317,16 @@ export default function AdminScreen() {
     };
 
     const filtered = orders.filter(o => {
-      const statusMatch = orderFilter === 'All' || (o.status || '').toLowerCase() === orderFilter.toLowerCase();
+      const status = (o.status || '').toLowerCase();
+      const ACTIVE_STATUSES = ['pending', 'paid', 'processed'];
+      const HISTORY_STATUSES = ['fulfilled', 'refunded', 'failed', 'cancelled', 'shipped'];
+      const statusMatch = orderFilter === 'All'
+        ? true
+        : orderFilter === 'Active'
+          ? ACTIVE_STATUSES.includes(status)
+          : orderFilter === 'History'
+            ? HISTORY_STATUSES.includes(status)
+            : status === orderFilter.toLowerCase();
       const searchMatch = !orderSearch.trim() ||
         (o.customer_name || o.user_name || '').toLowerCase().includes(orderSearch.toLowerCase()) ||
         (o.customer_email || o.user_email || '').toLowerCase().includes(orderSearch.toLowerCase()) ||
@@ -1353,14 +1362,24 @@ export default function AdminScreen() {
 
         {/* Status filter chips */}
         <ScrollView horizontal showsHorizontalScrollIndicator={true} persistentScrollbar style={{ marginBottom: 12 }}>
-          {['All', 'Pending', 'Paid', 'Processed', 'Fulfilled', 'Refunded'].map(f => (
+          {['Active', 'All', 'Pending', 'Paid', 'Processed', 'History'].map(f => (
             <TouchableOpacity
               key={f}
               style={[styles.chipOption, orderFilter === f && styles.chipOptionActive, { marginRight: 6 }]}
               onPress={() => setOrderFilter(f)}
             >
               <Text style={[styles.chipOptionText, orderFilter === f && styles.chipOptionTextActive]}>
-                {f} {f !== 'All' && counts[f.toLowerCase()] ? '(' + counts[f.toLowerCase()] + ')' : ''}
+                {f} {(() => {
+                  if (f === 'Active') {
+                    const n = ['pending','paid','processed'].reduce((s,k) => s + (counts[k]||0), 0);
+                    return n > 0 ? '(' + n + ')' : '';
+                  }
+                  if (f === 'History') {
+                    const n = ['fulfilled','refunded','failed','cancelled','shipped'].reduce((s,k) => s + (counts[k]||0), 0);
+                    return n > 0 ? '(' + n + ')' : '';
+                  }
+                  return f !== 'All' && counts[f.toLowerCase()] ? '(' + counts[f.toLowerCase()] + ')' : '';
+                })()}
               </Text>
             </TouchableOpacity>
           ))}
