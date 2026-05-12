@@ -1077,6 +1077,25 @@ export default function AdminScreen() {
     }
   };
 
+  const handleProductToggle = async (product: any, field: string, value: boolean) => {
+    try {
+      await updateProduct(product.id, { [field]: value ? 1 : 0 });
+      const refreshed = await adminGetProducts();
+      setProducts(refreshed?.products || refreshed || []);
+    } catch (e: any) {
+      console.error('Toggle failed:', e.message);
+    }
+  };
+
+  const handleDeleteProduct = async (id: number, name: string) => {
+    if (!window.confirm('Delete "' + name + '"? This cannot be undone.')) return;
+    try {
+      await deleteProduct(id);
+      const refreshed = await adminGetProducts();
+      setProducts(refreshed?.products || refreshed || []);
+    } catch (e: any) { console.error('Delete failed:', e.message); }
+  };
+
   const renderProducts = () => {
     const filtered = products.filter(p => {
       if (!productSearch.trim()) return true;
@@ -1266,7 +1285,7 @@ export default function AdminScreen() {
         )}
 
         {filtered.map(p => (
-          <View key={p.id} style={styles.listItem}>
+          <View key={p.id} style={[styles.listItem, !p.is_active && { opacity: 0.55, borderColor: '#ef444422' }]}>
             {/* Emoji/image */}
             <View style={[styles.productIcon, { marginRight: 10 }]}>
               {p.image_url ? (
@@ -1280,6 +1299,7 @@ export default function AdminScreen() {
                 <Text style={styles.listItemTitle}>{p.name}</Text>
                 {p.featured ? <View style={styles.badgeTeal}><Text style={styles.badgeText}>Featured</Text></View> : null}
                 {p.is_pro_only ? <View style={styles.badgeOrange}><Text style={styles.badgeText}>Pro Only</Text></View> : null}
+                {!p.is_active ? <View style={{ backgroundColor: '#ef444422', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: '#ef444455' }}><Text style={{ color: '#ef4444', fontSize: 10, fontWeight: '700' }}>HIDDEN</Text></View> : null}
               </View>
               <Text style={[styles.listItemSub, { color: C.TEAL, fontWeight: '700' }]}>${Number(p.price || 0).toFixed(2)}</Text>
               {p.description ? <Text style={styles.listItemMeta} numberOfLines={2}>{p.description}</Text> : null}
@@ -1291,6 +1311,10 @@ export default function AdminScreen() {
                 <View style={styles.toggleItem}>
                   <Text style={styles.toggleLabel}>Pro</Text>
                   <Switch value={!!p.is_pro_only} onValueChange={v => handleProductToggle(p, 'is_pro_only', v)} trackColor={{ true: C.ORANGE }} />
+                </View>
+                <View style={styles.toggleItem}>
+                  <Text style={[styles.toggleLabel, { color: p.is_active ? '#22c55e' : '#ef4444' }]}>{p.is_active ? 'Listed' : 'Hidden'}</Text>
+                  <Switch value={!!p.is_active} onValueChange={v => handleProductToggle(p, 'is_active', v)} trackColor={{ false: '#ef444466', true: '#22c55e' }} />
                 </View>
               </View>
             </View>

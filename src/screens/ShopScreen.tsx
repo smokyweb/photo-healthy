@@ -42,7 +42,8 @@ export default function ShopScreen() {
   const load = async () => {
     try {
       const data = await getProducts();
-      setProducts(data?.products || data || []);
+      const allProds = data?.products || data || [];
+      setProducts(allProds.filter((p: any) => p.is_active === 1 || p.is_active === true || p.is_active === undefined));
     } catch {}
     setLoading(false);
     setRefreshing(false);
