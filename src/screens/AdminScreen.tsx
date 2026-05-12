@@ -1659,15 +1659,34 @@ export default function AdminScreen() {
         style={styles.tabBar}
         contentContainerStyle={styles.tabBarContent}
       >
-        {TABS.map(tab => (
-          <TouchableOpacity
-            key={tab}
-            style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
-          </TouchableOpacity>
-        ))}
+        {(() => {
+          const pendingOrders = orders.filter(o => o.status === 'pending' || o.status === 'processing').length;
+          const todaySubmissions = stats.today?.submissions ?? 0;
+          const newUsers = stats.today?.logins ?? 0;
+          const tabBadges: Record<string,number> = {
+            Orders: pendingOrders,
+            Submissions: todaySubmissions,
+          };
+          return TABS.map(tab => {
+            const badge = tabBadges[tab] || 0;
+            return (
+              <TouchableOpacity
+                key={tab}
+                style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]}
+                onPress={() => setActiveTab(tab)}
+              >
+                <View style={{ position: 'relative' }}>
+                  <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+                  {badge > 0 && (
+                    <View style={{ position: 'absolute', top: -6, right: -10, backgroundColor: '#ef4444', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}>
+                      <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{badge > 99 ? '99+' : badge}</Text>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          });
+        })()}
       </ScrollView>
       {loading ? (
         <LoadingSpinner />
