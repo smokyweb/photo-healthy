@@ -885,7 +885,7 @@ export default function AdminScreen() {
           {/* Submission info */}
           <View style={styles.formCard}>
             <Text style={[styles.formTitle, { marginBottom: 8 }]}>{sub.title || 'Untitled'}</Text>
-            <Text style={styles.listItemSub}>{s(0x1F464)} {sub.user_name || 'Unknown'}</Text>
+            <Text style={styles.listItemSub}>👤 {sub.user_name || 'Unknown'}</Text>
             {sub.challenge_title ? <Text style={styles.listItemSub}>🏆 {sub.challenge_title}</Text> : null}
             <View style={{ flexDirection: 'row', gap: 16, marginTop: 8 }}>
               <Text style={styles.listItemMeta}>❤ {sub.like_count || 0} likes</Text>
