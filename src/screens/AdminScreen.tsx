@@ -95,6 +95,7 @@ export default function AdminScreen() {
   const [productGalleryFiles, setProductGalleryFiles] = useState<File[]>([]);
   const [productGalleryPreviews, setProductGalleryPreviews] = useState<string[]>([]);
   const [uploadingProductImg, setUploadingProductImg] = useState(false);
+  const [productSaveMsg, setProductSaveMsg] = useState('');
   const [productForm, setProductForm] = useState({
     name: '', description: '', price: '', is_pro_only: false, featured: false, emoji: '', image_url: '', sizes: '',
   });
@@ -1051,7 +1052,32 @@ export default function AdminScreen() {
     );
   };
 
-    const renderProducts = () => {
+    const handleCreateProduct = async (data: any) => {
+    try {
+      await createProduct({
+        name: data.name,
+        title: data.name,
+        description: data.description || '',
+        price: parseFloat(data.price) || 0,
+        emoji: data.emoji || '',
+        image_url: data.image_url || '',
+        gallery_images: data.gallery_images || [],
+        is_pro_only: data.is_pro_only ? 1 : 0,
+        featured: data.featured ? 1 : 0,
+        sizes: data.sizes || '',
+      });
+      const refreshed = await adminGetProducts();
+      setProducts(refreshed?.products || refreshed || []);
+      setProductForm({ name: '', description: '', price: '', is_pro_only: false, featured: false, emoji: '', image_url: '', sizes: '' });
+      setShowProductForm(false);
+      setProductSaveMsg('Product created successfully!');
+      setTimeout(() => setProductSaveMsg(''), 3000);
+    } catch (e: any) {
+      setProductSaveMsg('Error: ' + (e.message || 'Failed to create product'));
+    }
+  };
+
+  const renderProducts = () => {
     const filtered = products.filter(p => {
       if (!productSearch.trim()) return true;
       const q = productSearch.toLowerCase();
@@ -1163,6 +1189,7 @@ export default function AdminScreen() {
               <Text style={styles.switchLabel}>Pro Only</Text>
               <Switch value={productForm.is_pro_only} onValueChange={v => setProductForm(f => ({ ...f, is_pro_only: v }))} trackColor={{ true: C.ORANGE }} />
             </View>
+            {productSaveMsg ? <Text style={{ color: productSaveMsg.startsWith('Error') ? '#ef4444' : '#22c55e', marginBottom: 8, fontWeight: '700' }}>{productSaveMsg}</Text> : null}
             <View style={styles.formBtns}>
               <GradientButton
                 label={uploadingProductImg ? 'Uploading...' : 'Create'}
@@ -1175,7 +1202,7 @@ export default function AdminScreen() {
                     for (const gf of productGalleryFiles) {
                       const u = await uploadPhoto(gf); galleryUrls.push(u.url || '');
                     }
-                    await handleCreateProduct({ ...productForm, image_url: imageUrl, gallery_images: galleryUrls });
+                    await handleCreateProduct({ ...productForm, image_url: imageUrl, gallery_images: galleryUrls, sizes: productForm.sizes });
                     setProductImgFile(null); setProductImgPreview('');
                     setProductGalleryFiles([]); setProductGalleryPreviews([]);
                   } catch {}
