@@ -190,9 +190,13 @@ export default function SubmissionDetailScreen() {
 
           {/* Challenge tag */}
           {submission.challenge_title ? (
-            <View style={styles.challengeTag}>
-              <Text style={styles.challengeTagText}>{'\uD83C\uDFC6'} {submission.challenge_title}</Text>
-            </View>
+            <TouchableOpacity
+              style={styles.challengeTag}
+              onPress={() => { if (submission.challenge_id) navigation.navigate('ChallengeDetail' as never, { challengeId: submission.challenge_id, id: submission.challenge_id } as never); }}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.challengeTagText}>{'🏆'} {submission.challenge_title}  →</Text>
+            </TouchableOpacity>
           ) : null}
 
           {/* Actions */}
