@@ -797,7 +797,7 @@ export default function AdminScreen() {
     try {
       await deleteComment(commentId);
       setSubmissionComments(cs => cs.filter(c => c.id !== commentId));
-    } catch (e: any) { Alert.alert('Error', e.message); }
+    } catch (e: any) { console.error('Delete comment failed:', e.message); }
   };
 
   const handleSaveCommentEdit = async (commentId: number, newText: string) => {
@@ -813,24 +813,17 @@ export default function AdminScreen() {
     }
   };
 
-  const handleDeleteActivityItem = (item: any) => {
+  const handleDeleteActivityItem = async (item: any) => {
     const label = item.type === 'comment' ? 'comment' : 'submission';
-    Alert.alert('Delete', 'Delete this ' + label + '?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => {
-          try {
-            if (item.type === 'comment') {
-              await deleteComment(item.id);
-            } else {
-              await deleteSubmission(item.id);
-            }
-            setActivityItems(items => items.filter(i => !(i.id === item.id && i.type === item.type)));
-          } catch (e: any) { Alert.alert('Error', e.message); }
-        },
-      },
-    ]);
+    if (!window.confirm('Delete this ' + label + '? This cannot be undone.')) return;
+    try {
+      if (item.type === 'comment') {
+        await deleteComment(item.id);
+      } else {
+        await deleteSubmission(item.id);
+      }
+      setActivityItems(items => items.filter(i => !(i.id === item.id && i.type === item.type)));
+    } catch (e: any) { console.error('Delete failed:', e.message); }
   };
 
   const renderSubmissions = () => {
@@ -1040,19 +1033,31 @@ export default function AdminScreen() {
               </View>
             </TouchableOpacity>
           ) : (
-            <View key={'c-' + item.id} style={styles.submissionItem}>
+            <TouchableOpacity key={'c-' + item.id} style={styles.submissionItem}
+              onPress={() => {
+                // Find the submission this comment belongs to and open it
+                if (item.submission_id) {
+                  const sub = activityItems.find(a => a.type !== 'comment' && a.id === item.submission_id);
+                  if (sub) { setSelectedSubmission(sub); loadSubmissionComments(sub.id); }
+                  else { setSelectedSubmission({ id: item.submission_id, title: item.submission_title || 'Submission', image_url: null }); loadSubmissionComments(item.submission_id); }
+                }
+              }}
+            >
               <View style={[styles.thumbImage, styles.thumbPlaceholder]}>
                 <Text style={{ fontSize: 22 }}>💬</Text>
               </View>
               <View style={styles.listItemInfo}>
                 <Text style={styles.listItemTitle} numberOfLines={2}>{item.title || '(empty)'}</Text>
-                <Text style={styles.listItemSub}>{item.user_name || 'Unknown'}{item.submission_title ? ' · on: ' + item.submission_title : ''}</Text>
+                <Text style={styles.listItemSub}>{item.user_name || 'Unknown'}{item.submission_title ? ' on: ' + item.submission_title : ''}</Text>
                 <Text style={styles.listItemMeta}>{item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}</Text>
               </View>
-              <TouchableOpacity onPress={() => handleDeleteActivityItem(item)} style={styles.iconBtn}>
-                <Text style={styles.deleteIcon}>🗑</Text>
-              </TouchableOpacity>
-            </View>
+              <View style={{ gap: 4 }}>
+                <Text style={{ color: C.TEXT_MUTED, fontSize: 16 }}>›</Text>
+                <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); handleDeleteActivityItem(item); }} style={styles.iconBtn}>
+                  <Text style={styles.deleteIcon}>🗑</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
           )
         ))}
         {filtered.length === 0 && <Text style={styles.emptyText}>No content found.</Text>}
