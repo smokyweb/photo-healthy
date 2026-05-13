@@ -1578,7 +1578,7 @@ export default function AdminScreen() {
                           const d = await adminGetOrders();
                           setOrders(d?.orders || []);
                           setTrackingMsg(m => ({ ...m, [o.id]: '\u2713 Marked shipped!' + (tracking ? ' Tracking: ' + tracking : '') }));setTimeout(() => setTrackingMsg(m => { const n={...m}; delete n[o.id]; return n; }), 4000);
-                        } catch (e: any) { Alert.alert('Error', e.message); }
+                        } catch (e: any) { setTrackingMsg(m => ({ ...m, [o.id]: 'Error: ' + (e.message || 'Failed') })); }
                       }} />
                     )}
                     {trackingInput[o.id] && !(['refunded','cancelled','failed'].includes(o.status)) && (
