@@ -866,7 +866,25 @@ export default function AdminScreen() {
             );
             return (
               <View style={{ marginBottom: 12 }}>
-                {mainImg ? <Image source={{ uri: mainImg }} style={{ width: '100%', aspectRatio: 4/3, borderRadius: 12 }} resizeMode="contain" /> : null}
+                {mainImg ? (
+                  <View>
+                    <Image source={{ uri: mainImg }} style={{ width: '100%', maxHeight: 340, borderRadius: 12, objectFit: 'contain' } as any} resizeMode="contain" />
+                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                      <TouchableOpacity
+                        style={{ flex: 1, backgroundColor: '#1e293b', borderRadius: 8, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: '#334155' }}
+                        onPress={() => { if (typeof window !== 'undefined') { const a = document.createElement('a'); a.href = mainImg; a.download = 'submission-' + sub.id + '.jpg'; a.click(); } }}
+                      >
+                        <Text style={{ color: '#54DFB6', fontSize: 13, fontWeight: '700' }}>⬇ Download</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={{ flex: 1, backgroundColor: '#ef444415', borderRadius: 8, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: '#ef444440' }}
+                        onPress={() => { if (window.confirm('Delete this submission and all its photos?')) { handleDeleteActivityItem({ ...sub, type: 'submission' }); setSelectedSubmission(null); } }}
+                      >
+                        <Text style={{ color: '#ef4444', fontSize: 13, fontWeight: '700' }}>🗑 Delete</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : null}
                 {allPhotos2.length > 0 && (
                   <View style={{ flexDirection: 'row', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
                     {allPhotos2.map((uri, i) => uri ? (
