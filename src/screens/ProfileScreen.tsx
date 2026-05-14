@@ -263,7 +263,7 @@ export default function ProfileScreen() {
                   <Image
                     source={{ uri: fullUrl(s.image_url || s.photo_url || s.photo1_url) || '' }}
                     style={styles.submissionImg}
-                    resizeMode="cover"
+                    resizeMode="contain"
                   />
                 ) : (
                   <View style={[styles.submissionImg, styles.submissionPlaceholder]}>
@@ -384,9 +384,9 @@ const styles = StyleSheet.create({
   submissionsSection: { marginHorizontal: 16, marginTop: 24 },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   seeAll: { color: C.ORANGE, fontSize: 13 },
-  submissionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  submissionThumb: { width: '31%', aspectRatio: 1, borderRadius: 10, overflow: 'hidden', backgroundColor: C.CARD_BG },
-  submissionImg: { width: '100%', height: '100%' },
+  submissionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between' },
+  submissionThumb: { width: '48%', borderRadius: 10, overflow: 'hidden', backgroundColor: C.CARD_BG2, marginBottom: 6 },
+  submissionImg: { width: '100%', aspectRatio: 4/3, minHeight: 120 },
   submissionPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: C.CARD_BG2 },
   submissionOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end', padding: 5, backgroundColor: 'rgba(0,0,0,0.15)' },
   submissionLikes: { color: '#fff', fontSize: 12, fontWeight: '700' },
