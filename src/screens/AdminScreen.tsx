@@ -1479,14 +1479,12 @@ export default function AdminScreen() {
           const customerEmail = o.customer_email || o.user_email || '';
 
           return (
-            <TouchableOpacity
+            <View
               key={o.id}
               style={[styles.listItem, { flexDirection: 'column', alignItems: 'stretch' }]}
-              onPress={() => toggleOrderExpand(o.id)}
-              activeOpacity={0.85}
             >
-              {/* Order header */}
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {/* Order header - tap to expand/collapse */}
+              <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }} onPress={() => toggleOrderExpand(o.id)} activeOpacity={0.8}>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
                     <Text style={[styles.listItemTitle]}>Order #{o.id}</Text>
@@ -1512,7 +1510,7 @@ export default function AdminScreen() {
                 <Text style={{ color: isExpanded ? '#F55B09' : '#8B9AB0', fontSize: 20, marginLeft: 8 }}>
                   {isExpanded ? '▼' : '▶'}
                 </Text>
-              </View>
+              </TouchableOpacity>
 
               {/* Expanded detail */}
               {isExpanded && (
@@ -1540,6 +1538,8 @@ export default function AdminScreen() {
                     {(o.customer_name || o.user_name) && <Text style={{ color: '#EAECEF', fontSize: 14, fontWeight: '700' }}>{o.customer_name || o.user_name}</Text>}
                     {(o.customer_email || o.user_email) && <Text style={{ color: '#54DFB6', fontSize: 13 }}>{o.customer_email || o.user_email}</Text>}
                     {o.shipping_method && <Text style={{ color: '#8B9AB0', fontSize: 12 }}>Shipping: {o.shipping_method}</Text>}
+                    {o.stripe_session_id && <Text style={{ color: '#8B9AB0', fontSize: 11, marginTop: 4 }}>Stripe Session: {o.stripe_session_id}</Text>}
+                    {o.stripe_payment_intent && <Text style={{ color: '#8B9AB0', fontSize: 11 }}>Payment ID: {o.stripe_payment_intent}</Text>}
                     {o.shipping_address_json ? (() => {
                       try {
                         const addr = typeof o.shipping_address_json === 'string' ? JSON.parse(o.shipping_address_json) : o.shipping_address_json;
@@ -1558,7 +1558,10 @@ export default function AdminScreen() {
 
                   {/* Stripe link */}
                   {o.stripe_payment_url && (
-                    <TouchableOpacity style={{ marginTop: 10 }} onPress={() => { if (typeof window !== 'undefined') (window as any).open(o.stripe_payment_url, '_blank'); }}>
+                    <TouchableOpacity style={{ marginTop: 10 }} onPress={() => { if (typeof window !== 'undefined') {
+                        const url = o.stripe_payment_url || ('https://dashboard.stripe.com/test/payments/' + (o.stripe_payment_intent || ('cs_' + o.stripe_session_id?.split('cs_')[1])));
+                        (window as any).open(url, '_blank');
+                      } }}>
                       <Text style={{ color: '#54DFB6', fontSize: 13 }}>🔗 View in Stripe Dashboard</Text>
                     </TouchableOpacity>
                   )}
@@ -1621,7 +1624,7 @@ export default function AdminScreen() {
                   )}
                 </View>
               )}
-            </TouchableOpacity>
+            </View>
           );
         })}
 
