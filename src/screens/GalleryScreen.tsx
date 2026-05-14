@@ -72,7 +72,7 @@ export default function GalleryScreen() {
                     activeOpacity={0.85}
                   >
                     {imgUri ? (
-                      <Image source={{ uri: imgUri }} style={styles.img} resizeMode="cover" />
+                      <Image source={{ uri: imgUri }} style={styles.img} resizeMode="contain" />
                     ) : (
                       <View style={[styles.img, styles.placeholder]}>
                         <Text style={{ fontSize: 28 }}>📷</Text>

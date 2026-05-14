@@ -107,7 +107,7 @@ export default function MyProgressScreen() {
                   activeOpacity={0.85}
                 >
                   {imgUrl ? (
-                    <Image source={{ uri: imgUrl }} style={styles.photoImg} resizeMode="cover" />
+                    <Image source={{ uri: imgUrl }} style={styles.photoImg} resizeMode="contain" />
                   ) : (
                     <View style={[styles.photoImg, styles.photoPlaceholder]}>
                       <Text style={{ fontSize: 28 }}>{'ðŸ“·'}</Text>

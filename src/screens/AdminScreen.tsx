@@ -634,7 +634,7 @@ export default function AdminScreen() {
               }}
             >
               {s.photo1_url ? (
-                <Image source={{ uri: s.photo1_url.startsWith('http') ? s.photo1_url : 'https://photoai.betaplanets.com' + s.photo1_url }} style={styles.thumbImage} resizeMode="cover" />
+                <Image source={{ uri: s.photo1_url.startsWith('http') ? s.photo1_url : 'https://photoai.betaplanets.com' + s.photo1_url }} style={styles.thumbImage} resizeMode="contain" />
               ) : (
                 <View style={[styles.thumbImage, styles.thumbPlaceholder]}>
                   <Text style={{ fontSize: 20 }}>📷</Text>
@@ -1027,7 +1027,7 @@ export default function AdminScreen() {
                 <Image
                   source={{ uri: item.image_url.startsWith('http') ? item.image_url : 'https://photoai.betaplanets.com' + item.image_url }}
                   style={styles.thumbImage}
-                  resizeMode="cover"
+                  resizeMode="contain"
                 />
               ) : (
                 <View style={[styles.thumbImage, styles.thumbPlaceholder]}>

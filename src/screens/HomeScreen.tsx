@@ -396,7 +396,7 @@ const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navig
           style={li.communityCard}
           onPress={() => sub.photo1_url && navigation.navigate('SubmissionDetail', { id: sub.id })}
         >
-          <Image source={sub._localPhoto || { uri: fullUrl(sub.photo1_url) }} style={li.communityImg} resizeMode="cover" />
+          <Image source={sub._localPhoto || { uri: fullUrl(sub.photo1_url) }} style={li.communityImg} resizeMode="contain" />
           <View style={li.communityInfo}>
             <Text style={li.communityUser}>@{sub.user_name || 'unknown'}</Text>
             <Text style={li.communityTitle}>{sub.title || 'Untitled'}</Text>
@@ -531,7 +531,7 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft,
           style={pm.submission}
           onPress={() => sub.photo1_url && navigation.navigate('SubmissionDetail', { id: sub.id })}
         >
-          <Image source={sub._localPhoto || { uri: fullUrl(sub.photo1_url) }} style={pm.submissionImg} resizeMode="cover" />
+          <Image source={sub._localPhoto || { uri: fullUrl(sub.photo1_url) }} style={pm.submissionImg} resizeMode="contain" />
           <View style={pm.submissionBody}>
             <Text style={pm.userName}>@{sub.user_name}</Text>
             <Text style={pm.subTitle}>{sub.title}</Text>

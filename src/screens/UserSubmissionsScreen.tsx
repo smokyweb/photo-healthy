@@ -83,7 +83,7 @@ export default function UserSubmissionsScreen() {
                     activeOpacity={0.85}
                   >
                     {img ? (
-                      <Image source={{ uri: img }} style={styles.photo} resizeMode="cover" />
+                      <Image source={{ uri: img }} style={styles.photo} resizeMode="contain" />
                     ) : (
                       <View style={[styles.photo, styles.photoPlaceholder]}>
                         <Text style={{ fontSize: 24 }}>\uD83D\uDCF7</Text>

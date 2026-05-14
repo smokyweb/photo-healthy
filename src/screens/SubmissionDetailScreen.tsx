@@ -158,7 +158,7 @@ export default function SubmissionDetailScreen() {
         {/* Photo */}
         <View style={[styles.imageSection, isDesktop && styles.imageSectionDesktop]}>
           {allPhotos.length > 0 ? (
-            <Image source={{ uri: allPhotos[0] }} style={styles.image} resizeMode="cover" />
+            <Image source={{ uri: allPhotos[0] }} style={styles.image} resizeMode="contain" />
           ) : (
             <View style={styles.imagePlaceholder}>
               <Text style={{ fontSize: 60 }}>{'\uD83D\uDCF7'}</Text>
