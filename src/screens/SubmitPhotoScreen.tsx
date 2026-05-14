@@ -96,7 +96,7 @@ export default function SubmitPhotoScreen() {
         } else {
           navigation.goBack();
         }
-      }, 2000);
+      }, 3500);
     } catch (e: any) {
       setError(e.message || 'Submission failed. Please try again.');
     } finally {
@@ -131,9 +131,12 @@ export default function SubmitPhotoScreen() {
             <Text style={styles.backText}>← Cancel</Text>
           </TouchableOpacity>
       {success && (
-        <View style={{ backgroundColor: '#22c55e', padding: 16, borderRadius: 10, marginBottom: 16, alignItems: 'center' }}>
-          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>✅ Photo Submitted!</Text>
-          <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: 4 }}>Taking you to the challenge...</Text>
+        <View style={{ position: 'absolute' as any, top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(10,14,26,0.92)', zIndex: 9999, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+          <View style={{ backgroundColor: '#16a34a', borderRadius: 24, padding: 40, alignItems: 'center', width: '100%', maxWidth: 360, shadowColor: '#16a34a', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.5, shadowRadius: 24, elevation: 20 }}>
+            <Text style={{ fontSize: 64, marginBottom: 16 }}>✅</Text>
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 22, textAlign: 'center', marginBottom: 8 }}>Photo Submitted!</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 15, textAlign: 'center', lineHeight: 22 }}>Your photo has been shared with the community. Taking you to the challenge...</Text>
+          </View>
         </View>
       )}
           <Text style={styles.heading}>Submit Photos</Text>
