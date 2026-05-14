@@ -1085,17 +1085,18 @@ export default function AdminScreen() {
 
     const handleCreateProduct = async (data: any) => {
     try {
+      const galleryArr = Array.isArray(data.gallery_images) ? data.gallery_images : [];
       await createProduct({
-        name: data.name,
-        title: data.name,
-        description: data.description || '',
+        title: data.name || data.title || '',
+        description: data.description || null,
         price: parseFloat(data.price) || 0,
-        emoji: data.emoji || '',
-        image_url: data.image_url || '',
-        gallery_images: data.gallery_images || [],
+        emoji: data.emoji || null,
+        image_url: data.image_url || null,
+        gallery_images: galleryArr.length > 0 ? JSON.stringify(galleryArr) : null,
         is_pro_only: data.is_pro_only ? 1 : 0,
         featured: data.featured ? 1 : 0,
-        sizes: data.sizes || '',
+        sizes: data.sizes || null,
+        is_active: 1,
       });
       const refreshed = await adminGetProducts();
       setProducts(refreshed?.products || refreshed || []);
