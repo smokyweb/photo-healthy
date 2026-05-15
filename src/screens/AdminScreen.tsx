@@ -12,7 +12,7 @@ import {
   getSubmissions, deleteSubmission, deleteComment,
   adminGetOrders, adminMarkOrderPaid, adminProcessOrder, adminFulfillOrder, adminUpdateTracking, deleteUser, updateUser,
   adminGetTaxonomy, adminUpdateTaxonomy,
-  adminGetActivity, adminGetUserSubmissions, adminGetUserComments, adminGetUserOrders,
+  adminGetActivity, adminGetUserSubmissions, adminGetUserComments, adminGetUserOrders, adminCreateUser,
   uploadPhoto,
 } from '../services/api';
 import GradientButton from '../components/GradientButton';
@@ -38,6 +38,9 @@ export default function AdminScreen() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [editingUserForm, setEditingUserForm] = useState<any>(null);
   const [savingUser, setSavingUser] = useState(false);
+  const [showCreateUserForm, setShowCreateUserForm] = useState(false);
+  const [newUserForm, setNewUserForm] = useState({ name: '', email: '', password: '' });
+  const [createUserMsg, setCreateUserMsg] = useState('');
   const [userActivity, setUserActivity] = useState<{submissions: any[], orders: any[], comments: any[]}>({ submissions: [], orders: [], comments: [] });
   const [userDetailTab, setUserDetailTab] = useState<'Submissions'|'Orders'|'Comments'>('Submissions');
   const [userDetailLoading, setUserDetailLoading] = useState(false);
@@ -714,6 +717,33 @@ export default function AdminScreen() {
     return (
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Users ({filtered.length} / {users.length})</Text>
+        {/* Create User form */}
+        <View style={{ marginBottom: 14 }}>
+          <GradientButton label={showCreateUserForm ? '✕ Cancel' : '+ Add User'} variant={showCreateUserForm ? 'outline' : 'teal'} size="sm"
+            onPress={() => { setShowCreateUserForm(v => !v); setCreateUserMsg(''); setNewUserForm({ name: '', email: '', password: '' }); }} style={{ alignSelf: 'flex-start' } as any} />
+          {showCreateUserForm && (
+            <View style={[styles.formCard, { marginTop: 12 }]}>
+              <Text style={styles.formTitle}>Add New User</Text>
+              <Input label="Full Name *" value={newUserForm.name} onChangeText={v => setNewUserForm(f => ({ ...f, name: v }))} />
+              <Input label="Email Address *" value={newUserForm.email} onChangeText={v => setNewUserForm(f => ({ ...f, email: v }))} keyboardType="email-address" />
+              <Input label="Temporary Password *" value={newUserForm.password} onChangeText={v => setNewUserForm(f => ({ ...f, password: v }))} secureTextEntry />
+              {createUserMsg ? <Text style={{ color: createUserMsg.startsWith('Error') ? '#ef4444' : '#22c55e', marginTop: 8, fontWeight: '700' }}>{createUserMsg}</Text> : null}
+              <GradientButton label="Create User" variant="primary" style={{ marginTop: 12 } as any}
+                onPress={async () => {
+                  if (!newUserForm.name.trim() || !newUserForm.email.trim() || !newUserForm.password.trim()) { setCreateUserMsg('Error: All fields required'); return; }
+                  try {
+                    await adminCreateUser(newUserForm);
+                    const d = await adminGetUsers();
+                    setUsers(d?.users || d || []);
+                    setNewUserForm({ name: '', email: '', password: '' });
+                    setShowCreateUserForm(false);
+                    setCreateUserMsg('User created successfully!');
+                    setTimeout(() => setCreateUserMsg(''), 3000);
+                  } catch (e: any) { setCreateUserMsg('Error: ' + (e.message || 'Failed to create user')); }
+                }} />
+            </View>
+          )}
+        </View>
         <View style={styles.searchBar}>
           <TextInput
             style={styles.searchInput}

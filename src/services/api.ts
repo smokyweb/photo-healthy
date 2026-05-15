@@ -115,6 +115,10 @@ export const adminResetPassword = (id: number) =>
 export const deleteUser = (id: number) =>
   request('POST', `/api/users/${id}/delete`);
 
+export const adminCreateUser = (data: any) =>
+  request('POST', '/admin-api-proxy.php?path=/api/admin/users&method=POST', data);
+
+
 export const getUserStats = () => request('GET', '/api/users/me/stats');
 
 export const getUserAccess = () => request('GET', '/api/users/me/access');
