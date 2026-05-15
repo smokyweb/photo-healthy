@@ -172,7 +172,13 @@ export default function ChallengeDetailScreen() {
       }
     >
       {/* Back button */}
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+      <TouchableOpacity onPress={() => {
+          if (navigation.canGoBack()) {
+            navigation.goBack();
+          } else {
+            navigation.navigate('Main' as never, { screen: 'ChallengesTab' } as never);
+          }
+        }} style={styles.backBtn}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
 
