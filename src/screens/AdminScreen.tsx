@@ -39,7 +39,7 @@ export default function AdminScreen() {
   const [editingUserForm, setEditingUserForm] = useState<any>(null);
   const [savingUser, setSavingUser] = useState(false);
   const [showCreateUserForm, setShowCreateUserForm] = useState(false);
-  const [newUserForm, setNewUserForm] = useState({ name: '', email: '', password: '' });
+  const [newUserForm, setNewUserForm] = useState({ name: '', email: '', password: '', subscription_status: 'free', pro_days: '' });
   const [createUserMsg, setCreateUserMsg] = useState('');
   const [userActivity, setUserActivity] = useState<{submissions: any[], orders: any[], comments: any[]}>({ submissions: [], orders: [], comments: [] });
   const [userDetailTab, setUserDetailTab] = useState<'Submissions'|'Orders'|'Comments'>('Submissions');
@@ -570,6 +570,11 @@ export default function AdminScreen() {
             </View>
             <View style={styles.switchRow}>
               <Text style={styles.switchLabel}>Admin Access</Text>
+              {editingUserForm.subscription_status === 'active' && (
+                <Input label="Pro Duration (days to add/extend, e.g. 30)" value={editingUserForm.pro_days || ''}
+                  onChangeText={v => setEditingUserForm((f: any) => ({ ...f, pro_days: v }))}
+                  keyboardType="numeric" placeholder="30 (leave blank to keep current)" />
+              )}
               <Switch value={!!editingUserForm.is_admin} onValueChange={v => setEditingUserForm((f) => ({ ...f, is_admin: v }))} trackColor={{ true: C.ORANGE }} />
             </View>
             <View style={[styles.formBtns, { marginTop: 12 }]}>
@@ -727,15 +732,38 @@ export default function AdminScreen() {
               <Input label="Full Name *" value={newUserForm.name} onChangeText={v => setNewUserForm(f => ({ ...f, name: v }))} />
               <Input label="Email Address *" value={newUserForm.email} onChangeText={v => setNewUserForm(f => ({ ...f, email: v }))} keyboardType="email-address" />
               <Input label="Temporary Password *" value={newUserForm.password} onChangeText={v => setNewUserForm(f => ({ ...f, password: v }))} secureTextEntry />
+              <Text style={{ color: C.TEXT_MUTED, fontSize: 12, marginTop: 8, marginBottom: 4 }}>Membership Level</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                {['free', 'active'].map(st => (
+                  <TouchableOpacity key={st} style={[styles.chipOption, newUserForm.subscription_status === st && styles.chipOptionActive]}
+                    onPress={() => setNewUserForm(f => ({ ...f, subscription_status: st }))}>
+                    <Text style={[styles.chipOptionText, newUserForm.subscription_status === st && styles.chipOptionTextActive]}>{st === 'active' ? 'Pro Member' : 'Free'}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {newUserForm.subscription_status === 'active' && (
+                <Input label="Pro Duration (days, e.g. 30 or 365)" value={newUserForm.pro_days}
+                  onChangeText={v => setNewUserForm(f => ({ ...f, pro_days: v }))}
+                  keyboardType="numeric" placeholder="30" />
+              )}
               {createUserMsg ? <Text style={{ color: createUserMsg.startsWith('Error') ? '#ef4444' : '#22c55e', marginTop: 8, fontWeight: '700' }}>{createUserMsg}</Text> : null}
               <GradientButton label="Create User" variant="primary" style={{ marginTop: 12 } as any}
                 onPress={async () => {
                   if (!newUserForm.name.trim() || !newUserForm.email.trim() || !newUserForm.password.trim()) { setCreateUserMsg('Error: All fields required'); return; }
                   try {
-                    await adminCreateUser(newUserForm);
+                    const created = await adminCreateUser(newUserForm);
+                    // If Pro was selected, grant pro membership
+                    if (newUserForm.subscription_status === 'active' && created?.id) {
+                      const days = parseInt(newUserForm.pro_days) || 30;
+                      await fetch('/admin-api-proxy.php?path=/api/admin/users/' + created.id + '/grant-pro&method=POST', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ph_token') || '') },
+                        body: JSON.stringify({ days, note: 'Admin assigned at creation' })
+                      }).catch(() => {});
+                    }
                     const d = await adminGetUsers();
                     setUsers(d?.users || d || []);
-                    setNewUserForm({ name: '', email: '', password: '' });
+                    setNewUserForm({ name: '', email: '', password: '', subscription_status: 'free', pro_days: '' });
                     setShowCreateUserForm(false);
                     setCreateUserMsg('User created successfully!');
                     setTimeout(() => setCreateUserMsg(''), 3000);
