@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { clearToken as clearStoredToken } from '../services/api';
+
 import { getUserStats, getSubscriptionStatus, getSubmissions, getMyChallenges } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -63,8 +63,19 @@ export default function ProfileScreen() {
 
   const handleLogout = () => {
     logout();
-    clearStoredToken();
-    navigation.reset({ index: 0, routes: [{ name: 'Main' as never }] });
+    // Small delay to let state settle, then navigate
+    setTimeout(() => {
+      try {
+        navigation.navigate('Login' as never);
+      } catch {
+        try {
+          navigation.navigate('Main' as never);
+        } catch {
+          // Last resort - reload page
+          if (typeof window !== 'undefined') window.location.reload();
+        }
+      }
+    }, 100);
   };
 
   const initials = user?.name
