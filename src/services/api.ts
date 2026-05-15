@@ -98,7 +98,7 @@ export const register = (name: string, email: string, password: string) =>
 export const getMe = () => request('GET', '/api/auth/me');
 
 export const resetPassword = (email: string) =>
-  request('POST', '/api/auth/reset-password', { email });
+  request('POST', '/admin-api-proxy.php?path=/api/auth/forgot-password&method=POST', { email });
 
 export const changePassword = (currentPassword: string, newPassword: string) =>
   request('PATCH', '/api/auth/change-password', { currentPassword, newPassword });
