@@ -190,13 +190,13 @@ export const getProducts = () => request('GET', '/api/products');
 export const adminGetProducts = () => adminGet('/api/admin/products');
 
 export const createProduct = (data: any) =>
-  request('POST', '/api/admin/products', data);
+  request('POST', '/admin-api-proxy.php?path=/api/admin/products&method=POST', data);
 
 export const updateProduct = (id: number, data: any) =>
-  request('PATCH', `/api/admin/products/${id}`, data);
+  request('POST', `/admin-api-proxy.php?path=/api/admin/products/${id}&method=PATCH`, data);
 
 export const deleteProduct = (id: number) =>
-  request('DELETE', `/api/admin/products/${id}`);
+  request('POST', `/admin-api-proxy.php?path=/api/admin/products/${id}&method=DELETE`);
 
 // â”€â”€ Cart / Orders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const createCheckoutSession = (items: any[]) =>
