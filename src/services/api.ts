@@ -113,7 +113,7 @@ export const adminResetPassword = (id: number) =>
   request('POST', '/admin-api-proxy.php?path=/api/admin/users/' + id + '/reset-password&method=POST', {});
 
 export const deleteUser = (id: number) =>
-  request('POST', `/api/users/${id}/delete`);
+  request('POST', `/admin-api-proxy.php?path=/api/users/${id}/delete&method=POST`);
 
 export const adminCreateUser = (data: any) =>
   request('POST', '/admin-api-proxy.php?path=/api/admin/users&method=POST', data);
@@ -166,10 +166,10 @@ export const createSubmission = (data: any) =>
   request('POST', '/api/submissions', data);
 
 export const updateSubmission = (id: number, data: any) =>
-  request('PATCH', `/api/submissions/${id}`, data);
+  request('POST', `/admin-api-proxy.php?path=/api/submissions/${id}&method=PATCH`, data);
 
 export const deleteSubmission = (id: number) =>
-  request('POST', `/api/submissions/${id}/delete`);
+  request('POST', `/admin-api-proxy.php?path=/api/submissions/${id}/delete&method=POST`);
 
 export const likeSubmission = (id: number) =>
   request('POST', `/api/submissions/${id}/like`);
@@ -253,7 +253,7 @@ export const adminUpdateTaxonomy = (key: string, items: string[]) =>
   adminPut('/api/admin/taxonomy', { key, items });
 
 export const adminUpdateSettings = (data: any) =>
-  request('POST', '/api/admin/settings', data);
+  request('POST', '/admin-api-proxy.php?path=/api/admin/settings&method=POST', data);
 
 export const adminGetContactSubmissions = () =>
   adminGet('/api/admin/contact-submissions');
