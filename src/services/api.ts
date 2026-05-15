@@ -101,7 +101,7 @@ export const resetPassword = (email: string) =>
   request('POST', '/admin-api-proxy.php?path=/api/auth/forgot-password&method=POST', { email });
 
 export const changePassword = (currentPassword: string, newPassword: string) =>
-  request('PATCH', '/api/auth/change-password', { currentPassword, newPassword });
+  request('POST', '/admin-api-proxy.php?path=/api/auth/change-password&method=PATCH', { currentPassword, newPassword });
 
 // â”€â”€ Users â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const getUsers = () => adminGet('/api/users');
@@ -124,7 +124,7 @@ export const getUserStats = () => request('GET', '/api/users/me/stats');
 export const getUserAccess = () => request('GET', '/api/users/me/access');
 
 export const updateProfile = (data: any) =>
-  request('PATCH', '/api/auth/me', data);
+  request('POST', '/admin-api-proxy.php?path=/api/auth/profile&method=PUT', data);
 
 // â”€â”€ Challenges â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const getChallenges = (params?: Record<string, string>) => {
