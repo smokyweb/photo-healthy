@@ -32,6 +32,10 @@ export default function ChallengesScreen() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [category, setCategory] = useState('All');
+  const [feelingFilter, setFeelingFilter] = useState('All');
+  const [movementFilter, setMovementFilter] = useState('All');
+  const [feelingOptions, setFeelingOptions] = useState<string[]>(['All']);
+  const [movementOptions, setMovementOptions] = useState<string[]>(['All']);
 
   const load = async () => {
     try {
@@ -44,6 +48,12 @@ export default function ChallengesScreen() {
       )) as string[];
       cats.sort();
       setCategories(['All', ...cats]);
+      // Build feeling and movement options
+      const feelings = Array.from(new Set(list.flatMap((ch: any) => ch.feeling_category ? ch.feeling_category.split(',').map((s: string) => s.trim()) : []).filter(Boolean))) as string[];
+      const movements = Array.from(new Set(list.flatMap((ch: any) => ch.movement_category ? ch.movement_category.split(',').map((s: string) => s.trim()) : []).filter(Boolean))) as string[];
+      feelings.sort(); movements.sort();
+      setFeelingOptions(['All', ...feelings]);
+      setMovementOptions(['All', ...movements]);
       applyFilters(list, search, status, category);
     } catch (e) {
       console.error(e);
@@ -53,7 +63,7 @@ export default function ChallengesScreen() {
   };
 
   const applyFilters = useCallback(
-    (list: any[], q: string, s: string, cat: string) => {
+(list: any[], q: string, s: string, cat: string, feeling: string, movement: string) => {
       let result = [...list];
       if (s !== 'all') {
         if (s === 'active') {
@@ -73,6 +83,12 @@ export default function ChallengesScreen() {
       if (cat !== 'All') result = result.filter(c =>
         c.category && (c.category === cat || c.category.includes(cat.replace(/^\S+\s/, '')))
       );
+      if (feeling !== 'All') result = result.filter(c =>
+        c.feeling_category && c.feeling_category.split(',').some((f: string) => f.trim() === feeling)
+      );
+      if (movement !== 'All') result = result.filter(c =>
+        c.movement_category && c.movement_category.split(',').some((m: string) => m.trim() === movement)
+      );
       if (q.trim()) {
         const lq = q.toLowerCase();
         result = result.filter(
@@ -85,7 +101,7 @@ export default function ChallengesScreen() {
   );
 
   useEffect(() => { load(); }, []);
-  useEffect(() => { applyFilters(challenges, search, status, category); }, [search, status, category, challenges]);
+  useEffect(() => { applyFilters(challenges, search, status, category, feelingFilter, movementFilter); }, [search, status, category, feelingFilter, movementFilter, challenges]);
 
   const onRefresh = () => { setRefreshing(true); load(); };
 
@@ -215,6 +231,33 @@ export default function ChallengesScreen() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      {/* Feeling Filter */}
+      {feelingOptions.length > 2 && (
+        <>
+          <Text style={{ color: C.TEXT_SECONDARY, fontSize: 11, paddingHorizontal: 14, marginTop: 8 }}>Feeling:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll} contentContainerStyle={styles.categoryContent}>
+            {feelingOptions.map(f => (
+              <TouchableOpacity key={f} style={[styles.catChip, feelingFilter === f && styles.catChipActive]} onPress={() => setFeelingFilter(f)} activeOpacity={0.8}>
+                <Text style={[styles.catText, feelingFilter === f && styles.catTextActive]}>{f}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </>
+      )}
+      {/* Movement Filter */}
+      {movementOptions.length > 2 && (
+        <>
+          <Text style={{ color: C.TEXT_SECONDARY, fontSize: 11, paddingHorizontal: 14, marginTop: 6 }}>Movement:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll} contentContainerStyle={styles.categoryContent}>
+            {movementOptions.map(m => (
+              <TouchableOpacity key={m} style={[styles.catChip, movementFilter === m && styles.catChipActive]} onPress={() => setMovementFilter(m)} activeOpacity={0.8}>
+                <Text style={[styles.catText, movementFilter === m && styles.catTextActive]}>{m}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </>
+      )}
 
       {/* Results Count */}
       <View style={styles.resultsBar}>
