@@ -284,6 +284,10 @@ export default function AdminScreen() {
   };
 
   const saveChallenge = async () => {
+    if (!challengeForm.title?.trim()) {
+      setProductSaveMsg('Error: Challenge title is required');
+      return;
+    }
     try {
       let imageUrl = challengeForm.cover_image_url;
       if (challengeImgFile) {
@@ -294,7 +298,7 @@ export default function AdminScreen() {
       }
       const payload = {
         ...challengeForm,
-        cover_image_url: imageUrl,
+        cover_image_url: imageUrl || null,
         duration_days: parseInt(challengeForm.duration_days) || 30,
         global_end_date: challengeForm.global_end_date || null,
         start_date: challengeForm.start_date || null,
@@ -303,14 +307,19 @@ export default function AdminScreen() {
       if (editingChallenge) {
         await updateChallenge(editingChallenge.id, payload);
         setChallenges(cs => cs.map(c => c.id === editingChallenge.id ? { ...c, ...payload } : c));
+        setEditingChallenge(null);
+        setProductSaveMsg('Challenge updated!');
       } else {
         const created = await createChallenge(payload);
         setChallenges(cs => [...cs, created?.challenge || created]);
+        setProductSaveMsg('Challenge created!');
       }
       setShowChallengeForm(false);
-      Alert.alert('Saved', editingChallenge ? 'Challenge updated.' : 'Challenge created.');
+      setChallengeForm({ title: '', description: '', duration_days: '30', start_date: '', end_date: '', global_end_date: '', cover_image_url: '', feeling_category: '', movement_category: '', is_pro_only: false, is_active: true });
+      setTimeout(() => setProductSaveMsg(''), 3000);
     } catch (e: any) {
-      Alert.alert('Error', e.message);
+      setUploadingImg(false);
+      setProductSaveMsg('Error: ' + (e.message || 'Failed to save challenge'));
     }
   };
 
@@ -417,7 +426,8 @@ export default function AdminScreen() {
             <Text style={styles.switchLabel}>Pro Only</Text>
             <Switch value={challengeForm.is_pro_only} onValueChange={v => setChallengeForm(f => ({ ...f, is_pro_only: v }))} trackColor={{ true: C.ORANGE }} />
           </View>
-          <View style={styles.formBtns}>
+                      {productSaveMsg ? <Text style={{ color: productSaveMsg.startsWith('Error') ? '#ef4444' : '#22c55e', marginBottom: 8, fontWeight: '700' }}>{productSaveMsg}</Text> : null}
+<View style={styles.formBtns}>
             <GradientButton label="Save" onPress={saveChallenge} variant="primary" style={{ flex: 1, marginRight: 8 }} />
             <GradientButton label="Cancel" onPress={() => setShowChallengeForm(false)} variant="outline" style={{ flex: 1 }} />
           </View>
