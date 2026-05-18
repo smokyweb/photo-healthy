@@ -9,6 +9,34 @@ import Input from '../components/Input';
 import GradientButton from '../components/GradientButton';
 import AppFooter from '../components/AppFooter';
 import { C, borderRadius, brandGradients, fontFamilies } from '../theme';
+import { Image } from 'react-native';
+
+const PARTNER_LOGO = require('../../assets/Pose_8-removebg-preview.png');
+const GET_IN_TOUCH_IMAGE = require('../../assets/get_in_touch.jpg');
+const PLAN_IMAGE = require('../../assets/what-is-an-action-plan.png');
+const LAUNCH_IMAGE = require('../../assets/launch.jpg');
+
+function ProcessStep({ number, title, subtext, imagePosition, imageSource }: { number: number; title: string; subtext: string; imagePosition: 'left' | 'right'; imageSource: any }) {
+  const { height } = useWindowDimensions();
+  const imageHeight = height * 0.25;
+
+  return (
+    <View style={ps.container}>
+      <View style={[ps.content, imagePosition === 'right' ? { flexDirection: 'row' } : { flexDirection: 'row-reverse' }]}>
+        <View style={ps.textContent}>
+          <View style={ps.numberRow}>
+            <View style={ps.numberCircle}>
+              <Text style={ps.numberText}>{number}</Text>
+            </View>
+            <Text style={ps.title}>{title}</Text>
+          </View>
+          <Text style={ps.subtext}>{subtext}</Text>
+        </View>
+        <Image source={imageSource} style={[ps.imagePlaceholder, { height: imageHeight }]} resizeMode="contain" />
+      </View>
+    </View>
+  );
+}
 
 const TIERS = [
   {
@@ -74,37 +102,93 @@ export default function PartnersScreen() {
 
   return (
     <ScrollView style={styles.screen}>
-      {/* Hero */}
-      <View style={styles.hero}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-          <Text style={styles.backText}>→ Back</Text>
-        </TouchableOpacity>
+      {/* Logo */}
+      <View style={styles.logoContainer}>
+        <View style={styles.logoImageWrapper}>
+          <Image source={PARTNER_LOGO} style={styles.logoImage} />
+        </View>
+        <Text style={styles.logoTitle}>Partners</Text>
+      </View>
+
+      {/* Partnership Process Sections */}
+      <View style={styles.processSection}>
+        <ProcessStep
+          number={1}
+          title="Get in touch"
+          subtext="Reach out to our partnerships team to discuss opportunities. We'll learn about your organization and explore how we can work together to make a meaningful impact."
+          imagePosition="right"
+          imageSource={GET_IN_TOUCH_IMAGE}
+        />
+        <ProcessStep
+          number={2}
+          title="Create a plan"
+          subtext="We'll collaborate to design a partnership that aligns with both our missions. Whether it's content, resources, or community engagement, we'll find the right fit for success."
+          imagePosition="left"
+          imageSource={PLAN_IMAGE}
+        />
+        <ProcessStep
+          number={3}
+          title="Launch together"
+          subtext="Once everything is set, we'll launch your partnership and start supporting our community together. We'll track results and adjust as needed for optimal outcomes."
+          imagePosition="right"
+          imageSource={LAUNCH_IMAGE}
+        />
+      </View>
+
+
+
+      {/* Contact Form */}
+      <View style={styles.section}>
+         {/* Hero */}
+      <View>
         <Text style={styles.heroTitle}>Partner With Us</Text>
         <Text style={styles.heroSubtitle}>
           Reach thousands of health-conscious individuals actively working on their wellness goals.
         </Text>
       </View>
-
-      {/* Tiers */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Sponsorship Tiers</Text>
-        {TIERS.map(t => (
-          <View key={t.name} style={[styles.tierCard, { borderColor: t.color + '88' }]}>
-            <View style={[styles.tierHeader, { backgroundColor: t.color + '22' }]}>
-              <Text style={[styles.tierName, { color: t.color }]}>{t.name}</Text>
-              <Text style={[styles.tierPrice, { color: t.color }]}>{t.price}</Text>
-            </View>
-            {t.perks.map(p => (
-              <Text key={p} style={styles.perk}>✓ {p}</Text>
-            ))}
-          </View>
-        ))}
+        <View style={styles.formContainer}>
+          <Input
+            placeholder="Your Name"
+            value={name}
+            onChangeText={setName}
+            style={styles.input}
+          />
+          <Input
+            placeholder="Company"
+            value={company}
+            onChangeText={setCompany}
+            style={styles.input}
+          />
+          <Input
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            style={styles.input}
+          />
+          <Input
+            placeholder="Tier (optional)"
+            value={tier}
+            onChangeText={setTier}
+            style={styles.input}
+          />
+          <Input
+            placeholder="Message"
+            value={message}
+            onChangeText={setMessage}
+            multiline
+            numberOfLines={4}
+            style={styles.input}
+          />
+          <GradientButton
+            label={sending ? 'Sending...' : 'Submit'}
+            variant="primary"
+            size="md"
+            onPress={handleSubmit}
+            disabled={sending}
+          />
+        </View>
       </View>
-
-
-
-      {/* ── NEW LAYOUT FROM PDF ── */}
-      <NewPartnerSections />
 
       <AppFooter />
     </ScrollView>
@@ -325,7 +409,34 @@ function NewPartnerSections() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: C.BG },
+  screen: {
+    flex: 1,
+    backgroundColor: C.BG,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    borderBottomWidth: 2,
+    borderBottomColor: C.ORANGE,
+  },
+  logoImageWrapper: {
+    width: 250,
+    height: 170,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  logoImage: {
+    width: 250,
+    height: 200,
+    marginTop: 0,
+  },
+  logoTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: C.TEXT,
+    fontFamily: fontFamilies.heading,
+  },
   hero: {
     backgroundColor: C.BG,
     padding: 24,
@@ -337,8 +448,19 @@ const styles = StyleSheet.create({
   backText: { color: C.ORANGE, fontSize: 15 },
   heroTitle: { color: C.WHITE, fontSize: 32, fontWeight: '900', marginBottom: 8, fontFamily: fontFamilies.heading },
   heroSubtitle: { color: C.TEXT_SECONDARY, fontSize: 15, lineHeight: 22, fontFamily: fontFamilies.body },
-  section: { padding: 20 },
-  sectionTitle: { color: C.WHITE, fontSize: 22, fontWeight: '800', marginBottom: 16 },
+  section: { padding: 24 },
+  sectionTitle: { color: C.WHITE, fontSize: 24, fontWeight: '800', marginBottom: 20, fontFamily: fontFamilies.heading },
+  formContainer: {
+    width: '50%',
+    alignSelf: 'flex-end',
+  },
+  input: {
+    marginBottom: 16,
+    backgroundColor: C.CARD_BG,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+  },
   tierCard: {
     backgroundColor: C.CARD_BG,
     borderRadius: borderRadius.xl,
@@ -355,6 +477,60 @@ const styles = StyleSheet.create({
   tierName: { fontSize: 16, fontWeight: '800', fontFamily: fontFamilies.heading },
   tierPrice: { fontSize: 15, fontWeight: '700', fontFamily: fontFamilies.heading },
   perk: { color: C.TEXT_SECONDARY, fontSize: 14, paddingHorizontal: 14, paddingVertical: 5, lineHeight: 20, fontFamily: fontFamilies.body },
+  processSection: {
+    paddingVertical: 24,
+  },
+});
+
+const ps = StyleSheet.create({
+  container: {
+    marginBottom: 24,
+    paddingHorizontal: 16,
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+  },
+  textContent: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+  },
+  numberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  numberCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: C.ORANGE,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  numberText: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: C.TEXT,
+  },
+  subtext: {
+    fontSize: 16,
+    color: C.TEXT_SECONDARY,
+    lineHeight: 24,
+  },
+  imagePlaceholder: {
+    flex: 1,
+    borderRadius: 30,
+    overflow: 'hidden',
+  },
 });
 
 // ---- NEW SECTIONS STYLES ----

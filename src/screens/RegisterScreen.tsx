@@ -3,6 +3,8 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator,
 import { useAuth } from '../context/AuthContext';
 import { C } from '../theme';
 
+const REGISTER_LOGO = require('../../assets/Pose_10-removebg-preview.png');
+
 const SIGNIN_HERO = require('../../assets/theme-fin_02-signin-bg.png');
 const ORANGE_GRADIENT = 'linear-gradient(90deg, #F55B09 0%, #FFD000 100%)';
 const EYE_ICON =

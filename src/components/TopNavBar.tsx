@@ -3,7 +3,7 @@ import {
   View, Text, Image, TouchableOpacity, StyleSheet,
   useWindowDimensions,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { C, borderRadius } from '../theme';
@@ -23,6 +23,7 @@ const NAV_LINKS = [
 
 export default function TopNavBar() {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const { user, logout } = useAuth();
   const { itemCount } = useCart();
   const { width } = useWindowDimensions();
@@ -38,6 +39,17 @@ export default function TopNavBar() {
     ? user.name.split(' ').map((n: string) => n[0].toUpperCase()).slice(0, 2).join('')
     : 'U';
 
+  const isActive = (link: typeof NAV_LINKS[0]) => {
+    const currentRouteName = route.name;
+    const currentParams = route.params || {};
+    
+    if (link.screen === 'Main') {
+      // For nested screens in Main, check the nested screen param
+      return currentRouteName === 'Main' && currentParams.screen === link.params?.screen;
+    }
+    return currentRouteName === link.screen;
+  };
+
   return (
     <View>
       {/* Main bar */}
@@ -45,6 +57,7 @@ export default function TopNavBar() {
         {/* Logo */}
         <TouchableOpacity onPress={() => nav('Main', { screen: 'HomeTab' })} style={styles.logoWrap}>
           <Image source={LOGO_IMG} style={styles.logo} resizeMode="contain" />
+          <Text style={styles.logoText}>Photo Healthy</Text>
         </TouchableOpacity>
 
         {/* Desktop nav links */}
@@ -52,7 +65,7 @@ export default function TopNavBar() {
           <View style={styles.navLinks}>
             {NAV_LINKS.map(l => (
               <TouchableOpacity key={l.label} onPress={() => nav(l.screen, l.params)} style={styles.navLinkBtn}>
-                <Text style={styles.navLinkText}>{l.label}</Text>
+                <Text style={[styles.navLinkText, isActive(l) && styles.navLinkTextActive]}>{l.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -110,7 +123,7 @@ export default function TopNavBar() {
         <View style={styles.drawer}>
           {NAV_LINKS.map(l => (
             <TouchableOpacity key={l.label} style={styles.drawerItem} onPress={() => nav(l.screen, l.params)}>
-              <Text style={styles.drawerText}>{l.label}</Text>
+              <Text style={[styles.drawerText, isActive(l) && styles.drawerTextActive]}>{l.label}</Text>
             </TouchableOpacity>
           ))}
           <View style={styles.drawerDivider} />
@@ -138,8 +151,19 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(148,163,184,0.12)',
     zIndex: 100,
   },
-  logoWrap: { flexShrink: 0 },
+  logoWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flexShrink: 0,
+  },
   logo: { width: 44, height: 44 },
+  logoText: {
+    color: C.TEXT,
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
   navLinks: {
     flex: 1,
     flexDirection: 'row',
@@ -150,6 +174,7 @@ const styles = StyleSheet.create({
   },
   navLinkBtn: { paddingHorizontal: 10, paddingVertical: 6 },
   navLinkText: { color: 'rgba(234,236,239,0.75)', fontSize: 13, fontWeight: '500' },
+  navLinkTextActive: { color: '#F55B09', fontWeight: '700' },
   rightSide: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   cartBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: 'rgba(245,91,9,0.15)', borderWidth: 1, borderColor: 'rgba(245,91,9,0.4)' },
   cartText: { color: '#F55B09', fontSize: 13, fontWeight: '600' },
@@ -171,5 +196,6 @@ const styles = StyleSheet.create({
   },
   drawerItem: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
   drawerText: { color: 'rgba(234,236,239,0.9)', fontSize: 16, fontWeight: '500' },
+  drawerTextActive: { color: '#F55B09', fontWeight: '700' },
   drawerDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 8 },
 });

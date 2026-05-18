@@ -45,13 +45,10 @@ function formatDate(dateStr?: string): string {
 
 export default function ChallengeCard({ challenge, onPress }: Props) {
   const daysLeft = getDaysLeft(challenge.end_date);
-  const isActive = challenge.status === 'active';
   const isEnded = challenge.status === 'ended' || challenge.status === 'completed' || (daysLeft !== null && daysLeft === 0);
   const isUpcoming = challenge.status === 'upcoming';
 
   const statusLabel = isEnded ? 'Ended' : isUpcoming ? 'Upcoming' : 'Active';
-  const statusColor = isEnded ? C.TEXT_MUTED : isUpcoming ? C.WARNING : C.SUCCESS;
-
   const imageUrl = fullUrl(challenge.cover_image_url || challenge.cover_image || '');
 
   const tags = [
@@ -74,7 +71,7 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
         {/* Overlay badges */}
         <View style={styles.overlayBadges}>
           <View style={[styles.statusBadge, { backgroundColor: isEnded ? 'rgba(0,0,0,0.6)' : isUpcoming ? C.WARNING + 'dd' : C.SUCCESS + 'dd' }]}>
-            <Text style={[styles.statusBadgeText, { color: isEnded ? C.TEXT_MUTED : '#000' }]}>
+            <Text style={[styles.statusBadgeText, { color: isEnded ? C.TEXT_MUTED : '#FFFFFF' }]}>
               ● {statusLabel}
             </Text>
           </View>
@@ -84,11 +81,6 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
             </View>
           )}
         </View>
-        {daysLeft !== null && !isEnded && (
-          <View style={styles.daysLeftBadge}>
-            <Text style={styles.daysLeftText}>Ends in {daysLeft}d</Text>
-          </View>
-        )}
         {challenge.user_challenge && (
           <View style={styles.enrolledBadge}>
             <Text style={styles.enrolledBadgeText}>
@@ -108,7 +100,7 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
         {/* Date Range */}
         {(challenge.start_date || challenge.end_date) && (
           <Text style={styles.dateRange}>
-            📅 {formatDate(challenge.start_date)}{challenge.end_date ? ` → ${formatDate(challenge.end_date)}` : ''}
+            {formatDate(challenge.start_date)}{challenge.end_date ? ` — ${formatDate(challenge.end_date)}` : ''}
           </Text>
         )}
 
@@ -125,11 +117,9 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
 
         {/* Stats Footer */}
         <View style={styles.statsRow}>
-          {challenge.submission_count !== undefined && (
-            <Text style={styles.stat}>📷 {challenge.submission_count} submissions</Text>
-          )}
+          <Text style={styles.stat}>� {challenge.submission_count || 0} participants</Text>
           {daysLeft !== null && !isEnded && (
-            <Text style={styles.stat}>⏳ Submissions end in {daysLeft}d</Text>
+            <Text style={styles.stat}>⏱ {daysLeft} days left</Text>
           )}
           {isEnded && (
             <Text style={[styles.stat, { color: C.TEXT_MUTED }]}>Challenge ended</Text>
@@ -148,18 +138,24 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
 
 const styles = StyleSheet.create({
   card: {
+    width: '100%',
     backgroundColor: C.CARD_BG,
-    borderRadius: borderRadius.xl,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
     overflow: 'hidden',
-    marginBottom: 14,
+    marginBottom: 18,
+    shadowColor: '#000000',
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
 
   // Image - 16:9
   imageWrap: {
     width: '100%',
-    aspectRatio: 16 / 9,
+    aspectRatio: 1.38,
     position: 'relative',
   },
   image: { width: '100%', height: '100%' },
@@ -173,15 +169,15 @@ const styles = StyleSheet.create({
   // Overlay badges
   overlayBadges: {
     position: 'absolute',
-    top: 10,
-    left: 10,
+    top: 14,
+    right: 14,
     flexDirection: 'row',
     gap: 6,
   },
   statusBadge: {
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    borderRadius: borderRadius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   statusBadgeText: { fontSize: 12, fontWeight: '800' },
   proBadge: {
@@ -213,57 +209,58 @@ const styles = StyleSheet.create({
   enrolledBadgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 
   // Body
-  body: { padding: 14 },
+  body: { padding: 20 },
   title: {
     color: C.TEXT,
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
     fontFamily: "'Lexend', sans-serif",
-    marginBottom: 6,
-    lineHeight: 22,
+    marginBottom: 8,
+    lineHeight: 24,
   },
   dateRange: {
-    color: C.TEXT_MUTED,
-    fontSize: 12,
-    marginBottom: 8,
+    color: C.ORANGE_MID,
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 10,
     fontFamily: "'Inter', sans-serif",
   },
 
   // Tags
-  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginBottom: 10 },
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
   tag: {
-    backgroundColor: C.TEAL + '1A',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: C.TEAL + '44',
-    borderRadius: borderRadius.pill,
-    paddingHorizontal: 9,
-    paddingVertical: 3,
+    borderColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 7,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   tagCategory: {
-    backgroundColor: C.ORANGE + '1A',
+    backgroundColor: C.ORANGE + '18',
     borderColor: C.ORANGE + '55',
   },
-  tagText: { color: C.TEAL, fontSize: 12, fontWeight: '600' },
+  tagText: { color: C.TEXT_SECONDARY, fontSize: 12, fontWeight: '700' },
   tagCategoryText: { color: C.ORANGE },
 
   // Stats
-  statsRow: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
-  stat: { color: C.TEXT_SECONDARY, fontSize: 13, fontFamily: "'Inter', sans-serif" },
+  statsRow: { flexDirection: 'row', gap: 18, flexWrap: 'wrap' },
+  stat: { color: C.TEXT_SECONDARY, fontSize: 13, fontWeight: '700', fontFamily: "'Inter', sans-serif" },
 
   viewBtnWrap: {
-    paddingHorizontal: 14,
-    paddingBottom: 14,
-    paddingTop: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    paddingTop: 16,
   },
   viewBtn: {
-    borderRadius: 10,
-    paddingVertical: 10,
+    borderRadius: borderRadius.pill,
+    paddingVertical: 12,
     paddingHorizontal: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundImage: 'linear-gradient(90deg, #F55B09 0%, #FFD000 100%)' as any,
+    backgroundImage: 'linear-gradient(90deg, #F55B09 0%, #FFD000 100%)',
     backgroundColor: '#F55B09',
-  },
+  } as any,
   viewBtnText: {
     color: '#fff',
     fontSize: 13,

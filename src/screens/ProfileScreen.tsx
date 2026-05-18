@@ -12,6 +12,8 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
 import { C, borderRadius } from '../theme';
 
+const PROFILE_LOGO = require('../../assets/Pose_7-removebg-preview.png');
+
 const BASE = 'https://photoai.betaplanets.com';
 const fullUrl = (url?: string) => (!url ? '' : url.startsWith('http') ? url : BASE + url);
 
@@ -122,6 +124,14 @@ export default function ProfileScreen() {
       }
       showsVerticalScrollIndicator={false}
     >
+      {/* Logo */}
+      <View style={styles.logoContainer}>
+        <View style={styles.logoImageWrapper}>
+          <Image source={PROFILE_LOGO} style={styles.logoImage} />
+        </View>
+        <Text style={styles.logoTitle}>Profile</Text>
+      </View>
+
       {/* Profile Header */}
       <View style={styles.profileHeader}>
         <View style={styles.avatarRing}>
@@ -334,7 +344,28 @@ const statStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.BG },
-
+  logoContainer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+  },
+  logoImageWrapper: {
+    width: 250,
+    height: 170,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  logoImage: {
+    width: 250,
+    height: 200,
+    marginTop: 0,
+  },
+  logoTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: C.TEXT,
+    fontFamily: "'Lexend', sans-serif",
+  },
   guestContainer: {
     flex: 1,
     backgroundColor: C.BG,

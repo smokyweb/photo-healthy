@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, useWindowDimensions, Platform,
+  View, Text, StyleSheet, ScrollView, useWindowDimensions, Platform, Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import GradientButton from '../components/GradientButton';
@@ -13,6 +13,8 @@ const SECTION_PAD_V = 64;
 const SECTION_PAD_V_HERO = 80;
 const CONTENT_PAD_H = 24;
 const CARD_RADIUS = 16;
+const ABOUT_PURPOSE_IMAGE = require('../../assets/Pose_4-removebg-preview.png');
+const ABOUT_STORY_IMAGE = require('../../assets/81152a899d49bff0e41109a7a1650ccf6ad5953d.png');
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const VALUES = [
@@ -44,6 +46,13 @@ export default function AboutScreen() {
 
       {/* ── 1. Hero ── */}
       <View style={styles.heroSection}>
+        <View style={styles.purposeImageContainer}>
+          <Image
+            source={ABOUT_PURPOSE_IMAGE}
+            style={styles.purposeImage}
+            resizeMode="center"
+          />
+        </View>
         <Text style={styles.heroTitle}>Our Purpose</Text>
         <Text style={styles.heroDesc}>
           Photo Healthy is a vibrant community where wellness meets visual storytelling. We empower
@@ -60,6 +69,7 @@ export default function AboutScreen() {
       {/* ── 2. Philosophy ── */}
       <View style={styles.philosophySection}>
         <View style={styles.philosophyInner}>
+          <Text style={styles.sectionTitle}>Our Mission</Text>
           <Text style={styles.philosophyText}>
             "We believe that health is not just a destination — it's a daily practice. Every meal
             prepared with care, every morning run, every mindful breath is a step toward a better
@@ -77,7 +87,11 @@ export default function AboutScreen() {
       {/* ── 3. Our Story ── */}
       <View style={styles.storySection}>
         <View style={[styles.storyRow, isDesktop && styles.storyRowDesktop]}>
-          <View style={[styles.storyImage, isDesktop && styles.storyImageDesktop]} />
+          <Image
+            source={ABOUT_STORY_IMAGE}
+            style={[styles.storyImage, isDesktop && styles.storyImageDesktop]}
+            resizeMode="cover"
+          />
           <View style={[styles.storyTextCol, isDesktop && styles.storyTextColDesktop]}>
             <Text style={styles.storyTitle}>Our Story</Text>
             <Text style={styles.storyBody}>
@@ -99,6 +113,7 @@ export default function AboutScreen() {
       </View>
 
       {/* ── 4. Values ── */}
+      {/*
       <View style={styles.valuesSection}>
         <View style={styles.sectionInner}>
           <Text style={styles.sectionTitle}>Our Values</Text>
@@ -112,17 +127,21 @@ export default function AboutScreen() {
           </View>
         </View>
       </View>
+      */}
 
       {/* ── 5. CTA Banner ── */}
       <View style={styles.ctaSection}>
         <View style={styles.ctaBanner as any}>
-          <Text style={styles.ctaTitle}>Start Your Journey</Text>
-          <Text style={styles.ctaSubtitle}>Join thousands of members already thriving</Text>
+          <Text style={styles.ctaTitle}>Join Your Wellness Community</Text>
+          <Text style={styles.ctaSubtitle}>
+            Be a part of our growing wellness community that encourages your every step. Connect and Share with people from around the world.
+          </Text>
           <GradientButton
-            label="Join Free Today"
+            label="Sign Up Now"
             onPress={() => navigation.navigate('Register' as never)}
             size="lg"
             style={styles.ctaBtn}
+            textStyle={styles.ctaBtnText}
             variant="outline"
           />
         </View>
@@ -146,6 +165,18 @@ const styles = StyleSheet.create({
     paddingVertical: SECTION_PAD_V_HERO,
     paddingHorizontal: CONTENT_PAD_H,
     alignItems: 'center',
+  },
+  purposeImageContainer: {
+    width: '50%',
+    height: 140,
+    borderRadius: 18,
+    marginBottom: 34,
+    backgroundColor: C.CARD_BG2,
+    overflow: 'hidden',
+  },
+  purposeImage: {
+    width: '100%',
+    height: '100%',
   },
   heroTitle: {
     color: C.TEXT,
@@ -278,10 +309,10 @@ const styles = StyleSheet.create({
   // CTA Banner — orange gradient
   ctaSection: {
     paddingVertical: SECTION_PAD_V,
-    paddingHorizontal: CONTENT_PAD_H,
+    paddingHorizontal: 0,
   },
   ctaBanner: {
-    borderRadius: CARD_RADIUS,
+    borderRadius: 0,
     paddingVertical: SECTION_PAD_V,
     paddingHorizontal: CONTENT_PAD_H,
     alignItems: 'center',
@@ -304,5 +335,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 4,
   },
-  ctaBtn: { marginTop: 20, borderColor: C.WHITE },
+  ctaBtn: {
+    marginTop: 20,
+    backgroundColor: C.WHITE,
+    borderColor: C.WHITE,
+  },
+  ctaBtnText: {
+    color: '#000000',
+  },
 });

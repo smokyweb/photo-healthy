@@ -7,6 +7,8 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
 import { C, borderRadius } from '../theme';
 
+const PROGRESS_LOGO = require('../../assets/Pose_3-removebg-preview.png');
+
 const BASE = 'https://photoai.betaplanets.com';
 const fullUrl = (u?: string) => u ? (u.startsWith('http') ? u : BASE + u) : null;
 
@@ -57,6 +59,14 @@ export default function MyProgressScreen() {
       contentContainerStyle={{ flexGrow: 1 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={C.ORANGE} />}
     >
+      {/* Logo */}
+      <View style={styles.logoContainer}>
+        <View style={styles.logoImageWrapper}>
+          <Image source={PROGRESS_LOGO} style={styles.logoImage} />
+        </View>
+        <Text style={styles.logoTitle}>My Progress</Text>
+      </View>
+
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -130,6 +140,28 @@ export default function MyProgressScreen() {
 
 const styles = StyleSheet.create({
   screen: { backgroundColor: C.BG },
+  logoContainer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+  },
+  logoImageWrapper: {
+    width: 250,
+    height: 170,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  logoImage: {
+    width: 250,
+    height: 200,
+    marginTop: 0,
+  },
+  logoTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: C.TEXT,
+    fontFamily: "'Lexend', sans-serif",
+  },
   container: { padding: 16, maxWidth: 1100, alignSelf: 'center', width: '100%' },
 
   header: {

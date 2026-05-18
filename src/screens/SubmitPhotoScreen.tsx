@@ -11,6 +11,8 @@ import GradientButton from '../components/GradientButton';
 import AppFooter from '../components/AppFooter';
 import { C, borderRadius } from '../theme';
 
+const SUBMIT_LOGO = require('../../assets/Pose_2-removebg-preview.png');
+
 const MAX_PHOTOS = 2;
 
 export default function SubmitPhotoScreen() {
@@ -112,6 +114,14 @@ export default function SubmitPhotoScreen() {
       contentContainerStyle={{ flexGrow: 1 }}
       keyboardShouldPersistTaps="handled"
     >
+      {/* Logo */}
+      <View style={styles.logoContainer}>
+        <View style={styles.logoImageWrapper}>
+          <Image source={SUBMIT_LOGO} style={styles.logoImage} />
+        </View>
+        <Text style={styles.logoTitle}>Submit Photos</Text>
+      </View>
+
       {/* Hidden file input - rendered in DOM for iOS Safari compatibility */}
       {Platform.OS === 'web' && (
         <input
@@ -258,6 +268,28 @@ export default function SubmitPhotoScreen() {
 
 const styles = StyleSheet.create({
   screen: { backgroundColor: C.BG },
+  logoContainer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+  },
+  logoImageWrapper: {
+    width: 250,
+    height: 170,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  logoImage: {
+    width: 250,
+    height: 200,
+    marginTop: 0,
+  },
+  logoTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: C.TEXT,
+    fontFamily: "'Lexend', sans-serif",
+  },
   container: { padding: 20, maxWidth: 640, width: '100%' },
   containerDesktop: { alignSelf: 'center' },
 

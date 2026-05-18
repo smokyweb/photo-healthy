@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TextInput,
+  View, Text, StyleSheet, TextInput, Modal,
   TouchableOpacity, ScrollView, RefreshControl, useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -11,22 +11,38 @@ import GradientButton from '../components/GradientButton';
 import { C, borderRadius } from '../theme';
 import AppFooter from '../components/AppFooter';
 import { Image } from 'react-native';
+import { useAuth } from '../context/AuthContext';
+
+const CHALLENGE_LOGO = require('../../assets/Pose_6-removebg-preview.png');
 
 const BASE_URL = 'https://photoai.betaplanets.com';
 const fullUrl = (u?: string) => u ? (u.startsWith('http') ? u : BASE_URL + u) : undefined;
 
-// Categories built dynamically from data - see load()
-
-// STATUS_TABS computed dynamically below
-
 export default function ChallengesScreen() {
   const navigation = useNavigation<any>();
-  const { width } = useWindowDimensions();
-  const numCols = width >= 900 ? 3 : width >= 600 ? 2 : 1;
+  const { user } = useAuth();
+  const [motivationalQuote, setMotivationalQuote] = useState('The secret of getting ahead is getting started. — Mark Twain');
+  const [quoteAuthor, setQuoteAuthor] = useState('');
+  const [dismissSignupBanner, setDismissSignupBanner] = useState(false);
+  
+  React.useEffect(() => {
+    fetch('https://motivational-spark-api.vercel.app/api/quotes/random')
+      .then(r => r.json())
+      .then((data: any) => {
+        const q = data?.quote || data?.text || data?.content || (Array.isArray(data) ? data[0]?.quote : null);
+        const a = data?.author || data?.name || '';
+        if (q) {
+          setMotivationalQuote(q);
+          setQuoteAuthor(a && a !== 'null' ? a : '');
+        }
+      })
+      .catch(() => {
+        // Keep default quote on error
+      });
+  }, []);
 
   const [challenges, setChallenges] = useState<any[]>([]);
   const [filtered, setFiltered] = useState<any[]>([]);
-  const [categories, setCategories] = useState<string[]>(['All']);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
@@ -36,25 +52,22 @@ export default function ChallengesScreen() {
   const [movementFilter, setMovementFilter] = useState('All');
   const [feelingOptions, setFeelingOptions] = useState<string[]>(['All']);
   const [movementOptions, setMovementOptions] = useState<string[]>(['All']);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const { width } = useWindowDimensions();
+  const numCols = width >= 768 ? 4 : 1;
 
   const load = async () => {
     try {
       const data = await getChallenges();
       const list = data?.challenges || data || [];
       setChallenges(list);
-      // Build category list dynamically from actual data
-      const cats = Array.from(new Set(
-        list.map((c: any) => c.category).filter(Boolean)
-      )) as string[];
-      cats.sort();
-      setCategories(['All', ...cats]);
-      // Build feeling and movement options
-      const feelings = Array.from(new Set(list.flatMap((ch: any) => ch.feeling_category ? ch.feeling_category.split(',').map((s: string) => s.trim()) : []).filter(Boolean))) as string[];
-      const movements = Array.from(new Set(list.flatMap((ch: any) => ch.movement_category ? ch.movement_category.split(',').map((s: string) => s.trim()) : []).filter(Boolean))) as string[];
-      feelings.sort(); movements.sort();
-      setFeelingOptions(['All', ...feelings]);
-      setMovementOptions(['All', ...movements]);
-      applyFilters(list, search, status, category);
+      
+      // Extract unique categories
+      const categories = Array.from(new Set(list.map((c: any) => c.category).filter(Boolean))) as string[];
+      categories.sort();
+      setFeelingOptions(['All', ...Array.from(new Set(list.map((c: any) => c.feeling_tag).filter(Boolean))) as string[]]);
+      setMovementOptions(['All', ...Array.from(new Set(list.map((c: any) => c.movement_tag).filter(Boolean))) as string[]]);
+      applyFilters(list, search, status, category, feelingFilter, movementFilter);
     } catch (e) {
       console.error(e);
     }
@@ -115,11 +128,11 @@ export default function ChallengesScreen() {
   }
   const rows = chunkArray(filtered, numCols);
 
-  // Tab counts using is_active field
+  // Tab counts using is_active field and status
   const tabCounts = {
     all: challenges.length,
-    active: challenges.filter(c => c.is_active === 1 || c.is_active === true).length,
-    completed: challenges.filter(c => (c.is_active === 0 || c.is_active === false) && c.status !== 'archived').length,
+    active: challenges.filter(c => (c.is_active === 1 || c.is_active === true) && c.status !== 'archived').length,
+    completed: challenges.filter(c => (c.is_active === 0 || c.is_active === false || c.status === 'ended' || c.status === 'completed') && c.status !== 'archived').length,
     archived: challenges.filter(c => c.status === 'archived').length,
   };
   const STATUS_TABS = [
@@ -129,13 +142,30 @@ export default function ChallengesScreen() {
     { key: 'archived', label: 'Archived (' + tabCounts.archived + ')' },
   ];
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={{ flexGrow: 1 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.ORANGE} />}
-    >
+    <>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={{ flexGrow: 1 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.ORANGE} />}
+      >
+      {/* Logo */}
+      <View style={styles.logoContainer}>
+        <View style={styles.logoImageWrapper}>
+          <Image source={CHALLENGE_LOGO} style={styles.logoImage} />
+        </View>
+        <Text style={styles.logoTitle}>Challenges</Text>
+      </View>
+
+      {/* Motivational Quote Banner */}
+      <View style={styles.quoteBanner}>
+        <Text style={styles.quoteText}>
+          {motivationalQuote}
+        </Text>
+        {quoteAuthor ? <Text style={styles.quoteAuthor}>— {quoteAuthor}</Text> : null}
+      </View>
+
       {/* Featured Challenge Banner */}
-      {(() => {
+      {/* {(() => {
         const featured = challenges.find(c => c.is_active || c.status === 'active') || challenges[0];
         if (!featured) return null;
         const imgUri = fullUrl(featured.cover_image_url || featured.cover_image);
@@ -148,7 +178,6 @@ export default function ChallengesScreen() {
             onPress={() => navigation.navigate('ChallengeDetail', { challengeId: featured.id, id: featured.id })}
             activeOpacity={0.92}
           >
-            {/* Side-by-side layout: image left, info right */}
             <View style={styles.featuredImgWrap}>
               {imgUri ? (
                 <Image source={{ uri: imgUri }} style={styles.featuredImg} resizeMode="cover" />
@@ -160,8 +189,7 @@ export default function ChallengesScreen() {
             </View>
             <View style={styles.featuredInfoPanel}>
               <View style={styles.featuredActiveBadge}>
-                <Text style={{ color: C.TEAL, fontSize: 11, fontWeight: '800', marginRight: 4 }}>●</Text>
-                <Text style={styles.featuredActiveBadgeText}>Active Challenge</Text>
+                <Text style={styles.featuredActiveBadgeText}>{featured.is_active ? 'ACTIVE' : 'FEATURED'}</Text>
               </View>
               <Text style={styles.featuredTitle} numberOfLines={2}>{featured.title}</Text>
               {featured.description ? <Text style={styles.featuredDescText} numberOfLines={3}>{featured.description}</Text> : null}
@@ -175,7 +203,7 @@ export default function ChallengesScreen() {
             </View>
           </TouchableOpacity>
         );
-      })()}
+      })()} */}
 
       {/* Search Bar */}
       <View style={styles.searchWrap}>
@@ -193,115 +221,220 @@ export default function ChallengesScreen() {
             <Text style={styles.clearBtnText}>✕</Text>
           </TouchableOpacity>
         )}
-      </View>
-
-      {/* Status Filter Tabs */}
-      <View style={styles.tabsRow}>
-        {STATUS_TABS.map(tab => (
-          <TouchableOpacity
-            key={tab.key}
-            style={[styles.tab, status === tab.key && styles.tabActive]}
-            onPress={() => setStatus(tab.key)}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabText, status === tab.key && styles.tabTextActive]}>
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        <TouchableOpacity onPress={() => setFilterModalVisible(true)} style={styles.filterBtn}>
+          <Text style={styles.filterBtnText}>⚙️ Filters</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Category Filter Pills */}
-      <Text style={{ color: C.TEXT_SECONDARY, fontSize: 12, paddingHorizontal: 14, marginTop: 2 }}>Swipe for categories ›</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={true}
-        persistentScrollbar
-        style={styles.categoryScroll}
-        contentContainerStyle={styles.categoryContent}
-      >
-        {categories.map(cat => (
+      <View style={styles.pillsRow}>
+        {['All', ...Array.from(new Set(challenges.map((c: any) => c.category).filter(Boolean)))].map(cat => (
           <TouchableOpacity
             key={cat}
-            style={[styles.catChip, category === cat && styles.catChipActive]}
+            style={[styles.pill, category === cat && styles.pillActive]}
             onPress={() => setCategory(cat)}
             activeOpacity={0.8}
           >
-            <Text style={[styles.catText, category === cat && styles.catTextActive]}>{cat}</Text>
+            <Text style={[styles.pillText, category === cat && styles.pillTextActive]}>{cat}</Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
-
-      {/* Feeling Filter */}
-      {feelingOptions.length > 2 && (
-        <>
-          <Text style={{ color: C.TEXT_SECONDARY, fontSize: 11, paddingHorizontal: 14, marginTop: 8 }}>Feeling:</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll} contentContainerStyle={styles.categoryContent}>
-            {feelingOptions.map(f => (
-              <TouchableOpacity key={f} style={[styles.catChip, feelingFilter === f && styles.catChipActive]} onPress={() => setFeelingFilter(f)} activeOpacity={0.8}>
-                <Text style={[styles.catText, feelingFilter === f && styles.catTextActive]}>{f}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </>
-      )}
-      {/* Movement Filter */}
-      {movementOptions.length > 2 && (
-        <>
-          <Text style={{ color: C.TEXT_SECONDARY, fontSize: 11, paddingHorizontal: 14, marginTop: 6 }}>Movement:</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll} contentContainerStyle={styles.categoryContent}>
-            {movementOptions.map(m => (
-              <TouchableOpacity key={m} style={[styles.catChip, movementFilter === m && styles.catChipActive]} onPress={() => setMovementFilter(m)} activeOpacity={0.8}>
-                <Text style={[styles.catText, movementFilter === m && styles.catTextActive]}>{m}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </>
-      )}
-
-      {/* Results Count */}
-      <View style={styles.resultsBar}>
-        <Text style={styles.resultsText}>
-          {filtered.length} challenge{filtered.length !== 1 ? 's' : ''} found
-        </Text>
       </View>
 
       {/* Challenge Grid */}
-      <View style={[styles.list, numCols > 1 && styles.listGrid]}>
-        {filtered.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>🔍</Text>
-            <Text style={styles.emptyTitle}>No challenges found</Text>
-            <Text style={styles.emptyBody}>Try adjusting your filters or search term.</Text>
-          </View>
-        ) : (
-          rows.map((row, rowIdx) => (
-            <View key={rowIdx} style={numCols > 1 ? styles.colWrapper : undefined}>
-              {row.map(item => (
-                <View key={item.id} style={{ flex: 1, minWidth: 0 }}>
+      {filtered.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={{ fontSize: 48, marginBottom: 12 }}>🏆</Text>
+          <Text style={styles.emptyTitle}>No challenges found</Text>
+          <Text style={styles.emptyBody}>Try adjusting your filters or search terms.</Text>
+        </View>
+      ) : (
+        <View style={styles.grid}>
+          {rows.map((row, rowIndex) => (
+            <View key={rowIndex} style={styles.row}>
+              {row.map((challenge: any) => (
+                <View key={challenge.id} style={{ flex: 1, paddingHorizontal: 6, minHeight: 250 }}>
                   <ChallengeCard
-                    challenge={item}
-                    onPress={() => navigation.navigate('ChallengeDetail', { challengeId: item.id, id: item.id })}
+                    challenge={challenge}
+                    onPress={() => navigation.navigate('ChallengeDetail', { challengeId: challenge.id, id: challenge.id })}
                   />
                 </View>
               ))}
-              {/* Pad last row if uneven */}
-              {row.length < numCols && Array(numCols - row.length).fill(0).map((_, i) => (
-                <View key={`pad-${i}`} style={{ flex: 1, minWidth: 0 }} />
-              ))}
             </View>
-          ))
-        )}
-      </View>
+          ))}
+        </View>
+      )}
+
+      <View style={{ height: 40 }} />
       <AppFooter />
     </ScrollView>
+
+    {/* Sign Up Banner for non-logged-in users */}
+    {!user && !dismissSignupBanner && (
+      <View style={styles.signupBannerContainer}>
+        <TouchableOpacity onPress={() => setDismissSignupBanner(true)} style={styles.signupBannerClose}>
+          <Text style={styles.signupBannerCloseText}>✕</Text>
+        </TouchableOpacity>
+        <View style={styles.signupBanner}>
+          <Text style={styles.signupTitle}>Sign up to participate in challenges</Text>
+          <Text style={styles.signupSubtitle}>
+            Be a part of our growing wellness community that encourages your every step. Connect and Share with people from around the world.
+          </Text>
+          <GradientButton
+            label="Sign up now"
+            variant="primary"
+            size="md"
+            onPress={() => navigation.navigate('Register')}
+            style={styles.signupButton}
+          />
+        </View>
+      </View>
+    )}
+
+    {/* Filter Modal */}
+    <Modal
+      visible={filterModalVisible}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setFilterModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Filters</Text>
+            <TouchableOpacity onPress={() => setFilterModalVisible(false)} style={styles.modalCloseBtn}>
+              <Text style={styles.modalCloseText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalScroll}>
+            {/* Status Filter */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterLabel}>Status</Text>
+              <View style={styles.pillsRow}>
+                {STATUS_TABS.map(tab => (
+                  <TouchableOpacity
+                    key={tab.key}
+                    style={[styles.pill, status === tab.key && styles.pillActive]}
+                    onPress={() => { setStatus(tab.key); }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.pillText, status === tab.key && styles.pillTextActive]}>{tab.label.split(' (')[0]}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Feeling Filter */}
+            {feelingOptions.length > 1 && (
+              <View style={styles.filterSection}>
+                <Text style={styles.filterLabel}>Feeling</Text>
+                <View style={styles.pillsRow}>
+                  {feelingOptions.map(feeling => (
+                    <TouchableOpacity
+                      key={feeling}
+                      style={[styles.pill, feelingFilter === feeling && styles.pillActive]}
+                      onPress={() => setFeelingFilter(feeling)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.pillText, feelingFilter === feeling && styles.pillTextActive]}>{feeling}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Movement Filter */}
+            {movementOptions.length > 1 && (
+              <View style={styles.filterSection}>
+                <Text style={styles.filterLabel}>Movement</Text>
+                <View style={styles.pillsRow}>
+                  {movementOptions.map(movement => (
+                    <TouchableOpacity
+                      key={movement}
+                      style={[styles.pill, movementFilter === movement && styles.pillActive]}
+                      onPress={() => setMovementFilter(movement)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.pillText, movementFilter === movement && styles.pillTextActive]}>{movement}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+          </ScrollView>
+
+          <TouchableOpacity
+            onPress={() => setFilterModalVisible(false)}
+            style={styles.modalApplyBtn}
+          >
+            <Text style={styles.modalApplyText}>Apply Filters</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
-
-  // Featured Banner
+  screen: {
+    flex: 1,
+    backgroundColor: C.BG,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+  },
+  logoImageWrapper: {
+    width: 250,
+    height: 170,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  logoImage: {
+    width: 250,
+    height: 200,
+    marginTop: 0,
+  },
+  logoTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: C.TEXT,
+    fontFamily: 'Lexend',
+  },
+  logoSubtitle: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: C.TEXT_SECONDARY,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 20,
+    marginTop: 8,
+  },
+  quoteBanner: {
+    marginHorizontal: 12,
+    marginBottom: 12,
+    padding: 16,
+    backgroundColor: C.CARD_BG,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+  },
+  quoteText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: C.TEXT,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  quoteAuthor: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: C.TEXT_MUTED,
+    textAlign: 'center',
+    marginTop: 8,
+  },
   featuredBanner: {
     flexDirection: 'row',
     marginHorizontal: 12,
@@ -400,10 +533,22 @@ const styles = StyleSheet.create({
   },
   searchIcon: { fontSize: 16 },
   searchInput: { flex: 1, color: C.TEXT, fontSize: 15, fontFamily: "'Inter', sans-serif" },
-  clearBtn: { padding: 2 },
-  clearBtnText: { color: C.TEXT_MUTED, fontSize: 14 },
-
-  // Status Tabs
+  clearBtn: { paddingHorizontal: 8 },
+  clearBtnText: { fontSize: 16, color: C.TEXT_MUTED },
+  filterBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: C.CARD_BG,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+    marginLeft: 8,
+  },
+  filterBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.TEXT,
+  },
   tabsRow: {
     flexDirection: 'row',
     paddingHorizontal: 12,
@@ -468,4 +613,148 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 48, marginBottom: 12 },
   emptyTitle: { color: C.TEXT, fontSize: 18, fontWeight: '700', marginBottom: 6 },
   emptyBody: { color: C.TEXT_MUTED, fontSize: 14, textAlign: 'center' },
+  emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 32 },
+  pillsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginLeft: 12,
+    marginBottom: 12,
+  },
+  pill: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: C.CARD_BG,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+  },
+  pillActive: {
+    backgroundColor: C.ORANGE,
+    borderColor: C.ORANGE,
+  },
+  pillText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.TEXT_SECONDARY,
+  },
+  pillTextActive: {
+    color: '#FFFFFF',
+  },
+  grid: {
+    paddingHorizontal: 12,
+    paddingBottom: 20,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+    marginHorizontal: 0,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: C.BG,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    paddingBottom: 34,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: C.CARD_BORDER,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: C.TEXT,
+  },
+  modalCloseBtn: {
+    padding: 8,
+  },
+  modalCloseText: {
+    fontSize: 20,
+    color: C.TEXT_MUTED,
+  },
+  modalScroll: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  filterSection: {
+    marginBottom: 20,
+  },
+  filterLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: C.TEXT,
+    marginBottom: 10,
+  },
+  modalApplyBtn: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    paddingVertical: 14,
+    backgroundColor: C.ORANGE,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+  },
+  modalApplyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  signupBanner: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    backgroundColor: C.CARD_BG,
+    borderRadius: 0,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+    alignItems: 'center',
+    paddingTop: 32,
+  },
+  signupTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: C.TEXT,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  signupSubtitle: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: C.TEXT_SECONDARY,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  signupButton: {
+    paddingHorizontal: 32,
+  },
+  signupBannerContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: C.BG,
+    paddingTop: 12,
+  },
+  signupBannerClose: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 1,
+  },
+  signupBannerCloseText: {
+    fontSize: 20,
+    color: C.ORANGE,
+    fontWeight: '600',
+  },
 });

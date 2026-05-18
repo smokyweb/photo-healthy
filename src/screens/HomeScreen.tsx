@@ -17,7 +17,7 @@ import * as api from '../services/api';
 import { getPublicSettings } from '../services/api';
 import { C } from '../theme';
 
-const LOGO_IMG = require('../../assets/logo.png');
+const LOGO_IMG = require('../../assets/29c8c384-1bd0-11f1-ad58-a2ad5845d919.png');
 const PHOTO5_URBAN = require('../../assets/photo5-urban-sunset.png');
 const PHOTO2_MOUNTAIN = require('../../assets/photo2-mountain-sunset.png');
 const PHOTO1_CITY = require('../../assets/photo1-city-street.png');
@@ -63,6 +63,12 @@ const ionIcon = (name: string, color: string) => {
         return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect ${stroke} x="80" y="80" width="352" height="352" rx="96" ry="96" fill="none"/><circle ${stroke} cx="256" cy="256" r="80" fill="none"/><circle cx="348" cy="164" r="20" fill="${color}"/></svg>`;
       case 'facebook':
         return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="${color}" d="M480 257.35C480 133.46 379.76 33.22 255.87 33.22S32 133.46 32 257.35c0 111.95 81.95 204.78 189 221.65V322.12h-57V257.35h57V208c0-56.21 33.45-87.28 84.61-87.28 24.5 0 50.15 4.37 50.15 4.37v55.13h-28.26c-27.84 0-36.5 17.28-36.5 35v42.12h62.12l-9.92 64.77H291V479c107.05-16.87 189-109.7 189-221.65z"/></svg>`;
+      case 'shop':
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path ${stroke} d="M160 96c0-35.3 28.7-64 64-64h64c35.3 0 64 28.7 64 64v16h32c17.7 0 32 14.3 32 32v48H128v-48c0-17.7 14.3-32 32-32h32V96zm-16 112h224v256H144V208zm32 32v192h160V240H176z" fill="none"/></svg>`;
+      case 'partners':
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path ${stroke} d="M256 112c-48.6 0-88 39.4-88 88s39.4 88 88 88 88-39.4 88-88-39.4-88-88-88zm-48 88c0-26.5 21.5-48 48-48s48 21.5 48 48-21.5 48-48 48-48-21.5-48-48zm144 144h-48c-17.7 0-32 14.3-32 32v64h112v-64c0-17.7-14.3-32-32-32zm-192 0h-48c-17.7 0-32 14.3-32 32v64h112v-64c0-17.7-14.3-32-32-32z" fill="none"/></svg>`;
+      case 'how-it-works':
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path ${stroke} d="M256 64C150 64 64 150 64 256s86 192 192 192 192-86 192-192S362 64 256 64zm0 352c-88.4 0-160-71.6-160-160S167.6 96 256 96s160 71.6 160 160-71.6 160-160 160zm-16-208h32v96h-32v-96zm0-48h32v32h-32v-32z" fill="none"/></svg>`;
       default:
         return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><circle cx="256" cy="256" r="160" fill="${color}"/></svg>`;
     }
@@ -196,7 +202,7 @@ const FooterSocialLink = ({ name, label }: { name: string; label: string }) => (
   </Pressable>
 );
 
-const HomeBottomSections = ({ isMobile, onHowItWorksLayout }: { isMobile: boolean; onHowItWorksLayout?: (e: any) => void }) => {
+const HomeBottomSections = ({ isMobile, onHowItWorksLayout, onHowItWorksPress }: { isMobile: boolean; onHowItWorksLayout?: (e: any) => void; onHowItWorksPress?: () => void }) => {
   const howItems = [
     {
       icon: 'trophy',
@@ -221,21 +227,21 @@ const HomeBottomSections = ({ isMobile, onHowItWorksLayout }: { isMobile: boolea
         style={[bottom.howItWorks, isMobile && bottom.howItWorksMobile]}
         onLayout={onHowItWorksLayout}
       >
-        <View style={bottom.headingRow}>
+        <TouchableOpacity style={bottom.headingRow} onPress={onHowItWorksPress} activeOpacity={0.85}>
           <View style={bottom.headingLine} />
           <Text style={bottom.heading}>How It Works</Text>
           <View style={bottom.headingLine} />
-        </View>
+        </TouchableOpacity>
 
         <View style={[bottom.howGrid, isMobile && bottom.howGridMobile]}>
           {howItems.map((item) => (
-            <View key={item.title} style={[bottom.howItem, isMobile && bottom.howItemMobile]}>
+            <TouchableOpacity key={item.title} style={[bottom.howItem, isMobile && bottom.howItemMobile]} onPress={onHowItWorksPress} activeOpacity={0.85}>
               <View style={bottom.iconCircle}>
                 <IconGlyph name={item.icon} color="#FFFFFF" size={30} />
               </View>
               <Text style={bottom.howTitle}>{item.title}</Text>
               <Text style={bottom.howDesc}>{item.desc}</Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       </View>
@@ -409,15 +415,14 @@ const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navig
       ))}
     </View>
 
-    {/* Quick Actions Grid (2x2) */}
+    {/* Quick Actions Grid (3 buttons) */}
     <View style={li.section}>
       <Text style={li.sectionTitle}>Quick Actions</Text>
       <View style={li.quickGrid}>
         {[
-          { icon: '🏆', title: 'Browse Challenges', desc: 'Discover new photography challenges', nav: 'ChallengesTab' },
-          { icon: '📷', title: 'View Gallery', desc: 'See all your submitted photos', nav: 'Gallery' },
-          { icon: '⭐', title: 'Subscription', desc: 'Update billing preferences', nav: 'Subscription' },
-          { icon: '🛍️', title: 'Visit Shop', desc: 'Browse photography gear', nav: 'ChallengesTab' },
+          { icon: '🛍️', title: 'Shop', desc: 'Browse photography gear', nav: 'Shop' },
+          { icon: '🤝', title: 'Partners', desc: 'View our partners', nav: 'Partners' },
+          { icon: '�', title: 'How It Works', desc: 'Learn how it works', nav: 'HowItWorks' },
         ].map((item, i) => (
           <TouchableOpacity
             key={i}
@@ -546,10 +551,9 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft,
       <Text style={pm.sectionTitle}>Quick Actions</Text>
       <View style={pm.quickGrid}>
         {[
-          { icon: '▣', title: 'Browse Challenges', desc: 'Discover new photography challenges', nav: 'ChallengesTab' },
-          { icon: '▤', title: 'View Gallery', desc: 'See all your submitted photos', nav: 'Gallery' },
-          { icon: '▰', title: 'Subscription', desc: 'Update billing preferences', nav: 'Subscription' },
-          { icon: '◼', title: 'Visit Shop', desc: 'Browse photography gear', nav: 'ChallengesTab' },
+          { icon: '◼', title: 'Shop', desc: 'Browse photography gear', nav: 'Shop' },
+          { icon: '▰', title: 'Partners', desc: 'View our partners', nav: 'Partners' },
+          { icon: '▣', title: 'How It Works', desc: 'Learn how it works', nav: 'HowItWorks' },
         ].map((item) => (
           <TouchableOpacity key={item.title} style={pm.quickCard} onPress={() => navigation.navigate(item.nav)}>
             <View style={pm.quickIcon}><Text style={pm.quickIconText}>{item.icon}</Text></View>
@@ -610,7 +614,9 @@ const HomeScreen = () => {
   const featured = challenges.find(
     (c) => c.is_active && new Date(c.end_date) > new Date(),
   ) || challenges[0];
-  const recent = submissions.slice(0, 4);
+  const recent = [...submissions]
+    .sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+    .slice(0, 8);
 
   const daysLeft = featured
     ? Math.max(0, Math.ceil((new Date(featured.end_date).getTime() - Date.now()) / 86400000))
@@ -629,20 +635,16 @@ const HomeScreen = () => {
         </Text>
         <View style={[s.heroBtns, isMobile ? s.heroBtnsMobile : s.heroBtnsCentered]}>
           <TouchableOpacity
-            style={s.getStartedBtn}
+            style={[s.getStartedBtn, isMobile && s.getStartedBtnMobile]}
             onPress={() => navigation.navigate('Login')}
           >
-            <Text style={s.getStartedText}>Get Started</Text>
+            <Text style={[s.getStartedText, isMobile && s.getStartedTextMobile]}>Join free / Start a challenge</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[s.learnMoreBtn, isMobile && s.learnMoreBtnMobile]}
-            onPress={() => {
-              if (howItWorksY.current > 0) {
-                scrollRef.current?.scrollTo({ y: howItWorksY.current, animated: true });
-              }
-            }}
+            onPress={() => navigation.navigate('Main' as never, { screen: 'ChallengesTab' } as never)}
           >
-            <Text style={s.learnMoreText}>Learn More</Text>
+            <Text style={[s.learnMoreText, isMobile && s.getStartedTextMobile]}>View Challenges</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -652,9 +654,9 @@ const HomeScreen = () => {
           source={LOGO_IMG}
           style={[
             s.heroLogo,
-            isMobile ? { width: 150, height: 150 } : { width: 190, height: 190 },
+            isMobile ? { width: 200, height: 200, marginLeft: -20 } : { width: 250, height: 250, marginLeft: -30 },
           ]}
-          resizeMode="contain"
+          resizeMode="center"
         />
       </View>
     </>
@@ -719,7 +721,38 @@ const HomeScreen = () => {
             {publicHeroContent}
           </ImageBackground>
 
+          {/* ===== QUICK ACTIONS (Shop, Partners, How It Works) ===== */}
+          <View style={[s.section, !isMobile && s.desktopWidth, s.quickActionsSection]}>
+            <View style={[s.quickActionsGrid, isMobile && s.quickActionsGridMobile]}>
+              <Pressable
+                style={({ hovered }: any) => [s.quickActionCard, hovered && s.quickActionCardHovered]}
+                onPress={() => navigation.navigate('Shop')}
+              >
+                <IconGlyph name="shop" color={C.ORANGE} size={36} />
+                <Text style={s.quickActionTitle}>Shop</Text>
+                <Text style={s.quickActionDesc}>Browse photography gear</Text>
+              </Pressable>
+              <Pressable
+                style={({ hovered }: any) => [s.quickActionCard, hovered && s.quickActionCardHovered]}
+                onPress={() => navigation.navigate('Partners')}
+              >
+                <IconGlyph name="partners" color={C.ORANGE} size={36} />
+                <Text style={s.quickActionTitle}>Partners</Text>
+                <Text style={s.quickActionDesc}>View our partners</Text>
+              </Pressable>
+              <Pressable
+                style={({ hovered }: any) => [s.quickActionCard, hovered && s.quickActionCardHovered]}
+                onPress={() => navigation.navigate('HowItWorks')}
+              >
+                <IconGlyph name="how-it-works" color={C.ORANGE} size={36} />
+                <Text style={s.quickActionTitle}>How It Works</Text>
+                <Text style={s.quickActionDesc}>Learn how it works</Text>
+              </Pressable>
+            </View>
+          </View>
+
           {/* Stats row */}
+          {/*
           <View style={[s.section, !isMobile && s.desktopWidth, { marginTop: 0 }]}>
             <View style={[s.statsRow, isMobile && { gap: 10 }]}>
               <View style={s.statCard}>
@@ -736,46 +769,62 @@ const HomeScreen = () => {
               </View>
             </View>
           </View>
+          */}
 
           {/* ===== CURRENT CHALLENGE CARD ===== */}
           {featured && (
-            <View style={[s.section, !isMobile && s.desktopWidth]}>
-              <View style={[s.challengeCard, isMobile && { flexDirection: 'column' }]}>
-                <View style={[s.challengeLeft, isMobile && { width: '100%' as any, paddingBottom: 16 }]}>
-                  <Text style={s.challengeLabel}>📷 Photo Challenge</Text>
+            <View style={[s.section, s.currentChallengeSection, !isMobile && s.desktopWidth]}>
+              <Text style={s.currentChallengeHeader}>Current Challenge</Text>
+              <Text style={s.currentChallengeSubtext}>
+                Pick a challenge —a simple, doable reason to move. Notice how it feels and through photos, share a moment you’ll want to remember and others to see. We’re in this together—let’s build a community collage of small wins, inspiring each other to do more!
+              </Text>
+              <View style={s.challengeCard}>
+                <Image
+                  source={featured.cover_image_url ? { uri: fullUrl(featured.cover_image_url) } : PHOTO9_CLOUDS}
+                  style={s.challengeImg}
+                  resizeMode="cover"
+                />
+                <View style={s.challengeLeft}>
                   <Text style={s.challengeTitle}>{featured.title}</Text>
-                  <Text style={s.challengeMeta}>
-                    Category: {featured.category || 'General'} | Submissions: {featured.submission_count || submissions.length} | Ends in: {daysLeft} days
+                  <Text style={s.challengeDescription} numberOfLines={1}>
+                    {featured.description || 'Capture the essence of this challenge and share your unique perspective through photos.'}
                   </Text>
+                  <View style={[s.challengeMetaRow, isMobile && { flexDirection: 'column', alignItems: 'flex-start', gap: 8 }]}>
+                    <Text style={s.challengeMetaLabel}>Challenge Category</Text>
+                    <Text style={s.challengeMeta}>Example Feeling</Text>
+                    <Text style={s.challengeMeta}>{featured.category || 'Example Movement'}</Text>
+                    <Text style={s.challengeMeta}>Participants: {featured.submission_count || submissions.length}</Text>
+                    <Text style={s.challengeMeta}>Days Left: {daysLeft}</Text>
+                  </View>
                   <TouchableOpacity
                     style={s.submitBtn}
                     onPress={() => navigation.navigate('Login')}
                   >
-                    <Text style={s.submitBtnText}>Submit Your Photo</Text>
+                    <Text style={s.submitBtnText}>Sign Up To Participate</Text>
                   </TouchableOpacity>
-                </View>
-                <View style={[s.challengeRight, isMobile && { width: '100%' as any, height: 180 }]}>
-                  <Image
-                    source={featured.cover_image_url ? { uri: fullUrl(featured.cover_image_url) } : PHOTO9_CLOUDS}
-                    style={s.challengeImg}
-                    resizeMode="cover"
-                  />
                 </View>
               </View>
             </View>
           )}
 
+          <View style={[s.publicQuoteBanner, !isMobile && s.desktopWidth]}>
+            <Text style={s.publicQuoteText}>
+              {motivationalQuote}
+            </Text>
+            {quoteAuthor ? <Text style={s.publicQuoteAuthor}>— {quoteAuthor}</Text> : null}
+          </View>
+
           {/* ===== RECENT SUBMISSIONS ===== */}
-          <View style={[s.section, !isMobile && s.desktopWidth]}>
-            <Text style={[s.sectionTitle, { textAlign: 'center' }]}>
-              Here's what people are sharing NOW
+          <View style={[s.section, s.communitySection, !isMobile && s.desktopWidth]}>
+            <Text style={s.communityTitle}>
+              Recent Community Submissions
             </Text>
             <View style={[s.subGrid, isMobile && { gap: 12 }]}>
               {recent.map((sub: any) => (
                 <TouchableOpacity
                   key={sub.id}
-                  style={[s.subCard, isMobile && { width: '47%' as any }]}
-                  onPress={() => navigation.navigate('SubmissionDetail', { id: sub.id })}
+                  style={[s.subCard, !isMobile && s.subCardDesktop, isMobile && { width: '47%' as any }]}
+                  onPress={() => navigation.navigate('Register')}
                 >
                   <Image source={{ uri: fullUrl(sub.photo1_url) }} style={s.subImg} />
                   <View style={s.subInfo}>
@@ -786,12 +835,14 @@ const HomeScreen = () => {
                         </Text>
                       </View>
                       <Text style={s.subUserName} numberOfLines={1}>
-                        {sub.user_name || 'Unknown'}
+                        @{(sub.user_name || 'unknown').toLowerCase().replace(/\s+/g, '')}
                       </Text>
                     </View>
+                    <Text style={s.subCategory} numberOfLines={1}>
+                      {sub.challenge_title || sub.category || 'Community Moment'}
+                    </Text>
                     <View style={s.subStats}>
                       <Text style={s.subStat}>❤️ {sub.like_count || 0}</Text>
-                      <Text style={s.subStat}>💬 {sub.comment_count || 0}</Text>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -805,10 +856,10 @@ const HomeScreen = () => {
             )}
             {recent.length > 0 && (
               <TouchableOpacity
-                style={[s.getStartedBtn, { alignSelf: 'center', marginTop: 20, paddingHorizontal: 40 }]}
-                onPress={() => navigation.navigate('Main', { screen: 'CommunityTab' } as never)}
+                style={s.communitySignUpBtn}
+                onPress={() => navigation.navigate('Register')}
               >
-                <Text style={s.getStartedText}>Browse All</Text>
+                <Text style={s.communitySignUpText}>Sign Up To See More</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -816,6 +867,7 @@ const HomeScreen = () => {
           <HomeBottomSections
             isMobile={isMobile}
             onHowItWorksLayout={(e) => { howItWorksY.current = e.nativeEvent.layout.y; }}
+            onHowItWorksPress={() => navigation.navigate('HowItWorks')}
           />
         </>
       )}
@@ -919,10 +971,10 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   publicHeroBg: {
-    marginHorizontal: 14,
-    marginTop: 8,
+    marginHorizontal: 0,
+    marginTop: 0,
     marginBottom: 20,
-    borderRadius: 18,
+    borderRadius: 0,
     overflow: 'hidden',
     paddingHorizontal: 18,
     paddingVertical: 24,
@@ -930,18 +982,16 @@ const s = StyleSheet.create({
   },
   publicHeroBgDesktop: {
     marginHorizontal: 0,
-    marginTop: 16,
+    marginTop: 0,
     marginBottom: 28,
-    maxWidth: PAGE_MAX_WIDTH,
     width: '100%' as any,
-    alignSelf: 'center',
     height: 520,
     paddingHorizontal: 56,
     paddingVertical: 46,
     justifyContent: 'flex-start',
   },
   publicHeroBgImage: {
-    borderRadius: 18,
+    borderRadius: 0,
   },
   publicHeroOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -1024,10 +1074,17 @@ const s = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 28,
   } as any,
+  getStartedBtnMobile: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  } as any,
   getStartedText: {
     ...type.button,
     color: '#FFFFFF',
     fontSize: 15,
+  },
+  getStartedTextMobile: {
+    fontSize: 13,
   },
   learnMoreBtn: {
     borderWidth: 1,
@@ -1039,6 +1096,8 @@ const s = StyleSheet.create({
   },
   learnMoreBtnMobile: {
     backgroundColor: 'rgba(10,14,26,0.42)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
   learnMoreText: {
     ...type.button,
@@ -1078,6 +1137,49 @@ const s = StyleSheet.create({
 
   // Stats
   section: { paddingHorizontal: 20, marginBottom: 32 },
+  quickActionsSection: {
+    paddingTop: 48,
+    paddingBottom: 16,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    gap: 16,
+    justifyContent: 'center',
+  },
+  quickActionsGridMobile: {
+    flexDirection: 'column',
+    gap: 12,
+  },
+  quickActionCard: {
+    flex: 1,
+    backgroundColor: 'rgba(245, 91, 9, 0.08)',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(245, 91, 9, 0.3)',
+    padding: 20,
+    alignItems: 'center',
+    minHeight: 120,
+  },
+  quickActionCardHovered: {
+    backgroundColor: 'rgba(245, 91, 9, 0.15)',
+    borderColor: '#F55B09',
+    transform: [{ translateY: -2 }],
+  },
+  quickActionTitle: {
+    ...type.heading,
+    color: C.TEXT,
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  quickActionDesc: {
+    ...type.subtext,
+    color: C.TEXT_SECONDARY,
+    fontSize: 11,
+    textAlign: 'center',
+    lineHeight: 15,
+  },
   statsRow: {
     flexDirection: 'row',
     gap: 12,
@@ -1096,18 +1198,42 @@ const s = StyleSheet.create({
   statLabel: { ...type.subtext, color: '#FFFFFF', fontSize: 12, marginTop: 4 },
 
   // ===== CHALLENGE CARD =====
+  currentChallengeSection: {
+    marginTop: 34,
+    marginBottom: 46,
+  },
+  currentChallengeHeader: {
+    ...type.heading,
+    color: C.TEXT,
+    fontSize: 30,
+    lineHeight: 38,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  currentChallengeSubtext: {
+    ...type.subtext,
+    color: C.TEXT_SECONDARY,
+    fontSize: 16,
+    lineHeight: 26,
+    textAlign: 'center',
+    maxWidth: 860,
+    alignSelf: 'center',
+    marginBottom: 24,
+  },
   challengeCard: {
-    flexDirection: 'row',
     backgroundColor: C.CARD_BG,
-    borderRadius: 20,
+    borderRadius: 10,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
+    shadowColor: '#000000',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   challengeLeft: {
-    flex: 1,
-    padding: 24,
-    justifyContent: 'center',
+    padding: 18,
   },
   challengeLabel: {
     ...type.label,
@@ -1118,40 +1244,82 @@ const s = StyleSheet.create({
   challengeTitle: {
     ...type.heading,
     color: C.TEXT,
-    fontSize: 22,
+    fontSize: 24,
     marginBottom: 10,
+  },
+  challengeDescription: {
+    ...type.subtext,
+    color: C.TEXT_SECONDARY,
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  challengeMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 26,
+    marginBottom: 22,
+  },
+  challengeMetaLabel: {
+    ...type.label,
+    color: C.TEXT,
+    fontSize: 15,
   },
   challengeMeta: {
     ...type.subtext,
     color: C.TEXT_SECONDARY,
     fontSize: 12,
     lineHeight: 18,
-    marginBottom: 20,
   },
   submitBtn: {
     backgroundImage: ORANGE_GRADIENT_135,
     backgroundColor: C.ORANGE,
-    borderRadius: 14,
+    borderRadius: 25,
     paddingVertical: 14,
     alignItems: 'center',
+    shadowColor: C.ORANGE,
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
   } as any,
   submitBtnText: {
     ...type.button,
     color: '#FFFFFF',
-    fontSize: 15,
-  },
-  challengeRight: {
-    width: 280,
-    minHeight: 220,
+    fontSize: 12,
   },
   challengeImg: {
     width: '100%',
-    height: '100%',
+    height: 280,
+    backgroundColor: '#1A1E30',
   },
   challengeImgPlaceholder: {
     backgroundColor: '#1A1E30',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  publicQuoteBanner: {
+    backgroundColor: C.CARD_BG2,
+    marginHorizontal: 20,
+    marginBottom: 52,
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+  } as any,
+  publicQuoteText: {
+    ...type.subtext,
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontStyle: 'italic',
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  publicQuoteAuthor: {
+    ...type.subtext,
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: 'center',
   },
 
   // Section title
@@ -1163,30 +1331,51 @@ const s = StyleSheet.create({
   },
 
   // Submissions grid
+  communitySection: {
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  communityTitle: {
+    ...type.heading,
+    color: C.TEXT,
+    fontSize: 28,
+    lineHeight: 36,
+    textAlign: 'center',
+    marginBottom: 30,
+  },
   subGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: 18,
+    justifyContent: 'center',
   },
   subCard: {
     width: '48%' as any,
     backgroundColor: C.CARD_BG,
-    borderRadius: 14,
+    borderRadius: 10,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
+    shadowColor: '#000000',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  subCardDesktop: {
+    width: '23%' as any,
   },
   subImg: {
     width: '100%',
-    height: 140,
+    height: 210,
     backgroundColor: '#1A1E30',
   },
-  subInfo: { padding: 10 },
+  subInfo: { padding: 12 },
   subUserRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   subAvatar: {
     width: 24,
@@ -1201,11 +1390,35 @@ const s = StyleSheet.create({
   subUserName: {
     ...type.label,
     color: C.TEXT,
-    fontSize: 13,
+    fontSize: 12,
     flex: 1,
   },
+  subCategory: {
+    ...type.subtext,
+    color: C.ORANGE,
+    fontSize: 12,
+    marginBottom: 8,
+  },
   subStats: { flexDirection: 'row', gap: 12 },
-  subStat: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 12 },
+  subStat: { ...type.subtext, color: '#FF5A5F', fontSize: 12 },
+  communitySignUpBtn: {
+    backgroundImage: ORANGE_GRADIENT_135,
+    backgroundColor: C.ORANGE,
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    alignSelf: 'center',
+    marginTop: 34,
+    shadowColor: C.ORANGE,
+    shadowOpacity: 0.32,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  } as any,
+  communitySignUpText: {
+    ...type.button,
+    color: '#FFFFFF',
+    fontSize: 13,
+  },
 
   // Empty
   emptyState: { alignItems: 'center', paddingVertical: 40 },

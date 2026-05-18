@@ -1,17 +1,55 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { C, borderRadius } from '../theme';
+import { C } from '../theme';
+
+const PAGE_MAX_WIDTH = 1120;
+const ORANGE_GRADIENT = 'linear-gradient(90deg, #F55B09 0%, #FFD000 100%)';
+const ORANGE_GRADIENT_135 = 'linear-gradient(135deg, #F55B09 0%, #FFD000 100%)';
+const orangeGradientText = {
+  backgroundImage: ORANGE_GRADIENT,
+  WebkitBackgroundClip: 'text',
+  backgroundClip: 'text',
+  color: 'transparent',
+} as any;
+
+const ionIcon = (name: string, color: string) => {
+  const stroke = `stroke="${color}" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"`;
+  const svg = (() => {
+    switch (name) {
+      case 'instagram':
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect ${stroke} x="80" y="80" width="352" height="352" rx="96" ry="96" fill="none"/><circle ${stroke} cx="256" cy="256" r="80" fill="none"/><circle cx="348" cy="164" r="20" fill="${color}"/></svg>`;
+      case 'facebook':
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="${color}" d="M480 257.35C480 133.46 379.76 33.22 255.87 33.22S32 133.46 32 257.35c0 111.95 81.95 204.78 189 221.65V322.12h-57V257.35h57V208c0-56.21 33.45-87.28 84.61-87.28 24.5 0 50.15 4.37 50.15 4.37v55.13h-28.26c-27.84 0-36.5 17.28-36.5 35v42.12h62.12l-9.92 64.77H291V479c107.05-16.87 189-109.7 189-221.65z"/></svg>`;
+      default:
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><circle cx="256" cy="256" r="160" fill="${color}"/></svg>`;
+    }
+  })();
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+};
+
+const IconGlyph = ({ name, color, size = 20 }: { name: string; color: string; size?: number }) => (
+  <View
+    style={{
+      width: size,
+      height: size,
+      backgroundImage: ionIcon(name, color),
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: `${size}px ${size}px`,
+    } as any}
+  />
+);
 
 const FOOTER_ROUTES: Record<string, string> = {
   'About Us': 'About', 'FAQ': 'FAQ', 'Shop': 'Shop', 'Contact': 'Contact',
   'Partners': 'Partners', 'Privacy Policy': 'Legal', 'Terms of Service': 'Legal',
-  'Cookie Policy': 'Legal', 'GDPR': 'Legal', 'How It Works': 'HowItWorks',
+  'Community Guidelines': 'Legal', 'How It Works': 'HowItWorks',
   'Gallery': 'Gallery', 'Sign Up': 'Register', 'Log In': 'Login',
 };
 
 const COMPANY_LINKS = ['About Us', 'FAQ', 'Shop', 'Contact', 'Partners'];
-const LEGAL_LINKS = ['Privacy Policy', 'Terms of Service', 'Cookie Policy', 'GDPR'];
+const LEGAL_LINKS = ['Privacy Policy', 'Terms of Service', 'Community Guidelines'];
 
 export default function AppFooter() {
   const nav = useNavigation<any>();
@@ -19,9 +57,34 @@ export default function AppFooter() {
   const isMobile = width < 768;
 
   const FooterLink = ({ label }: { label: string }) => (
-    <TouchableOpacity onPress={() => { const r = FOOTER_ROUTES[label]; if (r) nav.navigate(r as never); }}>
-      <Text style={styles.link}>{label}</Text>
-    </TouchableOpacity>
+    <Pressable
+      accessibilityRole="link"
+      onPress={() => { const r = FOOTER_ROUTES[label]; if (r) nav.navigate(r as never); }}
+      style={({ hovered }: any) => [
+        styles.linkTouch,
+        hovered && styles.linkTouchHovered,
+      ]}
+    >
+      {({ hovered }: any) => (
+        <Text style={[styles.link, hovered && styles.linkHovered]}>{label}</Text>
+      )}
+    </Pressable>
+  );
+
+  const SocialLink = ({ name, label }: { name: string; label: string }) => (
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={label}
+      onPress={() => {}}
+      style={({ hovered }: any) => [
+        styles.socialLink,
+        hovered && styles.socialLinkHovered,
+      ]}
+    >
+      {({ hovered }: any) => (
+        <IconGlyph name={name} color={hovered ? '#FFFFFF' : C.TEXT_SECONDARY} size={20} />
+      )}
+    </Pressable>
   );
 
   return (
@@ -50,12 +113,10 @@ export default function AppFooter() {
         {/* Connect */}
         <View style={[styles.col, isMobile && styles.colMobile]}>
           <Text style={styles.colTitle}>Connect</Text>
-          <TouchableOpacity onPress={() => {}}>
-            <Text style={styles.link}>Instagram</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => {}}>
-            <Text style={styles.link}>Facebook</Text>
-          </TouchableOpacity>
+          <View style={styles.socialRow}>
+            <SocialLink name="instagram" label="Instagram" />
+            <SocialLink name="facebook" label="Facebook" />
+          </View>
         </View>
       </View>
 
@@ -68,73 +129,113 @@ export default function AppFooter() {
 const styles = StyleSheet.create({
   footer: {
     backgroundColor: C.NAV_BG,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(148,163,184,0.15)',
-    paddingTop: 48,
-    paddingBottom: 32,
-    paddingHorizontal: 32,
-    marginTop: 40,
+    paddingHorizontal: 36,
+    paddingTop: 42,
+    paddingBottom: 28,
   },
   grid: {
     flexDirection: 'row',
-    gap: 32,
-    marginBottom: 36,
-    flexWrap: 'wrap',
+    gap: 42,
+    maxWidth: PAGE_MAX_WIDTH,
+    width: '100%',
+    alignSelf: 'center',
+    alignItems: 'flex-start',
   },
   gridMobile: {
     flexDirection: 'column',
+    alignItems: 'stretch',
     gap: 24,
   },
   brand: {
-    flex: 2,
-    minWidth: 200,
+    flex: 1.45,
+    maxWidth: 270,
   },
   brandMobile: {
     flex: 0,
+    maxWidth: '100%' as any,
+    width: '100%' as any,
+    minHeight: 92,
   },
   brandTitle: {
-    color: '#EAECEF',
-    fontSize: 18,
+    color: C.TEXT,
+    fontSize: 16,
+    lineHeight: 22,
     fontWeight: '800',
-    marginBottom: 10,
-    letterSpacing: -0.3,
+    marginBottom: 14,
   },
   brandCopy: {
-    color: 'rgba(234,236,239,0.55)',
-    fontSize: 13,
+    color: C.TEXT_SECONDARY,
+    fontSize: 12,
     lineHeight: 20,
-    maxWidth: 280,
   },
   col: {
     flex: 1,
-    minWidth: 120,
-    gap: 10,
+    minWidth: 110,
   },
   colMobile: {
     flex: 0,
-    gap: 8,
+    width: '100%' as any,
+    minWidth: 0,
+    minHeight: 150,
   },
   colTitle: {
-    color: '#EAECEF',
+    color: C.TEXT,
     fontSize: 12,
     fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 8,
+    lineHeight: 18,
+    marginBottom: 14,
   },
   link: {
-    color: 'rgba(234,236,239,0.6)',
-    fontSize: 13,
-    lineHeight: 22,
+    color: C.TEXT_SECONDARY,
+    fontSize: 11,
+    lineHeight: 18,
   },
+  linkTouch: {
+    alignSelf: 'flex-start',
+    paddingVertical: 2,
+    marginBottom: 3,
+    cursor: 'pointer',
+  } as any,
+  linkTouchHovered: {
+    transform: [{ translateX: 2 }],
+  },
+  linkHovered: {
+    ...orangeGradientText,
+    textShadowColor: 'rgba(255, 208, 0, 0.32)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+  },
+  socialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  socialLink: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+  } as any,
+  socialLinkHovered: {
+    backgroundColor: C.ORANGE,
+    backgroundImage: ORANGE_GRADIENT_135,
+    boxShadow: '0 0 14px rgba(255, 208, 0, 0.35)',
+    transform: [{ translateY: -1 }],
+  } as any,
   rule: {
+    maxWidth: PAGE_MAX_WIDTH,
+    width: '100%',
+    alignSelf: 'center',
     height: 1,
-    backgroundColor: 'rgba(148,163,184,0.15)',
-    marginBottom: 20,
+    backgroundColor: C.CARD_BORDER,
+    marginTop: 30,
+    marginBottom: 22,
   },
   copy: {
-    color: 'rgba(234,236,239,0.35)',
-    fontSize: 12,
+    color: C.TEXT_MUTED,
+    fontSize: 11,
     textAlign: 'center',
   },
 });
