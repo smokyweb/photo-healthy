@@ -48,7 +48,7 @@ const FOOTER_ROUTES: Record<string, string> = {
   'Gallery': 'Gallery', 'Sign Up': 'Register', 'Log In': 'Login',
 };
 
-const COMPANY_LINKS = ['About Us', 'FAQ', 'Shop', 'Contact', 'Partners'];
+const COMPANY_LINKS = ['About Us', 'FAQ', 'Shop', 'Partners', 'Contact'];
 const LEGAL_LINKS = ['Privacy Policy', 'Terms of Service', 'Community Guidelines'];
 
 export default function AppFooter() {
@@ -121,7 +121,7 @@ export default function AppFooter() {
       </View>
 
       <View style={styles.rule} />
-      <Text style={styles.copy}>{'©'} {new Date().getFullYear()} Photo Healthy. All rights reserved.</Text>
+      <Text style={styles.copy}>{'\u00A9'} 2026 Photo Healthy. All rights reserved.</Text>
     </View>
   );
 }

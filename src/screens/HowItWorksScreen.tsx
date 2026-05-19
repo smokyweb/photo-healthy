@@ -72,6 +72,13 @@ const GUIDELINES = [
   },
 ];
 
+const PRO_BENEFITS = [
+  'Unlimited monthly challenge submissions',
+  'Access to Pro-only exclusive challenges',
+  'Pro badge on your profile',
+  'Access to Pro-only shop items',
+];
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function HowItWorksScreen() {
   const navigation = useNavigation<any>();
@@ -120,6 +127,24 @@ export default function HowItWorksScreen() {
               </View>
             );
           })}
+        </View>
+      </View>
+
+      <View style={styles.proSection}>
+        <View style={[styles.proInner, isDesktop && styles.proInnerDesktop]}>
+          <View style={styles.proText}>
+            <Text style={styles.sectionEyebrow}>Pro Subscription</Text>
+            <Text style={[styles.sectionTitle, styles.proTitle]}>Pro Benefits</Text>
+            <Text style={styles.proBody}>Text to be provided.</Text>
+          </View>
+          <View style={styles.proBenefitsGrid}>
+            {PRO_BENEFITS.map(item => (
+              <View key={item} style={styles.proBenefitCard}>
+                <Text style={styles.proCheck}>✓</Text>
+                <Text style={styles.proBenefitText}>{item}</Text>
+              </View>
+            ))}
+          </View>
         </View>
       </View>
 
@@ -242,6 +267,67 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
     height: 280,
+  },
+
+  proSection: {
+    paddingVertical: SECTION_PAD_V,
+    paddingHorizontal: CONTENT_PAD_H,
+  },
+  proInner: {
+    maxWidth: MAX_WIDTH,
+    alignSelf: 'center',
+    width: '100%',
+    gap: 28,
+  },
+  proInnerDesktop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  proText: {
+    flex: 1,
+  },
+  sectionEyebrow: {
+    color: C.TEAL,
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 8,
+  },
+  proBody: {
+    color: C.TEXT_SECONDARY,
+    fontSize: 16,
+    lineHeight: 25,
+    maxWidth: 520,
+  },
+  proTitle: {
+    textAlign: 'left',
+    marginBottom: 14,
+  },
+  proBenefitsGrid: {
+    flex: 1,
+    gap: 12,
+  },
+  proBenefitCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: C.CARD_BG,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+    padding: 16,
+  },
+  proCheck: {
+    color: C.TEAL,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  proBenefitText: {
+    color: C.TEXT,
+    fontSize: 14,
+    fontWeight: '700',
+    flex: 1,
   },
 
   // Community Guidelines

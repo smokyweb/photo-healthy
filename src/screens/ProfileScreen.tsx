@@ -144,6 +144,7 @@ export default function ProfileScreen() {
           )}
         </View>
         <Text style={styles.profileName}>{user.name}</Text>
+        {user.username ? <Text style={styles.profileUsername}>@{user.username}</Text> : null}
         <Text style={styles.profileEmail}>{user.email}</Text>
         {isPro && (
           <View style={styles.proBadge}>
@@ -396,6 +397,7 @@ const styles = StyleSheet.create({
   avatarFallback: { width: '100%', height: '100%', backgroundColor: C.ORANGE, alignItems: 'center', justifyContent: 'center' },
   avatarInitials: { color: '#fff', fontSize: 34, fontWeight: '800' },
   profileName: { color: C.TEXT, fontSize: 22, fontWeight: '800', fontFamily: "'Lexend', sans-serif", marginBottom: 4 },
+  profileUsername: { color: C.TEAL, fontSize: 14, fontWeight: '700', marginBottom: 4 },
   profileEmail: { color: C.TEXT_SECONDARY, fontSize: 14, marginBottom: 10 },
   proBadge: {
     backgroundColor: C.ORANGE + '22', borderWidth: 1, borderColor: C.ORANGE + '66',

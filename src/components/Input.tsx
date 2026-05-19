@@ -15,6 +15,7 @@ interface Props {
   style?: ViewStyle;
   error?: string;
   editable?: boolean;
+  maxLength?: number;
 }
 
 export default function Input({
@@ -30,6 +31,7 @@ export default function Input({
   style,
   error,
   editable = true,
+  maxLength,
 }: Props) {
   const [focused, setFocused] = useState(false);
   const [showPw, setShowPw] = useState(false);
@@ -58,6 +60,7 @@ export default function Input({
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           editable={editable}
+          maxLength={maxLength}
         />
         {secureTextEntry && (
           <TouchableOpacity onPress={() => setShowPw(v => !v)} style={styles.eyeBtn}>

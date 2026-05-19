@@ -36,7 +36,7 @@ export default function ScreenWrapper({ children, scroll = true, style, contentS
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: C.BG,
+    backgroundColor: 'transparent',
   },
   scroll: {
     flex: 1,

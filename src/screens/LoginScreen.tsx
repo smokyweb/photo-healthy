@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, Image, useWindowDimensions } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import AppFooter from '../components/AppFooter';
 import { C } from '../theme';
 
 const SIGNIN_HERO = require('../../assets/theme-fin_02-signin-bg.png');
@@ -123,12 +124,13 @@ const LoginScreen = ({ navigation }: any) => {
         </View>
 
       </View>
+      <AppFooter />
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#161616' },
+  container: { flex: 1, backgroundColor: 'transparent' },
   scrollContent: {
     flexGrow: 1,
     alignItems: 'center',
@@ -152,6 +154,7 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
     flexDirection: 'row',
     alignSelf: 'stretch',
+    minHeight: 760,
   } as any,
 
   hero: {
@@ -216,8 +219,8 @@ const styles = StyleSheet.create({
   } as any,
   cardTitle: {
     fontFamily: 'Lexend',
-    fontSize: 23,
-    lineHeight: 28,
+    fontSize: 34,
+    lineHeight: 42,
     fontWeight: '800',
     fontStyle: 'normal',
     color: C.TEXT,
@@ -231,7 +234,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardSubtitle: {
-    fontSize: 13,
+    fontSize: 17,
     fontFamily: 'Lexend',
     color: '#FFFFFF',
     fontWeight: '700',
@@ -246,11 +249,11 @@ const styles = StyleSheet.create({
   },
 
   input: {
-    height: 52,
+    height: 58,
     backgroundColor: '#3B3E4F',
     borderRadius: 8,
     paddingHorizontal: 16,
-    fontSize: 11,
+    fontSize: 14,
     fontFamily: 'Lexend',
     fontWeight: '700',
     color: C.TEXT,
@@ -260,7 +263,7 @@ const styles = StyleSheet.create({
   } as any,
   fieldLabel: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: 'Lexend',
     fontWeight: '700',
     fontStyle: 'normal',

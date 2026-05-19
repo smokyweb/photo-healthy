@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, Image, useWindowDimensions } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import AppFooter from '../components/AppFooter';
 import { C } from '../theme';
 
 const REGISTER_LOGO = require('../../assets/Pose_10-removebg-preview.png');
@@ -141,12 +142,13 @@ const RegisterScreen = ({ navigation }: any) => {
           </TouchableOpacity>
         </View>
       </View>
+      <AppFooter />
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#161616' },
+  container: { flex: 1, backgroundColor: 'transparent' },
   scrollContent: {
     flexGrow: 1,
     alignItems: 'center',
@@ -170,6 +172,7 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
     flexDirection: 'row',
     alignSelf: 'stretch',
+    minHeight: 820,
   } as any,
   hero: {
     width: '100%',
@@ -233,8 +236,8 @@ const styles = StyleSheet.create({
   } as any,
   cardTitle: {
     fontFamily: 'Lexend',
-    fontSize: 23,
-    lineHeight: 28,
+    fontSize: 32,
+    lineHeight: 40,
     fontWeight: '800',
     fontStyle: 'normal',
     color: C.TEXT,
@@ -248,7 +251,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardSubtitle: {
-    fontSize: 13,
+    fontSize: 16,
     fontFamily: 'Lexend',
     color: '#FFFFFF',
     fontWeight: '700',
@@ -271,11 +274,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   input: {
-    height: 52,
+    height: 56,
     backgroundColor: '#3B3E4F',
     borderRadius: 8,
     paddingHorizontal: 16,
-    fontSize: 11,
+    fontSize: 14,
     fontFamily: 'Lexend',
     fontWeight: '700',
     color: C.TEXT,

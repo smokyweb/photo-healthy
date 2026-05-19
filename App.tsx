@@ -160,9 +160,9 @@ function AppNavigator() {
           } : {}),
         }}>
         <Stack.Screen name="Main" component={MainTabs} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+        <Stack.Screen name="Login">{(p) => <OuterScreenWrapper><LoginScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="Register">{(p) => <OuterScreenWrapper><RegisterScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="ResetPassword">{(p) => <OuterScreenWrapper><ResetPasswordScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="ChallengeDetail">{(props) => <OuterScreenWrapper><ChallengeDetailScreen {...props} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="SubmitPhoto">{(props) => <OuterScreenWrapper><SubmitPhotoScreen {...props} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="UserSubmissions">{(p) => <OuterScreenWrapper><UserSubmissionsScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
@@ -171,7 +171,7 @@ function AppNavigator() {
         <Stack.Screen name="ProductDetail">{(p) => <OuterScreenWrapper><ProductDetailScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="Cart">{(p) => <OuterScreenWrapper><CartScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="CheckoutSuccess">{(p) => <OuterScreenWrapper><CheckoutSuccessScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="Admin" component={AdminScreen} />
+        <Stack.Screen name="Admin">{(p) => <OuterScreenWrapper><AdminScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="Gallery">{(p) => <OuterScreenWrapper><GalleryScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="Subscription">{(p) => <OuterScreenWrapper><SubscriptionScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="OrderHistory">{(p) => <OuterScreenWrapper><OrderHistoryScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>

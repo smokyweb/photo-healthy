@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Alert, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -10,9 +10,11 @@ import { C, borderRadius } from '../theme';
 
 export default function CartScreen() {
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
   const { user } = useAuth();
   const { items, removeItem, updateQuantity, clearCart, total, itemCount } = useCart();
   const [loading, setLoading] = useState(false);
+  const isDesktop = width >= 900;
 
   const handleCheckout = async () => {
     if (!user) { navigation.navigate('Login' as never); return; }
@@ -62,13 +64,22 @@ export default function CartScreen() {
               </View>
             ))}
           </View>
-          <View style={styles.summary}>
+          <View style={[styles.checkoutGrid, isDesktop && styles.checkoutGridDesktop]}>
+            <View style={styles.checkoutInfo}>
+              <Text style={styles.summaryTitle}>Checkout Details</Text>
+              <Text style={styles.checkoutLine}>Shipping address and delivery options are collected during secure checkout.</Text>
+              <Text style={styles.checkoutLine}>Coupons and gift codes can be applied before payment.</Text>
+              <Text style={styles.checkoutLine}>Card details are entered on the payment screen, not saved on this cart page.</Text>
+              <Text style={styles.returnNote}>Shipping and return options are determined by the customer address.</Text>
+            </View>
+            <View style={styles.summary}>
             <Text style={styles.summaryTitle}>Order Summary</Text>
             <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Subtotal ({items.reduce((s,i) => s+i.quantity, 0)} items)</Text><Text style={styles.summaryValue}>${total.toFixed(2)}</Text></View>
             <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Shipping</Text><Text style={styles.summaryValue}>Calculated at checkout</Text></View>
             <View style={[styles.summaryRow, styles.totalRow]}><Text style={styles.totalLabel}>Total</Text><Text style={styles.totalAmt}>${total.toFixed(2)}</Text></View>
             <GradientButton label={loading ? 'Redirecting...' : 'Proceed to Checkout'} onPress={handleCheckout} loading={loading} disabled={loading} style={{ marginTop: 4 } as any} />
             <TouchableOpacity onPress={() => navigation.navigate('Shop' as never)} style={styles.continueShopping}><Text style={styles.continueShoppingText}>← Continue Shopping</Text></TouchableOpacity>
+            </View>
           </View>
         </>
       )}
@@ -100,7 +111,12 @@ const styles = StyleSheet.create({
   qty: { color: C.TEXT, fontSize: 16, fontWeight: '700', minWidth: 24, textAlign: 'center' },
   removeBtn: { marginLeft: 8 },
   removeBtnText: { color: '#ef4444', fontSize: 13, fontWeight: '600' },
-  summary: { margin: 16, backgroundColor: C.CARD_BG, borderRadius: borderRadius.xl, padding: 20, borderWidth: 1, borderColor: C.CARD_BORDER },
+  checkoutGrid: { margin: 16, gap: 16 },
+  checkoutGridDesktop: { flexDirection: 'row', alignItems: 'stretch' },
+  checkoutInfo: { flex: 1, backgroundColor: C.CARD_BG, borderRadius: borderRadius.xl, padding: 20, borderWidth: 1, borderColor: C.CARD_BORDER },
+  checkoutLine: { color: C.TEXT_SECONDARY, fontSize: 14, lineHeight: 22, marginBottom: 10 },
+  returnNote: { color: C.TEAL, fontSize: 13, lineHeight: 20, marginTop: 4, fontWeight: '700' },
+  summary: { flex: 1, backgroundColor: C.CARD_BG, borderRadius: borderRadius.xl, padding: 20, borderWidth: 1, borderColor: C.CARD_BORDER },
   summaryTitle: { color: C.TEXT, fontSize: 16, fontWeight: '700', marginBottom: 14 },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
   summaryLabel: { color: C.TEXT_MUTED, fontSize: 14 },

@@ -288,6 +288,9 @@ const HomeBottomSections = ({ isMobile, onHowItWorksLayout, onHowItWorksPress }:
 const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navigation, recent, streak, motivationalQuote, quoteAuthor }: any) => {
   const firstName = (user.name || 'User').split(' ')[0];
   const today = formatDate(new Date());
+  const milesTracked = submissions
+    .filter((s: any) => !s.user_id || s.user_id === user?.id)
+    .reduce((sum: number, s: any) => sum + (parseFloat(s.miles ?? s.distance ?? s.miles_tracked ?? 0) || 0), 0);
 
   return (
   <>
@@ -349,13 +352,20 @@ const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navig
               </View>
             </View>
 
-            {/* Submit Photos Button */}
-            <TouchableOpacity
-              style={li.submitBtn}
-              onPress={() => navigation.navigate('ChallengesTab')}
-            >
-              <Text style={li.submitBtnText}>Submit Photos</Text>
-            </TouchableOpacity>
+            <View style={li.challengeActions}>
+              <TouchableOpacity
+                style={li.submitBtn}
+                onPress={() => navigation.navigate('ChallengesTab')}
+              >
+                <Text style={li.submitBtnText}>Submit Photos</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={li.browseBtn}
+                onPress={() => navigation.navigate('ChallengesTab')}
+              >
+                <Text style={li.browseBtnText}>Browse Challenges</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -381,11 +391,12 @@ const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navig
           <Text style={[li.statIcon, {fontSize:20, color:'#fff'}]}>{"Streak"}</Text>
           <Text style={[li.statNum, { color: streak > 0 ? C.ORANGE : C.TEXT }]}>{streak}</Text>
           <Text style={li.statLabel}>Day Streak</Text>
+          <Text style={li.statNote}>{daysLeft} days remaining</Text>
         </View>
         <View style={li.statCard}>
-          <Text style={[li.statIcon, {fontSize:20, color:'#fff'}]}>{"Challenges"}</Text>
-          <Text style={li.statNum}>{challenges.length}</Text>
-          <Text style={li.statLabel}>Total Challenges</Text>
+          <Text style={[li.statIcon, {fontSize:20, color:'#fff'}]}>{"Miles"}</Text>
+          <Text style={li.statNum}>{milesTracked.toFixed(1)}</Text>
+          <Text style={li.statLabel}>Miles Tracked</Text>
         </View>
       </View>
     </View>
@@ -444,6 +455,9 @@ const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navig
 
 const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navigation, recent, streak, motivationalQuote }: any) => {
   const firstName = (user?.name || 'User').split(' ')[0];
+  const milesTracked = submissions
+    .filter((s: any) => !s.user_id || s.user_id === user?.id)
+    .reduce((sum: number, s: any) => sum + (parseFloat(s.miles ?? s.distance ?? s.miles_tracked ?? 0) || 0), 0);
   const challenge = featured || {
     title: 'Golden Hour Magic',
     description: 'Capture the breathtaking beauty of golden hour. Show us how the warm, soft light transforms ordinary scenes.',
@@ -505,9 +519,14 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft,
               <Text style={pm.metaValue}>{challenge.submission_count || submissions.length || 144}</Text>
             </View>
           </View>
-          <TouchableOpacity style={pm.submitBtn} onPress={() => navigation.navigate('ChallengesTab')}>
-            <Text style={pm.submitText}>Submit Photos</Text>
-          </TouchableOpacity>
+          <View style={pm.challengeActions}>
+            <TouchableOpacity style={pm.submitBtn} onPress={() => navigation.navigate('ChallengesTab')}>
+              <Text style={pm.submitText}>Submit Photos</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={pm.browseBtn} onPress={() => navigation.navigate('ChallengesTab')}>
+              <Text style={pm.browseText}>Browse Challenges</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -518,8 +537,8 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft,
       <View style={pm.statRow}>
         {[
           { icon: '▾', value: String(challenges.length || 0), label: 'Challenge Completed' },
-          { icon: '◉', value: String(streak || 0), label: 'Day Streak' },
-          { icon: '★', value: String(submissions.filter((s: any) => s.user_id === user?.id).length || submissions.length || 0), label: 'Total Photos' },
+          { icon: '◉', value: String(streak || 0), label: `Day Streak - ${daysLeft} days remaining` },
+          { icon: '★', value: milesTracked.toFixed(1), label: 'Miles Tracked' },
         ].map((item) => (
           <View key={item.label} style={pm.statCard}>
             <View style={pm.statIcon}><Text style={pm.statIconText}>{item.icon}</Text></View>
@@ -710,6 +729,7 @@ const HomeScreen = () => {
               s.heroWrap,
               s.heroWrapMobile,
               s.publicHeroBg,
+              isMobile && s.publicHeroBgMobile,
               !isMobile && s.publicHeroBgDesktop,
             ]}
           >
@@ -976,6 +996,11 @@ const s = StyleSheet.create({
     paddingBottom: 24,
     height: 450,
   },
+  publicHeroBgMobile: {
+    height: 630,
+    paddingTop: 30,
+    paddingBottom: 30,
+  },
   publicHeroBgDesktop: {
     marginHorizontal: 0,
     marginTop: 0,
@@ -1050,8 +1075,12 @@ const s = StyleSheet.create({
     gap: 12,
   },
   heroBtnsMobile: {
+    width: '100%',
+    maxWidth: 340,
+    flexDirection: 'column',
     justifyContent: 'center',
     alignSelf: 'center',
+    gap: 10,
   },
   heroBtnsCentered: {
     justifyContent: 'center',
@@ -1065,8 +1094,10 @@ const s = StyleSheet.create({
     paddingHorizontal: 28,
   } as any,
   getStartedBtnMobile: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    width: '100%',
+    paddingVertical: 13,
+    paddingHorizontal: 18,
+    alignItems: 'center',
   } as any,
   getStartedText: {
     ...type.button,
@@ -1074,7 +1105,8 @@ const s = StyleSheet.create({
     fontSize: 15,
   },
   getStartedTextMobile: {
-    fontSize: 13,
+    fontSize: 14,
+    textAlign: 'center',
   },
   learnMoreBtn: {
     borderWidth: 1,
@@ -1085,9 +1117,11 @@ const s = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   learnMoreBtnMobile: {
+    width: '100%',
     backgroundColor: 'rgba(10,14,26,0.42)',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 13,
+    paddingHorizontal: 18,
+    alignItems: 'center',
   },
   learnMoreText: {
     ...type.button,
@@ -1716,6 +1750,7 @@ const pm = StyleSheet.create({
   metaLabel: { ...type.subtext, color: '#B7BDCB', fontSize: 8, marginBottom: 3 },
   metaValue: { ...type.label, color: '#FFFFFF', fontSize: 8 },
   submitBtn: {
+    flex: 1,
     height: 38,
     borderRadius: 4,
     alignItems: 'center',
@@ -1724,6 +1759,18 @@ const pm = StyleSheet.create({
     backgroundImage: ORANGE_GRADIENT,
   } as any,
   submitText: { ...type.button, color: '#FFFFFF', fontSize: 10 },
+  challengeActions: { gap: 8 },
+  browseBtn: {
+    flex: 1,
+    height: 38,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: C.TEAL,
+    backgroundColor: 'rgba(84,223,182,0.08)',
+  },
+  browseText: { ...type.button, color: C.TEAL, fontSize: 10 },
 
   quote: {
     height: 58,
@@ -1883,8 +1930,16 @@ const li = StyleSheet.create({
   miniLabel: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 12 },
   miniValue: { ...type.heading, color: C.TEXT, fontSize: 20, marginTop: 4 },
 
+  challengeActions: {
+    flexDirection: 'row',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+
   // Submit button
   submitBtn: {
+    flex: 1,
+    minWidth: 190,
     backgroundImage: ORANGE_GRADIENT_135,
     backgroundColor: C.ORANGE,
     borderRadius: 14,
@@ -1892,6 +1947,17 @@ const li = StyleSheet.create({
     alignItems: 'center',
   } as any,
   submitBtnText: { ...type.button, color: '#FFFFFF', fontSize: 16 },
+  browseBtn: {
+    flex: 1,
+    minWidth: 190,
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: C.TEAL,
+    backgroundColor: 'rgba(84,223,182,0.08)',
+  },
+  browseBtnText: { ...type.button, color: C.TEAL, fontSize: 16 },
 
   // Quote banner
   quoteBanner: {
@@ -1926,6 +1992,7 @@ const li = StyleSheet.create({
   statIcon: { fontSize: 24, marginBottom: 6 },
   statNum: { ...type.heading, color: C.TEXT, fontSize: 22 },
   statLabel: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 11, marginTop: 4, textAlign: 'center' },
+  statNote: { ...type.subtext, color: C.TEAL, fontSize: 10, marginTop: 4, textAlign: 'center' },
 
   // Community submissions (full-width)
   communityCard: {

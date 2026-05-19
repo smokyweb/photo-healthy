@@ -117,11 +117,10 @@ export default function ChallengeDetailScreen() {
       ]);
       return;
     }
-    // Block if monthly limit reached
     if (remainingSubmissions !== undefined && remainingSubmissions <= 0) {
       Alert.alert(
         'Monthly Limit Reached',
-        'You have used all your free submissions this month. Upgrade to Pro for unlimited submissions.',
+        'You have 0 remaining this month. Upgrade to Pro for unlimited submissions.',
         [
           { text: 'Maybe Later' },
           { text: 'Go Pro ⭐', onPress: () => navigation.navigate('Subscription') },
@@ -267,6 +266,24 @@ export default function ChallengeDetailScreen() {
                 onPress={handleSubmit}
                 style={styles.actionBtn}
               />
+              <View style={[styles.secondaryActionRow, isDesktop && styles.secondaryActionRowDesktop]}>
+                <GradientButton
+                  label="Become a PRO"
+                  variant="outline"
+                  pill={false}
+                  onPress={() => navigation.navigate('Subscription')}
+                  style={styles.secondaryActionBtn}
+                />
+                {hasPartner && (
+                  <GradientButton
+                    label="Partner Link"
+                    variant="outline-teal"
+                    pill={false}
+                    onPress={() => Linking.openURL(challenge.partner_url)}
+                    style={styles.secondaryActionBtn}
+                  />
+                )}
+              </View>
             </>
           )}
           {isActive && isEnrolled && personalDeadlineExpired && (
@@ -278,20 +295,18 @@ export default function ChallengeDetailScreen() {
             />
           )}
 
-          {/* Become a PRO - only show for pro-only challenges */}
-          {!!challenge?.is_pro_only && !isPro && user && (
+          {!isEnrolled && (
             <GradientButton
-              label="Upgrade to Pro ⭐"
+              label="Become a PRO"
               variant="outline" pill={false}
               onPress={() => navigation.navigate('Subscription')}
               style={styles.actionBtn}
             />
           )}
 
-          {/* Partner link (teal outline) */}
-          {hasPartner && (
+          {hasPartner && !isEnrolled && (
             <GradientButton
-              label="Visit Partner →"
+              label="Partner Link"
               variant="outline-teal" pill={false}
               onPress={() => Linking.openURL(challenge.partner_url)}
               style={styles.actionBtn}
@@ -301,8 +316,7 @@ export default function ChallengeDetailScreen() {
           {/* Remaining submissions */}
           {remainingSubmissions !== undefined && (
             <Text style={styles.remainingText}>
-              {remainingSubmissions} submission
-              {remainingSubmissions !== 1 ? 's' : ''} remaining this month
+              {remainingSubmissions} remaining this month
             </Text>
           )}
         </View>
@@ -493,6 +507,17 @@ const styles = StyleSheet.create({
   } as any,
 
   actionBtn: { marginBottom: 10 },
+  secondaryActionRow: {
+    gap: 10,
+    marginBottom: 10,
+  },
+  secondaryActionRowDesktop: {
+    flexDirection: 'row',
+  },
+  secondaryActionBtn: {
+    flex: 1,
+    minWidth: 160,
+  },
   daysLeftBadge: {
     backgroundColor: C.TEAL + '22',
     borderWidth: 1,

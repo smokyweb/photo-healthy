@@ -85,7 +85,7 @@ export default function AdminScreen() {
   const [challengeForm, setChallengeForm] = useState({
     title: '', description: '', start_date: '', end_date: '',
     category: '', feeling_category: '', movement_category: '', is_pro_only: false,
-    duration_days: '30', global_end_date: '', cover_image_url: '',
+    duration_days: '30', global_end_date: '', cover_image_url: '', partner_url: '',
   });
   const [challengeImgFile, setChallengeImgFile] = useState<File | null>(null);
   const [challengeImgPreview, setChallengeImgPreview] = useState('');
@@ -274,12 +274,13 @@ export default function AdminScreen() {
         duration_days: String(ch.duration_days || 30),
         global_end_date: ch.global_end_date ? ch.global_end_date.split('T')[0] : '',
         cover_image_url: ch.cover_image_url || '',
+        partner_url: ch.partner_url || '',
       });
       setChallengeImgPreview(ch.cover_image_url ? ('https://photoai.betaplanets.com' + ch.cover_image_url).replace('https://photoai.betaplanets.comhttp', 'http') : '');
       setChallengeImgFile(null);
     } else {
       setEditingChallenge(null);
-      setChallengeForm({ title: '', description: '', start_date: '', end_date: '', category: '', feeling_category: '', movement_category: '', is_pro_only: false, duration_days: '30', global_end_date: '', cover_image_url: '' });
+      setChallengeForm({ title: '', description: '', start_date: '', end_date: '', category: '', feeling_category: '', movement_category: '', is_pro_only: false, duration_days: '30', global_end_date: '', cover_image_url: '', partner_url: '' });
       setChallengeImgPreview('');
       setChallengeImgFile(null);
     }
@@ -306,6 +307,7 @@ export default function AdminScreen() {
         global_end_date: challengeForm.global_end_date || null,
         start_date: challengeForm.start_date || null,
         end_date: challengeForm.end_date || null,
+        partner_url: challengeForm.partner_url || null,
       };
       if (editingChallenge) {
         await updateChallenge(editingChallenge.id, payload);
@@ -318,7 +320,7 @@ export default function AdminScreen() {
         setProductSaveMsg('Challenge created!');
       }
       setShowChallengeForm(false);
-      setChallengeForm({ title: '', description: '', duration_days: '30', start_date: '', end_date: '', global_end_date: '', cover_image_url: '', feeling_category: '', movement_category: '', is_pro_only: false, is_active: true });
+      setChallengeForm({ title: '', description: '', duration_days: '30', start_date: '', end_date: '', global_end_date: '', cover_image_url: '', partner_url: '', feeling_category: '', movement_category: '', is_pro_only: false, is_active: true });
       setTimeout(() => setProductSaveMsg(''), 3000);
     } catch (e: any) {
       setUploadingImg(false);
@@ -352,7 +354,21 @@ export default function AdminScreen() {
         <View style={styles.formCard}>
           <Text style={styles.formTitle}>{editingChallenge ? 'Edit Challenge' : 'New Challenge'}</Text>
           <Input label="Title *" value={challengeForm.title} onChangeText={v => setChallengeForm(f => ({ ...f, title: v }))} />
-          <Input label="Description" value={challengeForm.description} onChangeText={v => setChallengeForm(f => ({ ...f, description: v }))} multiline numberOfLines={3} />
+          <Input
+            label="Description"
+            value={challengeForm.description}
+            onChangeText={v => setChallengeForm(f => ({ ...f, description: v }))}
+            multiline
+            numberOfLines={6}
+            maxLength={2000}
+          />
+          <Input
+            label="Partner Link"
+            value={challengeForm.partner_url}
+            onChangeText={v => setChallengeForm(f => ({ ...f, partner_url: v }))}
+            placeholder="https://partner-site.com/challenge"
+            autoCapitalize="none"
+          />
           <View style={[styles.highlightBox, { marginBottom: 12 }]}>
             <Text style={styles.highlightLabel}>Duration (days) *</Text>
             <Text style={styles.highlightHint}>How many days a user has to complete this challenge after accepting it</Text>
@@ -479,6 +495,9 @@ export default function AdminScreen() {
                 ) : null}
                 {ch.is_active ? (
                   <View style={[styles.adminChip, { borderColor: C.TEAL }]}><Text style={[styles.adminChipText, { color: C.TEAL }]}>🟢 Active</Text></View>
+                ) : null}
+                {ch.partner_url ? (
+                  <View style={[styles.adminChip, { borderColor: C.TEAL }]}><Text style={[styles.adminChipText, { color: C.TEAL }]}>Partner Link</Text></View>
                 ) : null}
               </View>
               {(dateStr || endDateStr) ? (

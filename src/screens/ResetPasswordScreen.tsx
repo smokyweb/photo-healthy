@@ -5,6 +5,7 @@ import { resetPassword } from '../services/api';
 import Input from '../components/Input';
 import GradientButton from '../components/GradientButton';
 import ScreenWrapper from '../components/ScreenWrapper';
+import AppFooter from '../components/AppFooter';
 import { C, borderRadius } from '../theme';
 
 export default function ResetPasswordScreen() {
@@ -72,12 +73,13 @@ export default function ResetPasswordScreen() {
           </>
         )}
       </View>
+      <AppFooter />
     </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, paddingTop: 16 },
+  container: { padding: 24, paddingTop: 16, flex: 1 },
   back: { marginBottom: 24 },
   backText: { color: C.ORANGE, fontSize: 15 },
   title: { color: C.TEXT, fontSize: 26, fontWeight: '700', marginBottom: 8 },

@@ -193,7 +193,7 @@ export default function ChallengesScreen() {
                 <Text style={styles.featuredActiveBadgeText}>{featured.is_active ? 'ACTIVE' : 'FEATURED'}</Text>
               </View>
               <Text style={styles.featuredTitle} numberOfLines={2}>{featured.title}</Text>
-              {featured.description ? <Text style={styles.featuredDescText} numberOfLines={3}>{featured.description}</Text> : null}
+              {featured.description ? <Text style={styles.featuredDescText} numberOfLines={5}>{featured.description}</Text> : null}
               <View style={styles.featuredStatsGrid}>
                 {daysLeft !== null && <View style={styles.featuredStatCell}><Text style={styles.featuredStatLabel}>ENDS IN</Text><Text style={styles.featuredStatVal}>{daysLeft}d</Text></View>}
                 {featured.submission_count != null && <View style={styles.featuredStatCell}><Text style={styles.featuredStatLabel}>ENTRIES</Text><Text style={styles.featuredStatVal}>{featured.submission_count}</Text></View>}
