@@ -95,7 +95,7 @@ export default function GalleryScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: C.BG },
+  screen: { backgroundColor: 'transparent' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

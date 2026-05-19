@@ -99,7 +99,7 @@ export default function EditProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: C.BG },
+  screen: { backgroundColor: 'transparent' },
   container: { padding: 20 },
   back: { marginBottom: 20 },
   backText: { color: C.ORANGE, fontSize: 15 },

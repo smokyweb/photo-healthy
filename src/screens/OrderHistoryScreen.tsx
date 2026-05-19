@@ -198,7 +198,7 @@ export default function OrderHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { flex: 1, backgroundColor: 'transparent' },
   header: { flexDirection: 'row', alignItems: 'center', gap: 16, padding: 16, borderBottomWidth: 1, borderBottomColor: C.DIVIDER },
   back: { color: C.ORANGE, fontSize: 15, fontWeight: '600' },
   title: { color: C.TEXT, fontSize: 20, fontWeight: '700' },

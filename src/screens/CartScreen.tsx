@@ -78,7 +78,7 @@ export default function CartScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: C.BG },
+  screen: { backgroundColor: 'transparent' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: C.DIVIDER },
   back: { color: C.ORANGE, fontSize: 14, fontWeight: '600' },
   title: { color: C.TEXT, fontSize: 17, fontWeight: '700' },

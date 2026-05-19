@@ -267,7 +267,7 @@ export default function SubmitPhotoScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: C.BG },
+  screen: { backgroundColor: 'transparent' },
   logoContainer: {
     alignItems: 'center',
     paddingVertical: 24,

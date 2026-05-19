@@ -384,7 +384,7 @@ export default function ChallengeDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { flex: 1, backgroundColor: 'transparent' },
   center: {
     flex: 1,
     alignItems: 'center',

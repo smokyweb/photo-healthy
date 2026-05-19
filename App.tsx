@@ -1,6 +1,6 @@
 ﻿import React from 'react';
 import { Platform, View, Text, ActivityIndicator } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useWindowDimensions } from 'react-native';
@@ -10,6 +10,7 @@ import { C } from './src/theme';
 import BottomNavBar from './src/components/BottomNavBar';
 import TopNavBar from './src/components/TopNavBar';
 import ScreenWithNav from './src/components/ScreenWithNav';
+import AppBackground from './src/components/AppBackground';
 
 // Screens
 import HomeScreen from './src/screens/HomeScreen';
@@ -42,6 +43,14 @@ import MyProgressScreen from './src/screens/MyProgressScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
+
+const navTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: 'transparent',
+  },
+};
 
 const linking = {
   prefixes: ['https://photoai.betaplanets.com', 'http://localhost:19006'],
@@ -88,9 +97,11 @@ function MainTabs() {
 
   return (
     <View style={{ flex: 1, flexDirection: 'column' }}>
+      <AppBackground />
       <View style={{ flex: 1 }}>
         <TopNavBar />
       <Tab.Navigator
+      sceneContainerStyle={{ backgroundColor: 'transparent' }}
       screenOptions={{
         headerShown: false,
         tabBarStyle: isDesktop
@@ -139,12 +150,12 @@ function AppNavigator() {
   }
 
   return (
-    <NavigationContainer linking={linking} fallback={<ActivityIndicator color={C.ORANGE} />}>
+    <NavigationContainer linking={linking} theme={navTheme} fallback={<ActivityIndicator color={C.ORANGE} />}>
       <Stack.Navigator screenOptions={{
           headerShown: false,
           // On web: allow each screen to scroll naturally via the browser
           ...(Platform.OS === 'web' ? {
-            cardStyle: { flex: 1 as any, overflow: 'hidden' as any },
+            cardStyle: { flex: 1 as any, overflow: 'hidden' as any, backgroundColor: 'transparent' },
             cardOverlayEnabled: false,
           } : {}),
         }}>

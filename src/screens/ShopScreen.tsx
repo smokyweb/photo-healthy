@@ -298,7 +298,7 @@ export default function ShopScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: C.BG },
+  screen: { backgroundColor: 'transparent' },
   content: { paddingBottom: 0 },
 
   pageHeader: { paddingHorizontal: 24, paddingTop: 36, paddingBottom: 20 },

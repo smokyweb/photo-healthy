@@ -99,25 +99,31 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
 
         {/* Date Range */}
         {(challenge.start_date || challenge.end_date) && (
-          <Text style={styles.dateRange}>
+          <Text style={styles.dateRange} numberOfLines={1}>
             {formatDate(challenge.start_date)}{challenge.end_date ? ` — ${formatDate(challenge.end_date)}` : ''}
           </Text>
         )}
 
-        {/* Tags Row */}
-        {tags.length > 0 && (
-          <View style={styles.tagsRow}>
-            {tags.map((tag, i) => (
-              <View key={i} style={[styles.tag, i === 0 && styles.tagCategory]}>
-                <Text style={[styles.tagText, i === 0 && styles.tagCategoryText]}>{tag}</Text>
-              </View>
-            ))}
-          </View>
+          {/* Tags Row */}
+          {tags.length > 0 && (
+            <View style={styles.tagsRow}>
+              {tags.map((tag, i) => (
+                <View key={i} style={[styles.tag, i === 0 && styles.tagCategory]}>
+                  <Text style={[styles.tagText, i === 0 && styles.tagCategoryText]}>{tag}</Text>
+                </View>
+              ))}
+            </View>
         )}
 
         {/* Stats Footer */}
         <View style={styles.statsRow}>
-          <Text style={styles.stat}>� {challenge.submission_count || 0} participants</Text>
+          <View style={styles.statItem}>
+            <View style={styles.personIcon}>
+              <View style={styles.personHead} />
+              <View style={styles.personBody} />
+            </View>
+            <Text style={styles.stat}>{challenge.submission_count || 0} participants</Text>
+          </View>
           {daysLeft !== null && !isEnded && (
             <Text style={styles.stat}>⏱ {daysLeft} days left</Text>
           )}
@@ -125,6 +131,7 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
             <Text style={[styles.stat, { color: C.TEXT_MUTED }]}>Challenge ended</Text>
           )}
         </View>
+
         {/* View Challenge button */}
         <View style={styles.viewBtnWrap}>
           <TouchableOpacity style={styles.viewBtn} activeOpacity={0.85} onPress={onPress}>
@@ -139,12 +146,13 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
 const styles = StyleSheet.create({
   card: {
     width: '100%',
+    height: '100%',
     backgroundColor: C.CARD_BG,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
     overflow: 'hidden',
-    marginBottom: 18,
+    marginBottom: 0,
     shadowColor: '#000000',
     shadowOpacity: 0.2,
     shadowRadius: 12,
@@ -155,7 +163,7 @@ const styles = StyleSheet.create({
   // Image - 16:9
   imageWrap: {
     width: '100%',
-    aspectRatio: 1.38,
+    aspectRatio: 1.75,
     position: 'relative',
   },
   image: { width: '100%', height: '100%' },
@@ -209,7 +217,7 @@ const styles = StyleSheet.create({
   enrolledBadgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 
   // Body
-  body: { padding: 20 },
+  body: { padding: 20, flex: 1 },
   title: {
     color: C.TEXT,
     fontSize: 18,
@@ -244,12 +252,30 @@ const styles = StyleSheet.create({
   tagCategoryText: { color: C.ORANGE },
 
   // Stats
-  statsRow: { flexDirection: 'row', gap: 18, flexWrap: 'wrap' },
+  statsRow: { flexDirection: 'row', gap: 18, flexWrap: 'wrap', alignItems: 'center' },
+  statItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  personIcon: {
+    width: 12,
+    height: 14,
+    alignItems: 'center',
+  },
+  personHead: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: C.TEXT_SECONDARY,
+    marginBottom: 1,
+  },
+  personBody: {
+    width: 10,
+    height: 7,
+    borderRadius: 5,
+    backgroundColor: C.TEXT_SECONDARY,
+  },
   stat: { color: C.TEXT_SECONDARY, fontSize: 13, fontWeight: '700', fontFamily: "'Inter', sans-serif" },
 
   viewBtnWrap: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    marginTop: 'auto',
     paddingTop: 16,
   },
   viewBtn: {

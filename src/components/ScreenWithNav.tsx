@@ -6,6 +6,7 @@ import React, { useEffect } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import TopNavBar from './TopNavBar';
 import { C } from '../theme';
+import AppBackground from './AppBackground';
 
 interface Props {
   children: React.ReactNode;
@@ -39,6 +40,7 @@ export default function ScreenWithNav({ children }: Props) {
 
   return (
     <View style={s.root}>
+      <AppBackground />
       {Platform.OS === 'web' && <TopNavBar />}
       <View style={s.content}>
         {children}

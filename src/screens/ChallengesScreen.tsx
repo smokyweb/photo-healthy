@@ -54,7 +54,8 @@ export default function ChallengesScreen() {
   const [movementOptions, setMovementOptions] = useState<string[]>(['All']);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const { width } = useWindowDimensions();
-  const numCols = width >= 768 ? 4 : 1;
+  const numCols = width >= 1100 ? 3 : width >= 700 ? 2 : 1;
+  const cardHeight = width >= 1100 ? 580 : width >= 700 ? 560 : 580;
 
   const load = async () => {
     try {
@@ -252,12 +253,15 @@ export default function ChallengesScreen() {
           {rows.map((row, rowIndex) => (
             <View key={rowIndex} style={styles.row}>
               {row.map((challenge: any) => (
-                <View key={challenge.id} style={{ flex: 1, paddingHorizontal: 6, minHeight: 250 }}>
+                <View key={challenge.id} style={[styles.challengeSlot, { width: `${100 / numCols - 1}%` as any, height: cardHeight }]}>
                   <ChallengeCard
                     challenge={challenge}
                     onPress={() => navigation.navigate('ChallengeDetail', { challengeId: challenge.id, id: challenge.id })}
                   />
                 </View>
+              ))}
+              {row.length < numCols && Array(numCols - row.length).fill(0).map((_, i) => (
+                <View key={`pad-${i}`} style={[styles.challengeSlot, styles.challengeSlotPad, { width: `${100 / numCols - 1}%` as any, height: cardHeight }]} />
               ))}
             </View>
           ))}
@@ -379,7 +383,7 @@ export default function ChallengesScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: C.BG,
+    backgroundColor: 'transparent',
   },
   logoContainer: {
     alignItems: 'center',
@@ -650,6 +654,12 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 12,
     marginHorizontal: 0,
+  },
+  challengeSlot: {
+    height: 540,
+  },
+  challengeSlotPad: {
+    opacity: 0,
   },
   modalOverlay: {
     flex: 1,

@@ -624,6 +624,16 @@ const HomeScreen = () => {
 
   const publicHeroContent = (
     <>
+      <View style={[s.heroRight, isMobile ? s.heroRightMobile : s.publicHeroRight]}>
+        <Image
+          source={LOGO_IMG}
+          style={[
+            s.heroLogo,
+            isMobile ? { width: 240, height: 240 } : { width: 320, height: 320 },
+          ]}
+          resizeMode="center"
+        />
+      </View>
       <View style={[s.heroLeft, isMobile ? s.heroLeftMobile : s.publicHeroLeft]}>
         <Text style={[s.heroHeading, s.publicHeroHeading, isMobile && s.heroHeadingMobile]}>
           Welcome somewhere that feels{' '}
@@ -647,17 +657,6 @@ const HomeScreen = () => {
             <Text style={[s.learnMoreText, isMobile && s.getStartedTextMobile]}>View Challenges</Text>
           </TouchableOpacity>
         </View>
-      </View>
-      <View style={[s.heroRight, isMobile ? s.heroRightMobile : s.publicHeroRight]}>
-        <View style={s.heroGlow} />
-        <Image
-          source={LOGO_IMG}
-          style={[
-            s.heroLogo,
-            isMobile ? { width: 200, height: 200, marginLeft: -20 } : { width: 250, height: 250, marginLeft: -30 },
-          ]}
-          resizeMode="center"
-        />
       </View>
     </>
   );
@@ -706,20 +705,16 @@ const HomeScreen = () => {
         /* ===== PUBLIC CONTENT (hero, stats, challenge, submissions, how-it-works) ===== */
         <>
           {/* ===== HERO SECTION ===== */}
-          <ImageBackground
-            source={PHOTO2_MOUNTAIN}
+          <View
             style={[
               s.heroWrap,
               s.heroWrapMobile,
               s.publicHeroBg,
               !isMobile && s.publicHeroBgDesktop,
             ]}
-            imageStyle={s.publicHeroBgImage}
-            resizeMode="cover"
           >
-            <View style={s.publicHeroOverlay} />
             {publicHeroContent}
-          </ImageBackground>
+          </View>
 
           {/* ===== QUICK ACTIONS (Shop, Partners, How It Works) ===== */}
           <View style={[s.section, !isMobile && s.desktopWidth, s.quickActionsSection]}>
@@ -877,7 +872,7 @@ const HomeScreen = () => {
 
 /* ========== PUBLIC / SHARED STYLES ========== */
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.BG },
+  root: { flex: 1, backgroundColor: 'transparent' },
   desktopWidth: {
     width: '100%' as any,
     maxWidth: PAGE_MAX_WIDTH,
@@ -977,7 +972,8 @@ const s = StyleSheet.create({
     borderRadius: 0,
     overflow: 'hidden',
     paddingHorizontal: 18,
-    paddingVertical: 24,
+    paddingTop: 44,
+    paddingBottom: 24,
     height: 450,
   },
   publicHeroBgDesktop: {
@@ -987,15 +983,9 @@ const s = StyleSheet.create({
     width: '100%' as any,
     height: 520,
     paddingHorizontal: 56,
-    paddingVertical: 46,
+    paddingTop: 72,
+    paddingBottom: 46,
     justifyContent: 'flex-start',
-  },
-  publicHeroBgImage: {
-    borderRadius: 0,
-  },
-  publicHeroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(5,9,18,0.58)',
   },
   heroLeft: {
     flex: 1,
@@ -1114,22 +1104,12 @@ const s = StyleSheet.create({
     zIndex: 1,
   },
   publicHeroRight: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 26,
     width: '100%' as any,
-    height: 198,
+    height: 180,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
-  },
-  heroGlow: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: 'rgba(245, 91, 9, 0.12)',
+    marginBottom: 14,
   },
   heroLogo: {
     zIndex: 1,

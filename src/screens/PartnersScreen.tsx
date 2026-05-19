@@ -15,6 +15,7 @@ const PARTNER_LOGO = require('../../assets/Pose_8-removebg-preview.png');
 const GET_IN_TOUCH_IMAGE = require('../../assets/get_in_touch.jpg');
 const PLAN_IMAGE = require('../../assets/what-is-an-action-plan.png');
 const LAUNCH_IMAGE = require('../../assets/launch.jpg');
+const PAGE_MAX_WIDTH = 1080;
 
 function ProcessStep({ number, title, subtext, imagePosition, imageSource }: { number: number; title: string; subtext: string; imagePosition: 'left' | 'right'; imageSource: any }) {
   const { height } = useWindowDimensions();
@@ -32,7 +33,9 @@ function ProcessStep({ number, title, subtext, imagePosition, imageSource }: { n
           </View>
           <Text style={ps.subtext}>{subtext}</Text>
         </View>
-        <Image source={imageSource} style={[ps.imagePlaceholder, { height: imageHeight }]} resizeMode="contain" />
+        <View style={[ps.imageFrame, { height: imageHeight }]}>
+          <Image source={imageSource} style={ps.stepImage} resizeMode="cover" />
+        </View>
       </View>
     </View>
   );
@@ -77,6 +80,8 @@ const TIERS = [
 
 export default function PartnersScreen() {
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
   const [name, setName] = useState('');
   const [company, setCompany] = useState('');
   const [email, setEmail] = useState('');
@@ -104,89 +109,96 @@ export default function PartnersScreen() {
     <ScrollView style={styles.screen}>
       {/* Logo */}
       <View style={styles.logoContainer}>
-        <View style={styles.logoImageWrapper}>
-          <Image source={PARTNER_LOGO} style={styles.logoImage} />
+        <View style={[styles.pageInner, styles.logoInner]}>
+          <View style={styles.logoImageWrapper}>
+            <Image source={PARTNER_LOGO} style={styles.logoImage} resizeMode="contain" />
+          </View>
+          <Text style={styles.logoTitle}>Partners</Text>
         </View>
-        <Text style={styles.logoTitle}>Partners</Text>
       </View>
 
-      {/* Partnership Process Sections */}
-      <View style={styles.processSection}>
-        <ProcessStep
-          number={1}
-          title="Get in touch"
-          subtext="Reach out to our partnerships team to discuss opportunities. We'll learn about your organization and explore how we can work together to make a meaningful impact."
-          imagePosition="right"
-          imageSource={GET_IN_TOUCH_IMAGE}
-        />
-        <ProcessStep
-          number={2}
-          title="Create a plan"
-          subtext="We'll collaborate to design a partnership that aligns with both our missions. Whether it's content, resources, or community engagement, we'll find the right fit for success."
-          imagePosition="left"
-          imageSource={PLAN_IMAGE}
-        />
-        <ProcessStep
-          number={3}
-          title="Launch together"
-          subtext="Once everything is set, we'll launch your partnership and start supporting our community together. We'll track results and adjust as needed for optimal outcomes."
-          imagePosition="right"
-          imageSource={LAUNCH_IMAGE}
-        />
+      <View style={styles.pageInner}>
+        {/* Partnership Process Sections */}
+        <View style={styles.processSection}>
+          <ProcessStep
+            number={1}
+            title="Get in touch"
+            subtext="Reach out to our partnerships team to discuss opportunities. We'll learn about your organization and explore how we can work together to make a meaningful impact."
+            imagePosition="right"
+            imageSource={GET_IN_TOUCH_IMAGE}
+          />
+          <ProcessStep
+            number={2}
+            title="Create a plan"
+            subtext="We'll collaborate to design a partnership that aligns with both our missions. Whether it's content, resources, or community engagement, we'll find the right fit for success."
+            imagePosition="left"
+            imageSource={PLAN_IMAGE}
+          />
+          <ProcessStep
+            number={3}
+            title="Launch together"
+            subtext="Once everything is set, we'll launch your partnership and start supporting our community together. We'll track results and adjust as needed for optimal outcomes."
+            imagePosition="right"
+            imageSource={LAUNCH_IMAGE}
+          />
+        </View>
+
       </View>
 
+      <View style={styles.contactDivider} />
 
-
-      {/* Contact Form */}
-      <View style={styles.section}>
-         {/* Hero */}
-      <View>
-        <Text style={styles.heroTitle}>Partner With Us</Text>
-        <Text style={styles.heroSubtitle}>
-          Reach thousands of health-conscious individuals actively working on their wellness goals.
-        </Text>
-      </View>
-        <View style={styles.formContainer}>
-          <Input
-            placeholder="Your Name"
-            value={name}
-            onChangeText={setName}
-            style={styles.input}
-          />
-          <Input
-            placeholder="Company"
-            value={company}
-            onChangeText={setCompany}
-            style={styles.input}
-          />
-          <Input
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            style={styles.input}
-          />
-          <Input
-            placeholder="Tier (optional)"
-            value={tier}
-            onChangeText={setTier}
-            style={styles.input}
-          />
-          <Input
-            placeholder="Message"
-            value={message}
-            onChangeText={setMessage}
-            multiline
-            numberOfLines={4}
-            style={styles.input}
-          />
-          <GradientButton
-            label={sending ? 'Sending...' : 'Submit'}
-            variant="primary"
-            size="md"
-            onPress={handleSubmit}
-            disabled={sending}
-          />
+      <View style={styles.pageInner}>
+        {/* Contact Form */}
+        <View style={[styles.section, isDesktop && styles.contactSectionDesktop]}>
+           {/* Hero */}
+        <View style={[styles.contactIntro, isDesktop && styles.contactIntroDesktop]}>
+          <Text style={styles.heroTitle}>Partner With Us</Text>
+          <Text style={styles.heroSubtitle}>
+            Reach thousands of health-conscious individuals actively working on their wellness goals.
+          </Text>
+        </View>
+          <View style={[styles.formContainer, isDesktop && styles.formContainerDesktop]}>
+            <Input
+              placeholder="Your Name"
+              value={name}
+              onChangeText={setName}
+              style={styles.input}
+            />
+            <Input
+              placeholder="Company"
+              value={company}
+              onChangeText={setCompany}
+              style={styles.input}
+            />
+            <Input
+              placeholder="Email"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              style={styles.input}
+            />
+            <Input
+              placeholder="Tier (optional)"
+              value={tier}
+              onChangeText={setTier}
+              style={styles.input}
+            />
+            <Input
+              placeholder="Message"
+              value={message}
+              onChangeText={setMessage}
+              multiline
+              numberOfLines={4}
+              style={styles.input}
+            />
+            <GradientButton
+              label={sending ? 'Sending...' : 'Submit'}
+              variant="primary"
+              size="md"
+              onPress={handleSubmit}
+              disabled={sending}
+            />
+          </View>
         </View>
       </View>
 
@@ -411,7 +423,13 @@ function NewPartnerSections() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: C.BG,
+    backgroundColor: 'transparent',
+  },
+  pageInner: {
+    width: '100%' as any,
+    maxWidth: PAGE_MAX_WIDTH,
+    alignSelf: 'center',
+    paddingHorizontal: 12,
   },
   logoContainer: {
     alignItems: 'center',
@@ -420,16 +438,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: C.ORANGE,
   },
+  logoInner: {
+    alignItems: 'center',
+  },
   logoImageWrapper: {
-    width: 250,
-    height: 170,
-    overflow: 'hidden',
+    width: 320,
+    height: 220,
     marginBottom: 12,
   },
   logoImage: {
-    width: 250,
-    height: 200,
-    marginTop: 0,
+    width: '100%',
+    height: '100%',
   },
   logoTitle: {
     fontSize: 28,
@@ -448,11 +467,27 @@ const styles = StyleSheet.create({
   backText: { color: C.ORANGE, fontSize: 15 },
   heroTitle: { color: C.WHITE, fontSize: 32, fontWeight: '900', marginBottom: 8, fontFamily: fontFamilies.heading },
   heroSubtitle: { color: C.TEXT_SECONDARY, fontSize: 15, lineHeight: 22, fontFamily: fontFamilies.body },
-  section: { padding: 24 },
+  section: { paddingVertical: 24, paddingHorizontal: 0 },
+  contactSectionDesktop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 40,
+  },
+  contactIntro: {
+    marginBottom: 18,
+  },
+  contactIntroDesktop: {
+    flex: 1,
+    marginBottom: 0,
+    paddingTop: 8,
+  },
   sectionTitle: { color: C.WHITE, fontSize: 24, fontWeight: '800', marginBottom: 20, fontFamily: fontFamilies.heading },
   formContainer: {
-    width: '50%',
-    alignSelf: 'flex-end',
+    width: '100%' as any,
+  },
+  formContainerDesktop: {
+    flex: 1,
+    maxWidth: 520,
   },
   input: {
     marginBottom: 16,
@@ -479,18 +514,26 @@ const styles = StyleSheet.create({
   perk: { color: C.TEXT_SECONDARY, fontSize: 14, paddingHorizontal: 14, paddingVertical: 5, lineHeight: 20, fontFamily: fontFamilies.body },
   processSection: {
     paddingVertical: 24,
+    paddingHorizontal: 0,
+  },
+  contactDivider: {
+    height: 2,
+    backgroundColor: C.ORANGE,
+    marginTop: 8,
+    marginBottom: 24,
   },
 });
 
 const ps = StyleSheet.create({
   container: {
     marginBottom: 24,
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
+    gap: 5,
   },
   textContent: {
     flex: 1,
@@ -526,16 +569,28 @@ const ps = StyleSheet.create({
     color: C.TEXT_SECONDARY,
     lineHeight: 24,
   },
-  imagePlaceholder: {
+  imageFrame: {
     flex: 1,
-    borderRadius: 30,
+    borderRadius: 22,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+    backgroundColor: C.CARD_BG,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    elevation: 6,
+  },
+  stepImage: {
+    width: '100%',
+    height: '100%',
   },
 });
 
 // ---- NEW SECTIONS STYLES ----
 const n2s = StyleSheet.create({
-  wrapper: { backgroundColor: C.BG },
+  wrapper: { backgroundColor: 'transparent' },
 
   divider: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 32, gap: 12 },
   dividerLine: { flex: 1, height: 1, backgroundColor: C.CARD_BORDER },

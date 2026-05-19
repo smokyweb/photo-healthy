@@ -99,7 +99,7 @@ export default function CommunityScreen() {
                     activeOpacity={0.85}
                   >
                     {imgUri ? (
-                      <Image source={{ uri: imgUri }} style={styles.img} resizeMode="contain" />
+                      <Image source={{ uri: imgUri }} style={styles.img} resizeMode="cover" />
                     ) : (
                       <View style={[styles.img, styles.placeholder]}>
                         <Text style={{ fontSize: 32 }}>📷</Text>
@@ -117,7 +117,6 @@ export default function CommunityScreen() {
                   </TouchableOpacity>
                 );
               })}
-              {/* Pad last row */}
               {row.length < numCols && Array(numCols - row.length).fill(0).map((_, i) => (
                 <View key={`pad-${i}`} style={[styles.card, { width: `${100 / numCols - 1}%` as any, backgroundColor: 'transparent', borderWidth: 0 }]} />
               ))}
@@ -132,7 +131,7 @@ export default function CommunityScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { flex: 1, backgroundColor: 'transparent' },
   header: {
     paddingHorizontal: 20,
     paddingTop: 24,
@@ -183,7 +182,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
   },
-  img: { width: '100%', aspectRatio: 1 },
+  img: { width: '100%', aspectRatio: 4 / 3, backgroundColor: C.CARD_BG2 },
   placeholder: { backgroundColor: C.CARD_BG2, alignItems: 'center', justifyContent: 'center', minHeight: 120 },
   cardInfo: { padding: 8 },
   cardTitle: { color: C.TEXT, fontSize: 13, fontWeight: '600', marginBottom: 4 },

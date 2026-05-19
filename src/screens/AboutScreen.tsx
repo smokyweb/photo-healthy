@@ -154,29 +154,25 @@ export default function AboutScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  screen: { backgroundColor: C.BG },
+  screen: { backgroundColor: 'transparent' },
   content: { paddingBottom: 0 },
 
   // Hero — full-width dark card
   heroSection: {
-    backgroundColor: C.CARD_BG,
-    borderBottomWidth: 1,
-    borderBottomColor: C.CARD_BORDER,
+    backgroundColor: 'transparent',
     paddingVertical: SECTION_PAD_V_HERO,
     paddingHorizontal: CONTENT_PAD_H,
     alignItems: 'center',
   },
   purposeImageContainer: {
-    width: '50%',
-    height: 140,
-    borderRadius: 18,
+    width: '60%',
+    height: 135,
     marginBottom: 34,
-    backgroundColor: C.CARD_BG2,
     overflow: 'hidden',
   },
   purposeImage: {
     width: '100%',
-    height: '100%',
+    height: 180,
   },
   heroTitle: {
     color: C.TEXT,

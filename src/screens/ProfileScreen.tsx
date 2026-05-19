@@ -343,7 +343,7 @@ const statStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.BG },
+  screen: { flex: 1, backgroundColor: 'transparent' },
   logoContainer: {
     alignItems: 'center',
     paddingVertical: 24,

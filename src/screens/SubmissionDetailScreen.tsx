@@ -290,7 +290,7 @@ export default function SubmissionDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: C.BG },
+  screen: { backgroundColor: 'transparent' },
 
   back: { padding: 16, paddingBottom: 8 },
   backText: { color: C.ORANGE, fontSize: 14, fontWeight: '600' },

@@ -24,7 +24,7 @@ const styles = StyleSheet.create({
   },
   fullScreen: {
     flex: 1,
-    backgroundColor: C.BG,
+    backgroundColor: 'transparent',
   },
   text: {
     color: C.TEXT_SECONDARY,

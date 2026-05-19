@@ -187,7 +187,7 @@ export default function ContactScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: C.BG },
+  screen: { backgroundColor: 'transparent' },
   content: { paddingBottom: 0 },
 
   pageHeader: {
