@@ -22,8 +22,7 @@ function injectScrollFix() {
     /* ===== iOS SCROLL FIX for React Native Web ===== */
     /* Enable momentum scrolling on all scrollable containers */
     * { -webkit-overflow-scrolling: touch; }
-    /* Ensure RN ScrollView renders correctly on iOS Safari */
-    [role="scrollbar"] { display: none; }
+    /* Keep RN Web scrollbars visible so horizontal filter lists are discoverable. */
     /* The actual scroll container RN Web creates */
     .css-scrollbars-h { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
     .css-scrollbars-v { overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; }

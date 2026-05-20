@@ -12,6 +12,7 @@ const LOGO_IMG = require('../../assets/logo.png');
 const ORANGE_GRADIENT = 'linear-gradient(90deg, #F55B09 0%, #FFD000 100%)';
 
 const NAV_LINKS = [
+  { label: 'Photo Healthy', screen: 'Main', params: { screen: 'HomeTab' } },
   { label: 'Challenges', screen: 'Main', params: { screen: 'ChallengesTab' } },
   { label: 'Community', screen: 'Main', params: { screen: 'CommunityTab' } },
   { label: 'Shop', screen: 'Shop' },
@@ -27,7 +28,7 @@ export default function TopNavBar() {
   const { user, logout } = useAuth();
   const { itemCount } = useCart();
   const { width } = useWindowDimensions();
-  const isMobile = width < 768;
+  const isMobile = width < 1100;
   const [menuOpen, setMenuOpen] = useState(false);
 
   const nav = (screen: string, params?: any) => {
@@ -53,11 +54,11 @@ export default function TopNavBar() {
   return (
     <View>
       {/* Main bar */}
-      <View style={styles.bar}>
+      <View style={[styles.bar, isMobile && styles.barMobile]}>
         {/* Logo */}
         <TouchableOpacity onPress={() => nav('Main', { screen: 'HomeTab' })} style={styles.logoWrap}>
           <Image source={LOGO_IMG} style={styles.logo} resizeMode="contain" />
-          <Text style={styles.logoText}>Photo Healthy</Text>
+          <Text style={[styles.logoText, isMobile && styles.logoTextMobile]} numberOfLines={1}>Photo Healthy</Text>
         </TouchableOpacity>
 
         {/* Desktop nav links */}
@@ -72,7 +73,7 @@ export default function TopNavBar() {
         )}
 
         {/* Right side */}
-        <View style={styles.rightSide}>
+        <View style={[styles.rightSide, isMobile && styles.rightSideMobile]}>
           {itemCount > 0 && (
             <TouchableOpacity style={styles.cartBtn} onPress={() => nav('Cart')}>
               <Text style={styles.cartText}>🛒 {itemCount}</Text>
@@ -80,12 +81,20 @@ export default function TopNavBar() {
           )}
 
           {user ? (
-            <View style={styles.rightSide}>
+            <View style={[styles.rightSide, isMobile && styles.rightSideMobile]}>
               <TouchableOpacity onPress={() => nav('Main', { screen: 'ProfileTab' })}>
                 <View style={styles.avatar}>
                   <Text style={styles.avatarText}>{initials}</Text>
                 </View>
               </TouchableOpacity>
+              {!isMobile && (
+                <TouchableOpacity
+                  style={styles.signOutBtn}
+                  onPress={() => { logout(); navigation.reset({ index: 0, routes: [{ name: 'Main' as never }] }); }}
+                >
+                  <Text style={styles.signOutText}>Sign Out</Text>
+                </TouchableOpacity>
+              )}
               {isMobile && (
                 <TouchableOpacity
                   onPress={() => setMenuOpen(v => !v)}
@@ -97,13 +106,17 @@ export default function TopNavBar() {
               )}
             </View>
           ) : (
-            <View style={styles.authBtns}>
-              <TouchableOpacity style={styles.loginBtn} onPress={() => nav('Login')}>
-                <Text style={styles.loginText}>Log In</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.signupBtn} onPress={() => nav('Register')}>
-                <Text style={styles.signupText}>Sign Up</Text>
-              </TouchableOpacity>
+            <View style={[styles.authBtns, isMobile && styles.authBtnsMobile]}>
+              {!isMobile && (
+                <>
+                  <TouchableOpacity style={styles.loginBtn} onPress={() => nav('Login')}>
+                    <Text style={styles.loginText}>Log In</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.signupBtn} onPress={() => nav('Register')}>
+                    <Text style={styles.signupText}>Sign Up</Text>
+                  </TouchableOpacity>
+                </>
+              )}
               {isMobile && (
                 <TouchableOpacity
                   onPress={() => setMenuOpen(v => !v)}
@@ -127,11 +140,30 @@ export default function TopNavBar() {
             </TouchableOpacity>
           ))}
           <View style={styles.drawerDivider} />
-          {user && (
-            <TouchableOpacity style={styles.drawerItem}
-              onPress={() => { setMenuOpen(false); logout(); navigation.reset({ index: 0, routes: [{ name: 'Main' as never }] }); }}>
-              <Text style={[styles.drawerText, { color: '#ef4444' }]}>Sign Out</Text>
-            </TouchableOpacity>
+          {user ? (
+            <>
+              <TouchableOpacity style={styles.drawerItem} onPress={() => nav('Main', { screen: 'ProfileTab' })}>
+                <Text style={styles.drawerText}>Profile</Text>
+              </TouchableOpacity>
+              {(user.is_admin || user.role === 'admin') && (
+                <TouchableOpacity style={styles.drawerItem} onPress={() => nav('Admin')}>
+                  <Text style={styles.drawerText}>Admin</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={styles.drawerItem}
+                onPress={() => { setMenuOpen(false); logout(); navigation.reset({ index: 0, routes: [{ name: 'Main' as never }] }); }}>
+                <Text style={[styles.drawerText, { color: C.DANGER }]}>Sign Out</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity style={styles.drawerItem} onPress={() => nav('Login')}>
+                <Text style={styles.drawerText}>Log In</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.drawerItem} onPress={() => nav('Register')}>
+                <Text style={styles.drawerText}>Sign Up</Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
       )}
@@ -151,6 +183,11 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(148,163,184,0.12)',
     zIndex: 100,
   },
+  barMobile: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    gap: 8,
+  },
   logoWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -164,27 +201,37 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.3,
   },
+  logoTextMobile: {
+    fontSize: 15,
+    maxWidth: 118,
+  },
   navLinks: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    paddingHorizontal: 16,
+    gap: 2,
+    paddingHorizontal: 10,
   },
-  navLinkBtn: { paddingHorizontal: 10, paddingVertical: 6 },
-  navLinkText: { color: 'rgba(234,236,239,0.75)', fontSize: 13, fontWeight: '500' },
+  navLinkBtn: { paddingHorizontal: 8, paddingVertical: 6 },
+  navLinkText: { color: 'rgba(234,236,239,0.75)', fontSize: 12, fontWeight: '600' },
   navLinkTextActive: { color: '#F55B09', fontWeight: '700' },
   rightSide: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  rightSideMobile: { gap: 6, flexShrink: 0 },
   cartBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: 'rgba(245,91,9,0.15)', borderWidth: 1, borderColor: 'rgba(245,91,9,0.4)' },
   cartText: { color: '#F55B09', fontSize: 13, fontWeight: '600' },
   avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#F55B09', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  signOutBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: C.DANGER },
+  signOutText: { color: C.DANGER, fontSize: 12, fontWeight: '800' },
   menuBtn: { padding: 6, marginLeft: 4 },
   authBtns: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  authBtnsMobile: { gap: 0 },
   loginBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 18, borderWidth: 1, borderColor: '#54DFB6' },
+  loginBtnMobile: { paddingHorizontal: 10, paddingVertical: 7 },
   loginText: { color: '#54DFB6', fontSize: 12, fontWeight: '700' },
   signupBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 18, backgroundColor: '#F55B09', backgroundImage: ORANGE_GRADIENT } as any,
+  signupBtnMobile: { paddingHorizontal: 10, paddingVertical: 7 } as any,
   signupText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   drawer: {
     backgroundColor: 'rgba(10,14,26,0.98)',

@@ -38,6 +38,8 @@ export default function ShopScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [categoryOpen, setCategoryOpen] = useState(false);
+  const [priceFilter, setPriceFilter] = useState('All Prices');
+  const [priceOpen, setPriceOpen] = useState(false);
 
   const load = async () => {
     try {
@@ -55,11 +57,22 @@ export default function ShopScreen() {
     'All Categories',
     ...Array.from(new Set<string>(products.map((p: any) => p.category).filter(Boolean))),
   ];
+  const priceFilters = ['All Prices', 'Under $25', '$25 - $50', '$50 - $100', '$100+'];
+
+  const matchesPrice = (price: number) => {
+    if (priceFilter === 'Under $25') return price < 25;
+    if (priceFilter === '$25 - $50') return price >= 25 && price <= 50;
+    if (priceFilter === '$50 - $100') return price > 50 && price <= 100;
+    if (priceFilter === '$100+') return price > 100;
+    return true;
+  };
 
   const filteredProducts = products.filter(p => {
     const matchCat = selectedCategory === 'All Categories' || p.category === selectedCategory;
-    const matchSearch = !searchQuery || p.name?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchCat && matchSearch;
+    const productName = p.title || p.name || '';
+    const matchSearch = !searchQuery || productName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchPrice = matchesPrice(Number(p.price || 0));
+    return matchCat && matchSearch && matchPrice;
   });
 
   const featuredProducts = filteredProducts.filter((p: any) => p.is_featured || p.featured);
@@ -90,7 +103,7 @@ export default function ShopScreen() {
     setTimeout(() => { setCartAdded(null); setToastMsg(null); }, 2500);
   };
 
-  const numFeaturedCols = isDesktop ? 4 : isTablet ? 2 : 1;
+  const numFeaturedCols = isDesktop ? 3 : isTablet ? 2 : 1;
   const numAllCols = isDesktop ? 3 : isTablet ? 2 : 1;
 
   if (loading) return <LoadingSpinner fullScreen />;
@@ -121,14 +134,12 @@ export default function ShopScreen() {
             <Text style={styles.pageTitle}>Shop</Text>
             <Text style={styles.pageSubtitle}>Photography gear & Photo Healthy merchandise</Text>
           </View>
-          {itemCount > 0 && (
-            <TouchableOpacity
-              style={styles.cartBtn}
-              onPress={() => navigation.navigate('Cart' as never)}
-            >
-              <Text style={styles.cartBtnText}>🛒 Cart ({itemCount})</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={styles.cartBtn}
+            onPress={() => navigation.navigate('Cart' as never)}
+          >
+            <Text style={styles.cartBtnText}>Cart ({itemCount})</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -163,9 +174,32 @@ export default function ShopScreen() {
             )}
           </View>
           {/* Price Filter */}
-          <TouchableOpacity style={styles.dropdownBtn}>
-            <Text style={styles.dropdownText}>Filter by Price ▼</Text>
-          </TouchableOpacity>
+          <View>
+            <TouchableOpacity
+              style={styles.dropdownBtn}
+              onPress={() => setPriceOpen(o => !o)}
+            >
+              <Text style={styles.dropdownText}>{priceFilter} ▼</Text>
+            </TouchableOpacity>
+            {priceOpen && (
+              <View style={styles.dropdownMenu}>
+                {priceFilters.map(filter => (
+                  <TouchableOpacity
+                    key={filter}
+                    style={styles.dropdownItem}
+                    onPress={() => { setPriceFilter(filter); setPriceOpen(false); }}
+                  >
+                    <Text style={[
+                      styles.dropdownItemText,
+                      priceFilter === filter && styles.dropdownItemActive,
+                    ]}>
+                      {filter}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
         </View>
         {/* Search */}
         <View style={[styles.searchWrapper, isDesktop && styles.searchWrapperDesktop]}>

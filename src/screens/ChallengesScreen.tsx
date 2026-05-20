@@ -12,11 +12,14 @@ import { C, borderRadius } from '../theme';
 import AppFooter from '../components/AppFooter';
 import { Image } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { CHALLENGE_CATEGORIES, FEELING_CATEGORIES, MOVEMENT_CATEGORIES } from '../constants/taxonomy';
 
 const CHALLENGE_LOGO = require('../../assets/Pose_6-removebg-preview.png');
 
 const BASE_URL = 'https://photoai.betaplanets.com';
 const fullUrl = (u?: string) => u ? (u.startsWith('http') ? u : BASE_URL + u) : undefined;
+const primaryValue = (value?: string) => (value || '').split(',')[0].trim();
+const userChallengeStatus = (challenge: any) => challenge.user_challenge?.status || null;
 
 export default function ChallengesScreen() {
   const navigation = useNavigation<any>();
@@ -50,8 +53,8 @@ export default function ChallengesScreen() {
   const [category, setCategory] = useState('All');
   const [feelingFilter, setFeelingFilter] = useState('All');
   const [movementFilter, setMovementFilter] = useState('All');
-  const [feelingOptions, setFeelingOptions] = useState<string[]>(['All']);
-  const [movementOptions, setMovementOptions] = useState<string[]>(['All']);
+  const [feelingOptions, setFeelingOptions] = useState<string[]>(['All', ...FEELING_CATEGORIES]);
+  const [movementOptions, setMovementOptions] = useState<string[]>(['All', ...MOVEMENT_CATEGORIES]);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const { width } = useWindowDimensions();
   const numCols = width >= 1100 ? 3 : width >= 700 ? 2 : 1;
@@ -63,11 +66,8 @@ export default function ChallengesScreen() {
       const list = data?.challenges || data || [];
       setChallenges(list);
       
-      // Extract unique categories
-      const categories = Array.from(new Set(list.map((c: any) => c.category).filter(Boolean))) as string[];
-      categories.sort();
-      setFeelingOptions(['All', ...Array.from(new Set(list.map((c: any) => c.feeling_tag).filter(Boolean))) as string[]]);
-      setMovementOptions(['All', ...Array.from(new Set(list.map((c: any) => c.movement_tag).filter(Boolean))) as string[]]);
+      setFeelingOptions(['All', ...FEELING_CATEGORIES]);
+      setMovementOptions(['All', ...MOVEMENT_CATEGORIES]);
       applyFilters(list, search, status, category, feelingFilter, movementFilter);
     } catch (e) {
       console.error(e);
@@ -81,11 +81,9 @@ export default function ChallengesScreen() {
       let result = [...list];
       if (s !== 'all') {
         if (s === 'active') {
-          // Active = currently running (is_active = 1, not explicitly archived)
-          result = result.filter(c => (c.is_active === 1 || c.is_active === true) && c.status !== 'archived');
+          result = result.filter(c => userChallengeStatus(c) === 'active');
         } else if (s === 'completed') {
-          // Completed = ended (is_active = 0 or status = ended/completed), not archived
-          result = result.filter(c => (c.is_active === 0 || c.is_active === false || c.status === 'ended' || c.status === 'completed') && c.status !== 'archived');
+          result = result.filter(c => userChallengeStatus(c) === 'completed');
         } else if (s === 'archived') {
           // Archived = manually archived by admin
           result = result.filter(c => c.status === 'archived');
@@ -98,10 +96,10 @@ export default function ChallengesScreen() {
         c.category && (c.category === cat || c.category.includes(cat.replace(/^\S+\s/, '')))
       );
       if (feeling !== 'All') result = result.filter(c =>
-        c.feeling_category && c.feeling_category.split(',').some((f: string) => f.trim() === feeling)
+        primaryValue(c.feeling_category || c.feeling_tag) === feeling
       );
       if (movement !== 'All') result = result.filter(c =>
-        c.movement_category && c.movement_category.split(',').some((m: string) => m.trim() === movement)
+        primaryValue(c.movement_category || c.movement_tag) === movement
       );
       if (q.trim()) {
         const lq = q.toLowerCase();
@@ -129,11 +127,10 @@ export default function ChallengesScreen() {
   }
   const rows = chunkArray(filtered, numCols);
 
-  // Tab counts using is_active field and status
   const tabCounts = {
     all: challenges.length,
-    active: challenges.filter(c => (c.is_active === 1 || c.is_active === true) && c.status !== 'archived').length,
-    completed: challenges.filter(c => (c.is_active === 0 || c.is_active === false || c.status === 'ended' || c.status === 'completed') && c.status !== 'archived').length,
+    active: challenges.filter(c => userChallengeStatus(c) === 'active').length,
+    completed: challenges.filter(c => userChallengeStatus(c) === 'completed').length,
     archived: challenges.filter(c => c.status === 'archived').length,
   };
   const STATUS_TABS = [
@@ -197,10 +194,10 @@ export default function ChallengesScreen() {
               <View style={styles.featuredStatsGrid}>
                 {daysLeft !== null && <View style={styles.featuredStatCell}><Text style={styles.featuredStatLabel}>ENDS IN</Text><Text style={styles.featuredStatVal}>{daysLeft}d</Text></View>}
                 {featured.submission_count != null && <View style={styles.featuredStatCell}><Text style={styles.featuredStatLabel}>ENTRIES</Text><Text style={styles.featuredStatVal}>{featured.submission_count}</Text></View>}
-                {featured.feeling_category && <View style={styles.featuredStatCell}><Text style={styles.featuredStatLabel}>FEELING</Text><Text style={styles.featuredStatVal} numberOfLines={1}>{featured.feeling_category.split(',')[0].trim()}</Text></View>}
-                {featured.movement_category && <View style={styles.featuredStatCell}><Text style={styles.featuredStatLabel}>MOVEMENT</Text><Text style={styles.featuredStatVal} numberOfLines={1}>{featured.movement_category.split(',')[0].trim()}</Text></View>}
+                {featured.feeling_category && <View style={styles.featuredStatCell}><Text style={styles.featuredStatLabel}>FEELING</Text><Text style={styles.featuredStatVal} numberOfLines={1}>{primaryValue(featured.feeling_category)}</Text></View>}
+                {featured.movement_category && <View style={styles.featuredStatCell}><Text style={styles.featuredStatLabel}>MOVEMENT</Text><Text style={styles.featuredStatVal} numberOfLines={1}>{primaryValue(featured.movement_category)}</Text></View>}
               </View>
-              <GradientButton label="View Challenge" variant="primary" size="sm" pill={false} onPress={() => navigation.navigate('ChallengeDetail', { challengeId: featured.id, id: featured.id })} style={{ marginTop: 12, alignSelf: 'flex-start' } as any} />
+              <GradientButton label="Join Challenge" variant="primary" size="sm" pill={false} onPress={() => navigation.navigate('ChallengeDetail', { challengeId: featured.id, id: featured.id })} style={{ marginTop: 12, alignSelf: 'flex-start' } as any} />
             </View>
           </TouchableOpacity>
         );
@@ -227,9 +224,26 @@ export default function ChallengesScreen() {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.quickFilterRow}>
+        <TouchableOpacity onPress={() => setFilterModalVisible(true)} style={styles.quickFilterBtn}>
+          <Text style={styles.quickFilterLabel}>Feeling</Text>
+          <Text style={styles.quickFilterValue}>{feelingFilter}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setFilterModalVisible(true)} style={styles.quickFilterBtn}>
+          <Text style={styles.quickFilterLabel}>Movement</Text>
+          <Text style={styles.quickFilterValue}>{movementFilter}</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Category Filter Pills */}
-      <View style={styles.pillsRow}>
-        {['All', ...Array.from(new Set(challenges.map((c: any) => c.category).filter(Boolean)))].map(cat => (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator
+        persistentScrollbar
+        style={styles.categoryScroll}
+        contentContainerStyle={styles.categoryContent}
+      >
+        {['All', ...CHALLENGE_CATEGORIES].map(cat => (
           <TouchableOpacity
             key={cat}
             style={[styles.pill, category === cat && styles.pillActive]}
@@ -239,7 +253,7 @@ export default function ChallengesScreen() {
             <Text style={[styles.pillText, category === cat && styles.pillTextActive]}>{cat}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       {/* Challenge Grid */}
       {filtered.length === 0 ? (
@@ -553,6 +567,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: C.TEXT,
   },
+  quickFilterRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginHorizontal: 12,
+    marginBottom: 8,
+  },
+  quickFilterBtn: {
+    flex: 1,
+    backgroundColor: C.CARD_BG,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  quickFilterLabel: { color: C.TEXT_MUTED, fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+  quickFilterValue: { color: C.TEXT, fontSize: 13, fontWeight: '700', marginTop: 2 },
   tabsRow: {
     flexDirection: 'row',
     paddingHorizontal: 12,

@@ -5,11 +5,12 @@ import {
   ScrollView, Alert, Platform, useWindowDimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { createSubmission, uploadPhoto } from '../services/api';
+import { createSubmission, uploadPhoto, getChallenge, getUserStats } from '../services/api';
 import Input from '../components/Input';
 import GradientButton from '../components/GradientButton';
 import AppFooter from '../components/AppFooter';
 import { C, borderRadius } from '../theme';
+import { normalizeFeelingCategory, normalizeMovementCategory } from '../constants/taxonomy';
 
 const SUBMIT_LOGO = require('../../assets/Pose_2-removebg-preview.png');
 
@@ -26,6 +27,8 @@ export default function SubmitPhotoScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [miles, setMiles] = useState('');
+  const [challenge, setChallenge] = useState<any>(null);
+  const [totalMiles, setTotalMiles] = useState<number>(0);
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -58,6 +61,17 @@ export default function SubmitPhotoScreen() {
     setPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
+  React.useEffect(() => {
+    if (!challengeId) return;
+    Promise.all([
+      getChallenge(challengeId).catch(() => null),
+      getUserStats().catch(() => null),
+    ]).then(([challengeData, statsData]) => {
+      setChallenge(challengeData?.challenge || challengeData || null);
+      setTotalMiles(Number(statsData?.totalMiles || 0));
+    });
+  }, [challengeId]);
+
   const handleSubmit = async () => {
     if (photos.length === 0) { setError('Please select at least one photo.'); return; }
     const submitErr = validateForm([
@@ -81,6 +95,7 @@ export default function SubmitPhotoScreen() {
         challenge_id: challengeId,
         title: sanitize(title, 150),
         description: sanitize(description, 1000),
+        miles_walked: miles ? parseFloat(miles) : undefined,
         miles: miles ? parseFloat(miles) : undefined,
       };
       uploadedUrls.forEach((url, i) => {
@@ -107,6 +122,13 @@ export default function SubmitPhotoScreen() {
   };
 
   const photoSlots = Array(MAX_PHOTOS).fill(null).map((_, i) => photos[i] || null);
+  const normalizedMovement = normalizeMovementCategory(challenge?.movement_category || challenge?.movement_tag);
+  const normalizedFeeling = normalizeFeelingCategory(challenge?.feeling_category || challenge?.feeling_tag || challenge?.mood_tag);
+  const movementValue = normalizedMovement === '-' ? 'Movement' : normalizedMovement;
+  const feelingValue = normalizedFeeling === '-' ? 'Feeling' : normalizedFeeling;
+  const enteredMiles = miles && /^\d*\.?\d+$/.test(miles) ? parseFloat(miles) : 0;
+  const projectedMiles = Math.round((totalMiles + enteredMiles) * 10) / 10;
+  const reflectionPrompt = `Share your thoughts on how you felt doing the ${movementValue} activity and how you were moved by the ${feelingValue} experience of the challenge.`;
 
   return (
     <ScrollView
@@ -213,18 +235,20 @@ export default function SubmitPhotoScreen() {
             label="Description"
             value={description}
             onChangeText={setDescription}
-            placeholder="Tell us about this moment..."
+            placeholder={reflectionPrompt}
             multiline
             numberOfLines={4}
             autoCapitalize="sentences"
           />
+          <Text style={styles.promptText}>{reflectionPrompt}</Text>
           <Input
-            label="Miles / Distance (optional)"
+            label="Miles for this challenge"
             value={miles}
             onChangeText={setMiles}
             placeholder="e.g. 3.2"
             keyboardType="decimal-pad"
           />
+          <Text style={styles.totalMilesText}>Total miles tracked: {projectedMiles}</Text>
         </View>
 
         {/* Guidelines Checkbox */}
@@ -365,6 +389,20 @@ const styles = StyleSheet.create({
   addMoreText: { color: C.ORANGE, fontSize: 14, fontWeight: '600' },
 
   form: { marginBottom: 8 },
+  promptText: {
+    color: C.TEXT_MUTED,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: -6,
+    marginBottom: 12,
+  },
+  totalMilesText: {
+    color: C.TEAL,
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: -6,
+    marginBottom: 12,
+  },
 
   checkRow: {
     flexDirection: 'row',

@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { Platform, View, Text, ActivityIndicator } from 'react-native';
+import { Platform, View, ActivityIndicator } from 'react-native';
 import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -91,6 +91,52 @@ const linking = {
   },
 };
 
+type TabIconName = 'home' | 'challenge' | 'community' | 'profile';
+
+function TabLineIcon({ name, color, size = 22 }: { name: TabIconName; color: string; size?: number }) {
+  const stroke = Math.max(2, Math.round(size / 11));
+  const box: any = { width: size, height: size, alignItems: 'center', justifyContent: 'center' };
+  const line = { borderColor: color, backgroundColor: 'transparent' };
+  const fill = { backgroundColor: color };
+
+  if (name === 'home') {
+    return (
+      <View style={box}>
+        <View style={[line, { position: 'absolute', top: size * 0.18, width: size * 0.48, height: size * 0.48, borderLeftWidth: stroke, borderTopWidth: stroke, transform: [{ rotate: '45deg' }] } as any]} />
+        <View style={[line, { position: 'absolute', bottom: size * 0.16, width: size * 0.62, height: size * 0.48, borderWidth: stroke, borderTopWidth: 0, borderRadius: 2 }]} />
+      </View>
+    );
+  }
+
+  if (name === 'challenge') {
+    return (
+      <View style={box}>
+        <View style={[line, { width: size * 0.62, height: size * 0.42, borderWidth: stroke, borderTopWidth: stroke, borderBottomLeftRadius: 6, borderBottomRightRadius: 6 }]} />
+        <View style={[fill, { width: stroke, height: size * 0.2 }]} />
+        <View style={[fill, { width: size * 0.44, height: stroke, borderRadius: stroke }]} />
+      </View>
+    );
+  }
+
+  if (name === 'community') {
+    return (
+      <View style={box}>
+        <View style={[line, { position: 'absolute', top: size * 0.18, left: size * 0.19, width: size * 0.22, height: size * 0.22, borderRadius: size, borderWidth: stroke }]} />
+        <View style={[line, { position: 'absolute', top: size * 0.12, right: size * 0.18, width: size * 0.26, height: size * 0.26, borderRadius: size, borderWidth: stroke }]} />
+        <View style={[line, { position: 'absolute', bottom: size * 0.18, left: size * 0.11, width: size * 0.38, height: size * 0.22, borderTopLeftRadius: size, borderTopRightRadius: size, borderWidth: stroke, borderBottomWidth: 0 }]} />
+        <View style={[line, { position: 'absolute', bottom: size * 0.16, right: size * 0.08, width: size * 0.44, height: size * 0.26, borderTopLeftRadius: size, borderTopRightRadius: size, borderWidth: stroke, borderBottomWidth: 0 }]} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={box}>
+      <View style={[line, { width: size * 0.34, height: size * 0.34, borderRadius: size, borderWidth: stroke, marginBottom: size * 0.08 }]} />
+      <View style={[line, { width: size * 0.58, height: size * 0.3, borderTopLeftRadius: size, borderTopRightRadius: size, borderWidth: stroke, borderBottomWidth: 0 }]} />
+    </View>
+  );
+}
+
 function MainTabs() {
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
@@ -119,10 +165,10 @@ function MainTabs() {
         tabBarInactiveTintColor: C.MED,
       }}
     >
-      <Tab.Screen name="HomeTab" component={HomeScreen} options={{ title: 'Home', tabBarLabel: 'Home', tabBarIcon: ({ color, size }) => <Text style={{ fontSize: size || 20, color }}>🏠</Text> }} />
-      <Tab.Screen name="ChallengesTab" component={ChallengesScreen} options={{ title: 'Challenges', tabBarLabel: 'Challenges', tabBarIcon: ({ color, size }) => <Text style={{ fontSize: size || 20, color }}>🏆</Text> }} />
-      <Tab.Screen name="CommunityTab" component={CommunityScreen} options={{ title: 'Community', tabBarLabel: 'Community', tabBarIcon: ({ color, size }) => <Text style={{ fontSize: size || 20, color }}>👥</Text> }} />
-      <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: 'Profile', tabBarLabel: 'Profile', tabBarIcon: ({ color, size }) => <Text style={{ fontSize: size || 20, color }}>👤</Text> }} />
+      <Tab.Screen name="HomeTab" component={HomeScreen} options={{ title: 'Home', tabBarLabel: 'Home', tabBarIcon: ({ color, size }) => <TabLineIcon name="home" color={color} size={size || 22} /> }} />
+      <Tab.Screen name="ChallengesTab" component={ChallengesScreen} options={{ title: 'Challenges', tabBarLabel: 'Challenges', tabBarIcon: ({ color, size }) => <TabLineIcon name="challenge" color={color} size={size || 22} /> }} />
+      <Tab.Screen name="CommunityTab" component={CommunityScreen} options={{ title: 'Community', tabBarLabel: 'Community', tabBarIcon: ({ color, size }) => <TabLineIcon name="community" color={color} size={size || 22} /> }} />
+      <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: 'Profile', tabBarLabel: 'Profile', tabBarIcon: ({ color, size }) => <TabLineIcon name="profile" color={color} size={size || 22} /> }} />
     </Tab.Navigator>
       </View>
     </View>

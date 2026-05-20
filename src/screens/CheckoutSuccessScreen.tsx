@@ -12,7 +12,7 @@ export default function CheckoutSuccessScreen() {
   useEffect(() => { clearCart(); }, []);
 
   return (
-    <ScrollView style={{ backgroundColor: C.BG }} contentContainerStyle={{ flexGrow: 1 }}>
+    <ScrollView style={{ backgroundColor: 'transparent' }} contentContainerStyle={{ flexGrow: 1 }}>
       <View style={styles.container}>
         <Text style={styles.icon}>🎉</Text>
         <Text style={styles.title}>Order Confirmed!</Text>

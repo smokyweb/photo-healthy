@@ -9,7 +9,7 @@ export const LEGAL_CONTENT = {
       { heading: 'Content', body: 'By uploading photos to Photo Healthy, you grant us a non-exclusive license to display your content on the platform. You retain full ownership of your photos.' },
       { heading: 'Pro Membership', body: 'Pro memberships are billed monthly. You may cancel at any time. Refunds are provided at our discretion.' },
       { heading: 'Prohibited Conduct', body: 'You may not upload illegal, harmful, or offensive content. Violations may result in account termination.' },
-      { heading: 'Contact', body: 'For questions about these Terms, contact us at hello@photohealthy.com' },
+      { heading: 'Contact', body: 'For questions about these Terms, please use the Contact page.' },
     ],
   },
   privacy: {
@@ -22,7 +22,7 @@ export const LEGAL_CONTENT = {
       { heading: 'Cookies', body: 'We use cookies to maintain your session and improve user experience. You can disable cookies in your browser settings.' },
       { heading: 'Third Parties', body: 'We do not sell your personal information. We use Stripe for payment processing, which has its own privacy policy.' },
       { heading: 'Data Retention', body: 'We retain your data while your account is active. You may request account deletion by contacting us.' },
-      { heading: 'Contact', body: 'For privacy questions, contact us at hello@photohealthy.com' },
+      { heading: 'Contact', body: 'For privacy questions, including GDPR-related requests, please use the Contact page or email Privacy@photohealthy.com.' },
     ],
   },
   guidelines: {

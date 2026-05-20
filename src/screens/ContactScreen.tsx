@@ -144,7 +144,10 @@ export default function ContactScreen() {
             <Text style={styles.infoCardTitle}>Get in Touch</Text>
             <View style={styles.infoRow}>
               <Text style={styles.infoIcon}>📧</Text>
-              <Text style={styles.infoText}>hello@photohealthy.com</Text>
+              <View>
+                <Text style={styles.infoText}>hello@photohealthy.com</Text>
+                <Text style={styles.infoText}>Privacy@photohealthy.com</Text>
+              </View>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoIcon}>⏰</Text>
@@ -161,6 +164,13 @@ export default function ContactScreen() {
             <Text style={styles.infoNote}>
               Follow us on social media for tips, inspiration, and community updates.
             </Text>
+            <GradientButton
+              label="View Community"
+              onPress={() => navigation.navigate('Main' as never, { screen: 'CommunityTab' } as never)}
+              variant="primary"
+              size="sm"
+              style={styles.communityBtn}
+            />
             <View style={styles.socialRow}>
               <GradientButton
                 label="Facebook"
@@ -277,4 +287,5 @@ const styles = StyleSheet.create({
   },
   socialRow: { flexDirection: 'row', gap: 10 },
   socialBtn: { flex: 1 },
+  communityBtn: { marginBottom: 12 },
 });

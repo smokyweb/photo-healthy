@@ -28,7 +28,7 @@ const BG_COLORS = {
   primary: '#F55B09',
   secondary: '#FFD000',
   teal: '#54DFB6',
-  danger: C.DANGER,
+  danger: '#991B1B',
   outline: 'transparent',
   'outline-teal': 'transparent',
 };
@@ -64,6 +64,7 @@ export default function GradientButton({
     // Outline styles
     ...(variant === 'outline' ? { borderWidth: 1.5, borderColor: C.ORANGE } : {}),
     ...(variant === 'outline-teal' ? { borderWidth: 1.5, borderColor: C.TEAL } : {}),
+    ...(variant === 'danger' ? { borderWidth: 1.5, borderColor: '#FCA5A5' } : {}),
   };
 
   const labelColor =

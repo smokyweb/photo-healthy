@@ -41,10 +41,13 @@ const IconGlyph = ({ name, color, size = 20 }: { name: string; color: string; si
   />
 );
 
-const FOOTER_ROUTES: Record<string, string> = {
+const FOOTER_ROUTES: Record<string, string | { screen: string; params?: any }> = {
   'About Us': 'About', 'FAQ': 'FAQ', 'Shop': 'Shop', 'Contact': 'Contact',
-  'Partners': 'Partners', 'Privacy Policy': 'Legal', 'Terms of Service': 'Legal',
-  'Community Guidelines': 'Legal', 'How It Works': 'HowItWorks',
+  'Partners': 'Partners',
+  'Privacy Policy': { screen: 'Legal', params: { section: 'privacy' } },
+  'Terms of Service': { screen: 'Legal', params: { section: 'terms' } },
+  'Community Guidelines': { screen: 'Legal', params: { section: 'guidelines' } },
+  'How It Works': 'HowItWorks',
   'Gallery': 'Gallery', 'Sign Up': 'Register', 'Log In': 'Login',
 };
 
@@ -59,14 +62,20 @@ export default function AppFooter() {
   const FooterLink = ({ label }: { label: string }) => (
     <Pressable
       accessibilityRole="link"
-      onPress={() => { const r = FOOTER_ROUTES[label]; if (r) nav.navigate(r as never); }}
+      onPress={() => {
+        const r = FOOTER_ROUTES[label];
+        if (!r) return;
+        if (typeof r === 'string') nav.navigate(r as never);
+        else nav.navigate(r.screen as never, r.params as never);
+      }}
       style={({ hovered }: any) => [
         styles.linkTouch,
+        isMobile && styles.linkTouchMobile,
         hovered && styles.linkTouchHovered,
       ]}
     >
       {({ hovered }: any) => (
-        <Text style={[styles.link, hovered && styles.linkHovered]}>{label}</Text>
+        <Text style={[styles.link, isMobile && styles.linkMobile, hovered && styles.linkHovered]}>{label}</Text>
       )}
     </Pressable>
   );
@@ -88,7 +97,7 @@ export default function AppFooter() {
   );
 
   return (
-    <View style={styles.footer}>
+    <View style={[styles.footer, isMobile && styles.footerMobile]}>
       <View style={[styles.grid, isMobile && styles.gridMobile]}>
         {/* Brand */}
         <View style={[styles.brand, isMobile && styles.brandMobile]}>
@@ -99,19 +108,19 @@ export default function AppFooter() {
         </View>
 
         {/* Company */}
-        <View style={[styles.col, isMobile && styles.colMobile]}>
+        <View style={[styles.col, isMobile && styles.colMobile, isMobile && styles.companyColMobile]}>
           <Text style={styles.colTitle}>Company</Text>
           {COMPANY_LINKS.map(item => <FooterLink key={item} label={item} />)}
         </View>
 
         {/* Legal */}
-        <View style={[styles.col, isMobile && styles.colMobile]}>
+        <View style={[styles.col, isMobile && styles.colMobile, isMobile && styles.legalColMobile]}>
           <Text style={styles.colTitle}>Legal</Text>
           {LEGAL_LINKS.map(item => <FooterLink key={item} label={item} />)}
         </View>
 
         {/* Connect */}
-        <View style={[styles.col, isMobile && styles.colMobile]}>
+        <View style={[styles.col, isMobile && styles.colMobile, isMobile && styles.connectColMobile]}>
           <Text style={styles.colTitle}>Connect</Text>
           <View style={styles.socialRow}>
             <SocialLink name="instagram" label="Instagram" />
@@ -128,6 +137,8 @@ export default function AppFooter() {
 
 const styles = StyleSheet.create({
   footer: {
+    width: '100%',
+    alignSelf: 'stretch',
     backgroundColor: C.NAV_BG,
     paddingHorizontal: 36,
     paddingTop: 42,
@@ -141,10 +152,15 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     alignItems: 'flex-start',
   },
+  footerMobile: {
+    paddingHorizontal: 24,
+    paddingTop: 34,
+    paddingBottom: 34,
+  },
   gridMobile: {
     flexDirection: 'column',
     alignItems: 'stretch',
-    gap: 24,
+    gap: 0,
   },
   brand: {
     flex: 1.45,
@@ -154,7 +170,8 @@ const styles = StyleSheet.create({
     flex: 0,
     maxWidth: '100%' as any,
     width: '100%' as any,
-    minHeight: 92,
+    minHeight: 86,
+    marginBottom: 24,
   },
   brandTitle: {
     color: C.TEXT,
@@ -176,7 +193,16 @@ const styles = StyleSheet.create({
     flex: 0,
     width: '100%' as any,
     minWidth: 0,
-    minHeight: 150,
+    marginBottom: 18,
+  },
+  companyColMobile: {
+    minHeight: 202,
+  },
+  legalColMobile: {
+    minHeight: 142,
+  },
+  connectColMobile: {
+    minHeight: 58,
   },
   colTitle: {
     color: C.TEXT,
@@ -190,12 +216,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 18,
   },
+  linkMobile: {
+    fontSize: 14,
+    lineHeight: 22,
+  },
   linkTouch: {
     alignSelf: 'flex-start',
     paddingVertical: 2,
     marginBottom: 3,
     cursor: 'pointer',
   } as any,
+  linkTouchMobile: {
+    width: '100%' as any,
+    minHeight: 26,
+    justifyContent: 'center',
+    marginBottom: 4,
+    paddingVertical: 1,
+  },
   linkTouchHovered: {
     transform: [{ translateX: 2 }],
   },

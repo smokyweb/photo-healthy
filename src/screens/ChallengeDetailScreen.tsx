@@ -11,6 +11,7 @@ import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
 import { C, borderRadius } from '../theme';
+import { normalizeChallengeCategory, normalizeFeelingCategory, normalizeMovementCategory } from '../constants/taxonomy';
 
 const BASE = 'https://photoai.betaplanets.com';
 const fullUrl = (url?: string | null) =>
@@ -151,6 +152,11 @@ export default function ChallengeDetailScreen() {
   const hasPartner = !!challenge.partner_url;
   const isEnrolled = !!enrollment?.enrolled;
   const userChallenge = enrollment?.user_challenge;
+  const userChallengeStatus = userChallenge?.status || challenge.user_challenge?.status;
+  const hasSubmitted = userChallengeStatus === 'completed' || !!userChallenge?.has_submission || !!challenge.user_challenge?.has_submission;
+  const categoryLabel = normalizeChallengeCategory(challenge.category);
+  const feelingLabel = normalizeFeelingCategory(challenge.feeling_category || challenge.feeling_tag);
+  const movementLabel = normalizeMovementCategory(challenge.movement_category || challenge.movement_tag);
   const personalDaysLeft = userChallenge ? Math.max(0, userChallenge.days_remaining ?? 0) : null;
   const personalDeadlineExpired = isEnrolled && userChallenge && userChallenge.days_remaining < 0;
 
@@ -172,11 +178,7 @@ export default function ChallengeDetailScreen() {
     >
       {/* Back button */}
       <TouchableOpacity onPress={() => {
-          if (navigation.canGoBack()) {
-            navigation.goBack();
-          } else {
-            navigation.navigate('Main' as never, { screen: 'ChallengesTab' } as never);
-          }
+          navigation.navigate('Main' as never, { screen: 'ChallengesTab' } as never);
         }} style={styles.backBtn}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
@@ -216,19 +218,16 @@ export default function ChallengeDetailScreen() {
           {/* 2Ã—2 stats grid */}
           <View style={styles.statsGrid}>
             {[
-              { label: 'Category', val: challenge.category || 'â€”' },
+              { label: 'Category', val: categoryLabel },
               {
                 label: 'Feeling',
-                val: challenge.feeling_category || challenge.feeling_tag || 'â€”',
+                val: feelingLabel,
               },
               {
                 label: 'Movement',
-                val: challenge.movement_category || challenge.movement_tag || 'â€”',
+                val: movementLabel,
               },
-              {
-                label: daysLeft !== null ? 'Submissions End' : 'Status',
-                val: daysLeft !== null ? String(daysLeft) : (challenge.status || 'â€”'),
-              },
+              { label: 'Days Left', val: daysLeft !== null ? String(daysLeft) : '—' },
             ].map(({ label, val }) => (
               <View key={label} style={styles.statItem}>
                 <Text style={styles.statLabel}>{label}</Text>
@@ -238,16 +237,16 @@ export default function ChallengeDetailScreen() {
           </View>
 
           {/* Participants */}
-          {challenge.submission_count !== undefined && (
+          {(challenge.participant_count !== undefined || challenge.submission_count !== undefined) && (
             <Text style={styles.participantsText}>
-              👥 {challenge.submission_count} participants
+              👥 {challenge.participant_count ?? challenge.submission_count ?? 0} participants
             </Text>
           )}
 
           {/* Enrollment / Submit flow */}
           {isActive && !isEnrolled && (
             <GradientButton
-              label={enrolling ? 'Joining...' : challenge?.is_pro_only && !isPro ? '⭐ Pro Members Only' : '🏁 Enter Challenge'}
+              label={enrolling ? 'Joining...' : challenge?.is_pro_only && !isPro ? 'Pro Members Only' : 'Join Challenge'}
               variant={challenge?.is_pro_only && !isPro ? 'outline' : 'primary'}
               onPress={handleEnterChallenge}
               loading={enrolling}
@@ -255,7 +254,15 @@ export default function ChallengeDetailScreen() {
               style={styles.actionBtn}
             />
           )}
-          {isActive && isEnrolled && !personalDeadlineExpired && (
+          {isActive && isEnrolled && hasSubmitted && (
+            <GradientButton
+              label="Challenge Completed"
+              variant="outline-teal"
+              onPress={() => {}}
+              style={styles.actionBtn}
+            />
+          )}
+          {isActive && isEnrolled && !hasSubmitted && !personalDeadlineExpired && (
             <>
               <View style={styles.daysLeftBadge}>
                 <Text style={styles.daysLeftText}>📅 Your personal deadline: {personalDaysLeft} day{personalDaysLeft !== 1 ? 's' : ''} left</Text>

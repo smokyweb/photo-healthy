@@ -9,18 +9,19 @@ import {
   adminGetDashboardStats, adminGetUsers, adminGetSettings, adminUpdateSettings,
   adminGetProducts, createProduct, updateProduct, deleteProduct,
   getChallenges, createChallenge, updateChallenge, deleteChallenge,
-  getSubmissions, deleteSubmission, deleteComment,
-  adminGetOrders, adminMarkOrderPaid, adminProcessOrder, adminFulfillOrder, adminUpdateTracking, deleteUser, updateUser,
+  deleteSubmission, deleteComment, updateComment, getComments,
+  adminGetOrders, adminMarkOrderPaid, adminProcessOrder, adminFulfillOrder, adminUpdateTracking, deleteUser, updateUser, adminSuspendUser,
   adminGetTaxonomy, adminUpdateTaxonomy,
-  adminGetActivity, adminGetUserSubmissions, adminGetUserComments, adminGetUserOrders, adminCreateUser,
+  adminGetActivity, adminGetUserSubmissions, adminGetUserComments, adminGetUserOrders, adminCreateUser, adminResetPassword,
   uploadPhoto,
 } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Input from '../components/Input';
 import { C, borderRadius } from '../theme';
+import { DEFAULT_TAXONOMY } from '../constants/taxonomy';
 
-const TABS = ['Dashboard', 'Challenges', 'Users', 'Submissions', 'Products', 'Orders', 'Settings', 'Taxonomy'];
+const TABS = ['Dashboard', 'Challenges', 'Users', 'Feed', 'Products', 'Orders', 'Settings', 'Taxonomy'];
 
 export default function AdminScreen() {
   const navigation = useNavigation<any>();
@@ -75,7 +76,7 @@ export default function AdminScreen() {
     challenge_categories: string[];
     feeling_categories: string[];
     movement_categories: string[];
-  }>({ challenge_categories: [], feeling_categories: [], movement_categories: [] });
+  }>(DEFAULT_TAXONOMY);
   const [newTaxonomyItem, setNewTaxonomyItem] = useState({ challenge: '', feeling: '', movement: '' });
   const [savingTaxonomy, setSavingTaxonomy] = useState(false);
 
@@ -108,9 +109,6 @@ export default function AdminScreen() {
     return (
       <View style={[styles.screen, { justifyContent: 'center', alignItems: 'center', flex: 1 }]}>
         <Text style={{ fontSize: 48, marginBottom: 16 }}>🔒</Text>
-        <Text style={{ color: C.TEXT, fontSize: 13, lineHeight: 20 }}>
-                        {[o.customer_name || o.user_name, addr.line1, addr.line2, [addr.city, addr.state].filter(Boolean).join(', ') + ' ' + (addr.postal_code||''), addr.country].filter(Boolean).join('\n')}
-                      </Text>
         <Text style={{ color: C.TEXT_MUTED, marginBottom: 24 }}>Admin access required.</Text>
         <GradientButton label="Go Back" onPress={() => navigation.goBack()} variant="outline" />
       </View>
@@ -129,7 +127,7 @@ export default function AdminScreen() {
         case 'Challenges': {
           const [chalData, taxData] = await Promise.all([getChallenges(), adminGetTaxonomy()]);
           setChallenges(chalData?.challenges || chalData || []);
-          setTaxonomy(taxData || taxonomy);
+          setTaxonomy(DEFAULT_TAXONOMY);
           break;
         }
         case 'Users': {
@@ -137,7 +135,7 @@ export default function AdminScreen() {
           setUsers(data?.users || data || []);
           break;
         }
-        case 'Submissions': {
+        case 'Feed': {
           const data = await adminGetActivity();
           setActivityItems(data?.items || []);
           break;
@@ -159,7 +157,7 @@ export default function AdminScreen() {
         }
         case 'Taxonomy': {
           const data = await adminGetTaxonomy();
-          setTaxonomy(data || { challenge_categories: [], feeling_categories: [], movement_categories: [] });
+          setTaxonomy(DEFAULT_TAXONOMY);
           break;
         }
       }
@@ -222,7 +220,7 @@ export default function AdminScreen() {
         <View style={styles.statsGrid}>
           {[
             { label: 'Total Users', value: stats.users?.total ?? 0, icon: '👥', tab: 'Users' as const },
-            { label: 'Submissions', value: stats.today?.submissions ?? 0, icon: '📷', tab: 'Submissions' as const },
+            { label: 'Feed', value: stats.today?.submissions ?? 0, icon: '📷', tab: 'Feed' as const },
             { label: 'Challenges', value: challenges.length || 0, icon: '🏆', tab: 'Challenges' as const },
             { label: 'Pro Members', value: stats.users?.pro ?? 0, icon: '⭐', tab: 'Users' as const },
             { label: 'Orders Today', value: stats.today?.orders ?? 0, icon: '📦', tab: 'Orders' as const },
@@ -292,6 +290,7 @@ export default function AdminScreen() {
       setProductSaveMsg('Error: Challenge title is required');
       return;
     }
+    const singleValue = (value?: string) => (value || '').split(',')[0].trim();
     try {
       let imageUrl = challengeForm.cover_image_url;
       if (challengeImgFile) {
@@ -303,6 +302,9 @@ export default function AdminScreen() {
       const payload = {
         ...challengeForm,
         cover_image_url: imageUrl || null,
+        category: singleValue(challengeForm.category),
+        feeling_category: singleValue(challengeForm.feeling_category),
+        movement_category: singleValue(challengeForm.movement_category),
         duration_days: parseInt(challengeForm.duration_days) || 30,
         global_end_date: challengeForm.global_end_date || null,
         start_date: challengeForm.start_date || null,
@@ -414,7 +416,7 @@ export default function AdminScreen() {
               </TouchableOpacity>
             ))}
           </ScrollView>
-          <Input label="" value={challengeForm.category} onChangeText={v => setChallengeForm(f => ({ ...f, category: v }))} placeholder="Or type custom category..." />
+          <Input label="" value={challengeForm.category} onChangeText={v => setChallengeForm(f => ({ ...f, category: v }))} placeholder="Select a category above" />
           <Text style={styles.fieldGroupLabel}>Feeling Category</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={true} persistentScrollbar style={{ marginBottom: 4 }}>
             {(taxonomy.feeling_categories || []).map(cat => (
@@ -427,7 +429,7 @@ export default function AdminScreen() {
               </TouchableOpacity>
             ))}
           </ScrollView>
-          <Input label="" value={challengeForm.feeling_category} onChangeText={v => setChallengeForm(f => ({ ...f, feeling_category: v }))} placeholder="Or type custom feeling..." />
+          <Input label="" value={challengeForm.feeling_category} onChangeText={v => setChallengeForm(f => ({ ...f, feeling_category: v }))} placeholder="Select a feeling above" />
           <Text style={styles.fieldGroupLabel}>Movement Category</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={true} persistentScrollbar style={{ marginBottom: 4 }}>
             {(taxonomy.movement_categories || []).map(cat => (
@@ -440,7 +442,7 @@ export default function AdminScreen() {
               </TouchableOpacity>
             ))}
           </ScrollView>
-          <Input label="" value={challengeForm.movement_category} onChangeText={v => setChallengeForm(f => ({ ...f, movement_category: v }))} placeholder="Or type custom movement..." />
+          <Input label="" value={challengeForm.movement_category} onChangeText={v => setChallengeForm(f => ({ ...f, movement_category: v }))} placeholder="Select a movement above" />
           <View style={styles.switchRow}>
             <Text style={styles.switchLabel}>Pro Only</Text>
             <Switch value={challengeForm.is_pro_only} onValueChange={v => setChallengeForm(f => ({ ...f, is_pro_only: v }))} trackColor={{ true: C.ORANGE }} />
@@ -548,6 +550,30 @@ export default function AdminScreen() {
     ]);
   };
 
+  const handleSuspendUser = (u: any) => {
+    const nextSuspended = !u.is_suspended;
+    const action = nextSuspended ? 'Block' : 'Unblock';
+    const reason = nextSuspended ? 'Blocked by admin' : '';
+    Alert.alert(action + ' User', action + ' ' + u.name + '?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: action,
+        style: nextSuspended ? 'destructive' : 'default',
+        onPress: async () => {
+          try {
+            await adminSuspendUser(u.id, nextSuspended, reason);
+            const updated = { ...u, is_suspended: nextSuspended, suspended_reason: reason || null };
+            setUsers(us => us.map(usr => usr.id === u.id ? updated : usr));
+            setSelectedUser(updated);
+            Alert.alert('Updated', u.name + (nextSuspended ? ' is blocked.' : ' is unblocked.'));
+          } catch (e: any) {
+            Alert.alert('Error', e.message);
+          }
+        },
+      },
+    ]);
+  };
+
   const renderUserDetail = () => {
     const u = selectedUser;
     const tabs: Array<'Submissions'|'Orders'|'Comments'> = ['Submissions', 'Orders', 'Comments'];
@@ -564,6 +590,7 @@ export default function AdminScreen() {
             <View style={styles.detailChip}><Text style={styles.detailChipLabel}>ID</Text><Text style={styles.detailChipValue}>#{u.id}</Text></View>
             <View style={styles.detailChip}><Text style={styles.detailChipLabel}>Plan</Text><Text style={[styles.detailChipValue, { color: u.subscription_status === 'active' ? C.TEAL : C.TEXT }]}>{u.subscription_status || 'free'}</Text></View>
             <View style={styles.detailChip}><Text style={styles.detailChipLabel}>Role</Text><Text style={[styles.detailChipValue, { color: u.is_admin ? C.ORANGE : C.TEXT }]}>{u.is_admin ? 'Admin' : u.role || 'user'}</Text></View>
+            <View style={styles.detailChip}><Text style={styles.detailChipLabel}>Status</Text><Text style={[styles.detailChipValue, { color: u.is_suspended ? C.DANGER : C.TEAL }]}>{u.is_suspended ? 'Blocked' : 'Active'}</Text></View>
             <View style={styles.detailChip}><Text style={styles.detailChipLabel}>Joined</Text><Text style={styles.detailChipValue}>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}</Text></View>
           </View>
           <Text style={styles.detailRow}><Text style={styles.detailLabel}>Name: </Text>{u.name}</Text>
@@ -632,6 +659,7 @@ export default function AdminScreen() {
               }}
             />
             {!u.is_admin && <GradientButton label="👑 Make Admin" variant="outline" size="sm" onPress={() => handlePromoteAdmin(u.id, u.name)} />}
+            {!u.is_admin && <GradientButton label={u.is_suspended ? 'Unblock User' : 'Block User'} variant={u.is_suspended ? 'outline' : 'danger'} size="sm" onPress={() => handleSuspendUser(u)} />}
             <GradientButton label="🗑 Delete" variant="danger" size="sm" onPress={() => { setSelectedUser(null); handleDeleteUser(u.id, u.name); }} />
           </View>
         )}
@@ -667,7 +695,7 @@ export default function AdminScreen() {
                 const normalized = { ...s, image_url: s.image_url || s.photo1_url };
                 setSelectedSubmission(normalized);
                 loadSubmissionComments(s.id);
-                setActiveTab('Submissions');
+                setActiveTab('Feed');
               }}
             >
               {s.photo1_url ? (
@@ -865,13 +893,8 @@ export default function AdminScreen() {
   const loadSubmissionComments = async (submissionId: number) => {
     setLoadingSubmComments(true);
     try {
-      const data = await adminGetUserComments(submissionId); // reuse this to get comments for a submission
-      // Actually call the public comments endpoint
-      const resp = await fetch('https://photoai.betaplanets.com/api/comments?submission_id=' + submissionId, {
-        headers: { Authorization: 'Bearer ' + (await import('../services/api').then(m => m.getToken())) || '' }
-      });
-      const d = await resp.json();
-      setSubmissionComments(d.comments || []);
+      const data = await getComments(submissionId);
+      setSubmissionComments(data.comments || data || []);
     } catch (e: any) {
       console.error('Failed to load comments:', e.message);
       setSubmissionComments([]);
@@ -890,13 +913,11 @@ export default function AdminScreen() {
   const handleSaveCommentEdit = async (commentId: number, newText: string) => {
     if (!newText.trim()) return;
     try {
-      await request('PATCH', '/api/comments/' + commentId, { text: newText });
+      await updateComment(commentId, newText);
       setSubmissionComments(cs => cs.map(c => c.id === commentId ? { ...c, text: newText } : c));
       setEditingComment(null);
-    } catch {
-      // If patch not available, just update locally
-      setSubmissionComments(cs => cs.map(c => c.id === commentId ? { ...c, text: newText } : c));
-      setEditingComment(null);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Could not update comment.');
     }
   };
 
@@ -1074,7 +1095,10 @@ export default function AdminScreen() {
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📋 Content Timeline ({filtered.length})</Text>
+        <Text style={styles.sectionTitle}>Feed ({filtered.length})</Text>
+        <Text style={[styles.listItemSub, { marginBottom: 12 }]}>
+          Review photo submissions and comments here. Open a photo to edit/delete comments, or use Users to block an account.
+        </Text>
 
         <View style={styles.searchBar}>
           <TextInput
@@ -1782,9 +1806,9 @@ export default function AdminScreen() {
         onChangeText={v => setSettings((s: any) => ({ ...s, tagline: v }))}
       />
       <Input
-        label="Max Free Submissions Per Challenge"
-        value={String(settings.max_free_submissions ?? 3)}
-        onChangeText={v => setSettings((s: any) => ({ ...s, max_free_submissions: parseInt(v) || 3 }))}
+        label="Max Free Submissions Per Month"
+        value={String(settings.max_free_submissions ?? 50)}
+        onChangeText={v => setSettings((s: any) => ({ ...s, max_free_submissions: parseInt(v) || 50 }))}
         keyboardType="numeric"
       />
 
@@ -1868,7 +1892,7 @@ export default function AdminScreen() {
           const newUsers = stats.today?.logins ?? 0;
           const tabBadges: Record<string,number> = {
             Orders: pendingOrders,
-            Submissions: todaySubmissions,
+            Feed: todaySubmissions,
           };
           return TABS.map(tab => {
             const badge = tabBadges[tab] || 0;
@@ -1907,7 +1931,7 @@ export default function AdminScreen() {
           {activeTab === 'Dashboard' && renderDashboard()}
           {activeTab === 'Challenges' && renderChallenges()}
           {activeTab === 'Users' && renderUsers()}
-          {activeTab === 'Submissions' && renderSubmissions()}
+          {activeTab === 'Feed' && renderSubmissions()}
           {activeTab === 'Products' && renderProducts()}
           {activeTab === 'Orders' && renderOrders()}
           {activeTab === 'Settings' && renderSettings()}

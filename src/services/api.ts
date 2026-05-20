@@ -76,8 +76,9 @@ async function adminGet<T = any>(path: string): Promise<T> {
 // â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function adminPut<T = any>(path: string, body?: any): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: 'PUT',
+  const proxyPath = `/admin-api-proxy.php?path=${encodeURIComponent(path)}&method=PUT`;
+  const res = await fetch(`${BASE_URL}${proxyPath}`, {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
@@ -183,6 +184,12 @@ export const createComment = (data: any) =>
 
 export const deleteComment = (id: number) =>
   request('POST', `/api/comments/${id}/delete`);
+
+export const updateComment = (id: number, text: string) =>
+  request('POST', `/admin-api-proxy.php?path=/api/comments/${id}&method=PATCH`, { text });
+
+export const adminSuspendUser = (id: number, suspended: boolean, reason?: string) =>
+  request('POST', `/admin-api-proxy.php?path=/api/admin/users/${id}/suspend&method=POST`, { suspended, reason });
 
 // â”€â”€ Reports â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const createReport = (data: any) =>

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Alert, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { createCheckoutSession } from '../services/api';
 import GradientButton from '../components/GradientButton';
@@ -11,13 +10,11 @@ import { C, borderRadius } from '../theme';
 export default function CartScreen() {
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
-  const { user } = useAuth();
   const { items, removeItem, updateQuantity, clearCart, total, itemCount } = useCart();
   const [loading, setLoading] = useState(false);
   const isDesktop = width >= 900;
 
   const handleCheckout = async () => {
-    if (!user) { navigation.navigate('Login' as never); return; }
     setLoading(true);
     try {
       const data = await createCheckoutSession(items.map(i => ({ id: i.id, quantity: i.quantity, size: i.size || null })));

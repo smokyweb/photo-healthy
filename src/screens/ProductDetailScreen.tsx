@@ -42,13 +42,6 @@ export default function ProductDetailScreen() {
   const isPro = user?.subscription_status === 'active' || user?.role === 'pro';
 
   const handleAddToCart = () => {
-    if (!user) {
-      Alert.alert('Sign In Required', 'Please sign in to add items to your cart.', [
-        { text: 'Cancel' },
-        { text: 'Sign In', onPress: () => navigation.navigate('Login') },
-      ]);
-      return;
-    }
     if (product.is_pro_only && !isPro) {
       Alert.alert('Pro Members Only', 'Upgrade to Pro to purchase this item.', [
         { text: 'Cancel' },

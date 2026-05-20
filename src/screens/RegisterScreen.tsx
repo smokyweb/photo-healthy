@@ -134,6 +134,24 @@ const RegisterScreen = ({ navigation }: any) => {
             </TouchableOpacity>
           </View>
 
+          <Text style={styles.termsText}>
+            By signing up, you agree to our{' '}
+            <Text
+              style={styles.termsLink}
+              onPress={() => navigation.navigate('Legal' as never, { section: 'terms' } as never)}
+            >
+              Terms of Service
+            </Text>
+            {' '}and{' '}
+            <Text
+              style={styles.termsLink}
+              onPress={() => navigation.navigate('Legal' as never, { section: 'privacy' } as never)}
+            >
+              Privacy Policy
+            </Text>
+            .
+          </Text>
+
           <TouchableOpacity
             style={[styles.backHomeBtn, !isDesktop && styles.backHomeBtnInFlow]}
             onPress={() => navigation.navigate('Main')}
@@ -349,6 +367,18 @@ const styles = StyleSheet.create({
     fontFamily: 'Lexend',
     fontWeight: '800',
     fontStyle: 'normal',
+  },
+  termsText: {
+    color: '#AEB6C8',
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginTop: 18,
+  },
+  termsLink: {
+    color: '#54DFB6',
+    fontWeight: '800',
+    textDecorationLine: 'underline',
   },
 });
 

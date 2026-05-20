@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { getSubmission, getComments, createComment, likeSubmission, deleteComment } from '../services/api';
+import { getSubmission, getComments, createComment, likeSubmission, deleteComment, createReport } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
@@ -105,6 +105,31 @@ export default function SubmissionDetailScreen() {
     setPosting(false);
   };
 
+  const handleReport = () => {
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please sign in to report submissions.', [
+        { text: 'Log In', onPress: () => navigation.navigate('Login' as never) },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+      return;
+    }
+    Alert.alert('Report Submission', 'Send this submission to the moderation team?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Report',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await createReport({ type: 'submission', target_id: submissionId, reason: 'Reported by user' });
+            Alert.alert('Report submitted', 'Thanks. Our team will review it.');
+          } catch (e: any) {
+            Alert.alert('Error', e.message || 'Could not submit report.');
+          }
+        },
+      },
+    ]);
+  };
+
   const handleDeleteComment = async (commentId: number) => {
     // Use window.confirm on web for reliable cross-browser support
     const confirmed = typeof window !== 'undefined' && window.confirm
@@ -188,17 +213,6 @@ export default function SubmissionDetailScreen() {
             <Text style={styles.description}>{submission.description}</Text>
           ) : null}
 
-          {/* Challenge tag */}
-          {submission.challenge_title ? (
-            <TouchableOpacity
-              style={styles.challengeTag}
-              onPress={() => { if (submission.challenge_id) navigation.navigate('ChallengeDetail' as never, { challengeId: submission.challenge_id, id: submission.challenge_id } as never); }}
-              activeOpacity={0.75}
-            >
-              <Text style={styles.challengeTagText}>{'🏆'} {submission.challenge_title}  →</Text>
-            </TouchableOpacity>
-          ) : null}
-
           {/* Actions */}
           <View style={styles.actions}>
             <TouchableOpacity style={styles.actionBtn} onPress={handleLike} activeOpacity={0.7}>
@@ -209,6 +223,9 @@ export default function SubmissionDetailScreen() {
               <Text style={styles.actionIcon}>{'\uD83D\uDCAC'}</Text>
               <Text style={styles.actionCount}>{comments.length}</Text>
             </View>
+            <TouchableOpacity style={styles.reportBtn} onPress={handleReport} activeOpacity={0.75}>
+              <Text style={styles.reportText}>Report</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.divider} />
@@ -341,22 +358,22 @@ const styles = StyleSheet.create({
   },
   description: { color: C.TEXT_SECONDARY, fontSize: 15, lineHeight: 23, marginBottom: 12 },
 
-  challengeTag: {
-    alignSelf: 'flex-start',
-    backgroundColor: C.ORANGE + '22',
-    borderWidth: 1, borderColor: C.ORANGE + '55',
-    borderRadius: borderRadius.pill,
-    paddingHorizontal: 12, paddingVertical: 5,
-    marginBottom: 14,
-  },
-  challengeTagText: { color: C.ORANGE, fontSize: 12, fontWeight: '600' },
-
   actions: {
-    flexDirection: 'row', gap: 20, paddingVertical: 12,
+    flexDirection: 'row', gap: 20, paddingVertical: 12, alignItems: 'center',
   },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   actionIcon: { fontSize: 22 },
   actionCount: { color: C.TEXT_SECONDARY, fontSize: 15, fontWeight: '600' },
+  reportBtn: {
+    marginLeft: 'auto',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    borderRadius: borderRadius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(153, 27, 27, 0.14)',
+  },
+  reportText: { color: '#FCA5A5', fontSize: 12, fontWeight: '800' },
 
   divider: { height: 1, backgroundColor: C.CARD_BORDER, marginVertical: 16 },
 

@@ -12,9 +12,11 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { getAssetByID } from 'react-native-web/dist/modules/AssetRegistry';
 import { useAuth } from '../context/AuthContext';
 import * as api from '../services/api';
 import { getPublicSettings } from '../services/api';
+import AppFooter from '../components/AppFooter';
 import { C } from '../theme';
 
 const LOGO_IMG = require('../../assets/29c8c384-1bd0-11f1-ad58-a2ad5845d919.png');
@@ -154,17 +156,23 @@ const calcStreak = (submissions: any[], userId: number): number => {
   return streak;
 };
 
-const FOOTER_NAV_MAP: Record<string, string> = {
+const FOOTER_NAV_MAP: Record<string, string | { screen: string; params?: any }> = {
   'About Us': 'About', 'FAQ': 'FAQ', 'Shop': 'Shop', 'Contact': 'Contact',
-  'Partners': 'Partners', 'Privacy Policy': 'Legal', 'Terms of Service': 'Legal',
-  'Cookie Policy': 'Legal', 'GDPR': 'Legal', 'How It Works': 'HowItWorks',
+  'Partners': 'Partners',
+  'Privacy Policy': { screen: 'Legal', params: { section: 'privacy' } },
+  'Terms of Service': { screen: 'Legal', params: { section: 'terms' } },
+  'Community Guidelines': { screen: 'Legal', params: { section: 'guidelines' } },
+  'How It Works': 'HowItWorks',
   'Gallery': 'Gallery', 'Sign Up': 'Register', 'Log In': 'Login',
 };
-let _footerNavFn: ((route: string) => void) | null = null;
-const setFooterNav = (fn: (route: string) => void) => { _footerNavFn = fn; };
+let _footerNavFn: ((route: string, params?: any) => void) | null = null;
+const setFooterNav = (fn: (route: string, params?: any) => void) => { _footerNavFn = fn; };
 const goFooterLink = (label: string) => {
   const route = FOOTER_NAV_MAP[label];
-  if (route && _footerNavFn) _footerNavFn(route);
+  if (route && _footerNavFn) {
+    if (typeof route === 'string') _footerNavFn(route);
+    else _footerNavFn(route.screen, route.params);
+  }
 };
 const goPlaceholderLink = () => {};
 
@@ -264,7 +272,7 @@ const HomeBottomSections = ({ isMobile, onHowItWorksLayout, onHowItWorksPress }:
 
           <View style={[bottom.footerCol, isMobile && bottom.footerColMobile]}>
             <Text style={bottom.footerColTitle}>Legal</Text>
-            {['Privacy Policy', 'Terms of Service', 'Cookie Policy', 'GDPR'].map((item) => (
+            {['Privacy Policy', 'Terms of Service', 'Community Guidelines'].map((item) => (
               <FooterLink key={item} label={item} />
             ))}
           </View>
@@ -586,6 +594,178 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft,
   );
 };
 
+const assetUri = (source: any) => {
+  if (typeof source === 'number') {
+    const asset = getAssetByID(source);
+    if (!asset) return '';
+    return `${asset.httpServerLocation}/${asset.name}.${asset.type}`;
+  }
+  return typeof source === 'string' ? source : source?.uri || source?.src || source?.default || '';
+};
+
+const AssetView = ({ source, style, resizeMode = 'cover' }: { source: any; style: any; resizeMode?: 'cover' | 'contain' }) => {
+  const uri = assetUri(source);
+
+  return (
+    <View
+      style={[
+        style,
+        {
+          backgroundImage: uri ? `url("${uri}")` : undefined,
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: resizeMode,
+        } as any,
+      ]}
+    />
+  );
+};
+
+const SkySection = ({ children, style, alt = false, bgPosition = 'center', bgSize = 'cover' }: { children: React.ReactNode; style?: any; alt?: boolean; bgPosition?: string; bgSize?: string }) => {
+  const uri = assetUri(CITY_BG);
+  return (
+    <View
+      style={[
+        landing.skySection,
+        style,
+        {
+          backgroundImage: uri ? `url("${uri}")` : undefined,
+          backgroundPosition: bgPosition,
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: bgSize,
+        } as any,
+      ]}
+    >
+      <View style={[landing.skyTint, alt && landing.skyTintAlt]}>{children}</View>
+    </View>
+  );
+};
+
+const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation, isMobile }: any) => {
+  const fallbackShareItems = [
+    { id: 'local-1', user_name: 'Skyline', challenge_title: 'Color after dusk', _localPhoto: PHOTO2_MOUNTAIN, like_count: 93 },
+    { id: 'local-2', user_name: 'Renew', challenge_title: 'Morning portrait', _localPhoto: PHOTO7_OCEAN, like_count: 129 },
+    { id: 'local-3', user_name: 'Trailblazer', challenge_title: 'Small discoveries', _localPhoto: PHOTO3_FIELD, like_count: 84 },
+    { id: 'local-4', user_name: 'Mindful', challenge_title: 'Community light', _localPhoto: PHOTO8_ALLEY, like_count: 111 },
+  ];
+  const shareItems = (recent.length > 0 ? recent : fallbackShareItems).slice(0, 4);
+
+  const benefits = [
+    { title: 'You start small', body: 'Small guided photo actions create easy wellness moments.' },
+    { title: 'You feel momentum', body: 'Your wellness habit grows through gentle challenges.' },
+    { title: 'You belong', body: 'Your photos help shape a kind, shared community.' },
+  ];
+
+  return (
+    <View style={[landing.wrap, isMobile && landing.wrapMobile]}>
+      <SkySection style={[landing.heroSky, isMobile && landing.skySectionMobile]}>
+        <View style={[landing.hero, isMobile && landing.heroMobile]}>
+          <View style={[landing.heroCopy, isMobile && landing.heroCopyMobile]}>
+          <Text style={[landing.heroTitle, isMobile && landing.heroTitleMobile]}>
+            <Text style={landing.heroWelcome}>Welcome</Text>
+            {' '}
+            <Text style={landing.heroSomewhere}>somewhere</Text>
+            {' '}that feels{' '}
+            <Text style={landing.heroGoodTo}>good to</Text>
+            {' '}be
+          </Text>
+            <Text style={landing.heroText}>
+              Join a vibrant community of photographers sharing inspiring wellness moments and participating in fun photo challenges.
+            </Text>
+            <View style={[landing.heroActions, isMobile && landing.heroActionsMobile]}>
+              <TouchableOpacity style={landing.primaryBtn} onPress={() => navigation.navigate('Register')}>
+                <Text style={landing.primaryBtnText}>Get Started</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={landing.secondaryBtn} onPress={() => navigation.navigate('HowItWorks')}>
+                <Text style={landing.secondaryBtnText}>Learn More</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={[landing.heroArt, isMobile && landing.heroArtMobile]}>
+            <AssetView source={LOGO_IMG} style={[landing.heroPhone, isMobile && landing.heroPhoneMobile]} resizeMode="contain" />
+          </View>
+        </View>
+      </SkySection>
+
+      {featured && (
+        <SkySection style={isMobile && landing.skySectionMobile} bgPosition="center 99%" bgSize="130% auto" alt>
+            <View style={landing.challengePanel}>
+              <View style={landing.challengeHeaderRow}>
+                <AssetView source={LOGO_IMG} style={landing.challengeIcon} resizeMode="contain" />
+                <Text style={landing.challengeKicker}>Photo Challenge</Text>
+              </View>
+              <View style={[landing.challengeBody, isMobile && landing.challengeBodyMobile]}>
+                <View style={landing.challengeInfo}>
+              <Text style={landing.challengeTitle}>{featured.title || 'Current Photo Challenge'}</Text>
+              <View style={[landing.metaRow, isMobile && landing.metaRowMobile]}>
+                <Text style={landing.metaText}>Category: {featured.category || 'Photo Challenge'}</Text>
+                <Text style={landing.metaText}>Submissions: {featured.submission_count || submissions.length || 132}</Text>
+                <Text style={landing.metaText}>Ends: {daysLeft || 4}d</Text>
+                  </View>
+                  <TouchableOpacity style={landing.submitBtn} onPress={() => navigation.navigate('Register')}>
+                    <Text style={landing.submitBtnText}>Submit Your Photo</Text>
+                  </TouchableOpacity>
+                </View>
+                <AssetView
+                  source={featured.cover_image_url ? { uri: fullUrl(featured.cover_image_url) } : PHOTO1_CITY}
+                  style={landing.challengeImage}
+                  resizeMode="cover"
+                />
+              </View>
+            </View>
+        </SkySection>
+      )}
+
+      <SkySection style={isMobile && landing.skySectionMobile} bgPosition="center 108%" bgSize="135% auto">
+        <View style={landing.shareSection}>
+          <Text style={landing.sectionTitle}>Here's what people are sharing NOW</Text>
+          <View style={[landing.shareGrid, isMobile && landing.shareGridMobile]}>
+            {shareItems.map((item: any) => (
+              <TouchableOpacity key={item.id} style={landing.shareCard} onPress={() => navigation.navigate('Register')}>
+                <AssetView
+                  source={item._localPhoto || (item.photo1_url ? { uri: fullUrl(item.photo1_url) } : PHOTO2_MOUNTAIN)}
+                  style={landing.shareImage}
+                  resizeMode="cover"
+                />
+                <View style={landing.shareInfo}>
+                  <View style={landing.shareUserRow}>
+                    <View style={landing.shareAvatar}>
+                      <Text style={landing.shareAvatarText}>{(item.user_name || 'P')[0]}</Text>
+                    </View>
+                    <Text style={landing.shareUser} numberOfLines={1}>{item.user_name || 'Photo Healthy'}</Text>
+                  </View>
+                  <Text style={landing.shareCaption} numberOfLines={1}>{item.challenge_title || item.title || 'Wellness moment'}</Text>
+                  <Text style={landing.shareMeta}>{item.like_count || 0} likes</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <TouchableOpacity style={landing.browseBtn} onPress={() => navigation.navigate('Main' as never, { screen: 'CommunityTab' } as never)}>
+            <Text style={landing.browseBtnText}>Browse All</Text>
+          </TouchableOpacity>
+        </View>
+      </SkySection>
+
+      <SkySection style={isMobile && landing.skySectionMobile} bgPosition="center 124%" bgSize="140% auto" alt>
+        <View style={landing.benefits}>
+          <Text style={landing.sectionTitle}>What this becomes over time</Text>
+          <View style={[landing.benefitGrid, isMobile && landing.benefitGridMobile]}>
+            {benefits.map((item) => (
+              <View key={item.title} style={landing.benefitItem}>
+                <AssetView source={LOGO_IMG} style={landing.benefitIcon} resizeMode="contain" />
+                <Text style={landing.benefitTitle}>{item.title}</Text>
+                <Text style={landing.benefitBody}>{item.body}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </SkySection>
+      <AppFooter />
+    </View>
+  );
+};
+
 /* ========== MAIN HOME SCREEN ========== */
 const HomeScreen = () => {
   const navigation = useNavigation<any>();
@@ -604,7 +784,7 @@ const HomeScreen = () => {
         }
       })
       .catch(() => {});
-  }, []);  setFooterNav((r: string) => navigation.navigate(r as never));
+  }, []);  setFooterNav((r: string, params?: any) => navigation.navigate(r as never, params as never));
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
@@ -721,176 +901,410 @@ const HomeScreen = () => {
           quoteAuthor={quoteAuthor}
         />
       ) : (
-        /* ===== PUBLIC CONTENT (hero, stats, challenge, submissions, how-it-works) ===== */
-        <>
-          {/* ===== HERO SECTION ===== */}
-          <View
-            style={[
-              s.heroWrap,
-              s.heroWrapMobile,
-              s.publicHeroBg,
-              isMobile && s.publicHeroBgMobile,
-              !isMobile && s.publicHeroBgDesktop,
-            ]}
-          >
-            {publicHeroContent}
-          </View>
-
-          {/* ===== QUICK ACTIONS (Shop, Partners, How It Works) ===== */}
-          <View style={[s.section, !isMobile && s.desktopWidth, s.quickActionsSection]}>
-            <View style={[s.quickActionsGrid, isMobile && s.quickActionsGridMobile]}>
-              <Pressable
-                style={({ hovered }: any) => [s.quickActionCard, hovered && s.quickActionCardHovered]}
-                onPress={() => navigation.navigate('Shop')}
-              >
-                <IconGlyph name="shop" color={C.ORANGE} size={36} />
-                <Text style={s.quickActionTitle}>Shop</Text>
-                <Text style={s.quickActionDesc}>Browse photography gear</Text>
-              </Pressable>
-              <Pressable
-                style={({ hovered }: any) => [s.quickActionCard, hovered && s.quickActionCardHovered]}
-                onPress={() => navigation.navigate('Partners')}
-              >
-                <IconGlyph name="partners" color={C.ORANGE} size={36} />
-                <Text style={s.quickActionTitle}>Partners</Text>
-                <Text style={s.quickActionDesc}>View our partners</Text>
-              </Pressable>
-              <Pressable
-                style={({ hovered }: any) => [s.quickActionCard, hovered && s.quickActionCardHovered]}
-                onPress={() => navigation.navigate('HowItWorks')}
-              >
-                <IconGlyph name="how-it-works" color={C.ORANGE} size={36} />
-                <Text style={s.quickActionTitle}>How It Works</Text>
-                <Text style={s.quickActionDesc}>Learn how it works</Text>
-              </Pressable>
-            </View>
-          </View>
-
-          {/* Stats row */}
-          {/*
-          <View style={[s.section, !isMobile && s.desktopWidth, { marginTop: 0 }]}>
-            <View style={[s.statsRow, isMobile && { gap: 10 }]}>
-              <View style={s.statCard}>
-                <Text style={s.statNum}>{submissions.length || 27}</Text>
-                <Text style={s.statLabel}>Photos</Text>
-              </View>
-              <View style={s.statCard}>
-                <Text style={s.statNum}>5</Text>
-                <Text style={s.statLabel}>Following</Text>
-              </View>
-              <View style={s.statCard}>
-                <Text style={s.statNum}>148</Text>
-                <Text style={s.statLabel}>Members</Text>
-              </View>
-            </View>
-          </View>
-          */}
-
-          {/* ===== CURRENT CHALLENGE CARD ===== */}
-          {featured && (
-            <View style={[s.section, s.currentChallengeSection, !isMobile && s.desktopWidth]}>
-              <Text style={s.currentChallengeHeader}>Current Challenge</Text>
-              <Text style={s.currentChallengeSubtext}>
-                Pick a challenge —a simple, doable reason to move. Notice how it feels and through photos, share a moment you’ll want to remember and others to see. We’re in this together—let’s build a community collage of small wins, inspiring each other to do more!
-              </Text>
-              <View style={s.challengeCard}>
-                <Image
-                  source={featured.cover_image_url ? { uri: fullUrl(featured.cover_image_url) } : PHOTO9_CLOUDS}
-                  style={s.challengeImg}
-                  resizeMode="cover"
-                />
-                <View style={s.challengeLeft}>
-                  <Text style={s.challengeTitle}>{featured.title}</Text>
-                  <Text style={s.challengeDescription} numberOfLines={1}>
-                    {featured.description || 'Capture the essence of this challenge and share your unique perspective through photos.'}
-                  </Text>
-                  <View style={[s.challengeMetaRow, isMobile && { flexDirection: 'column', alignItems: 'flex-start', gap: 8 }]}>
-                    <Text style={s.challengeMetaLabel}>Challenge Category</Text>
-                    <Text style={s.challengeMeta}>Example Feeling</Text>
-                    <Text style={s.challengeMeta}>{featured.category || 'Example Movement'}</Text>
-                    <Text style={s.challengeMeta}>Participants: {featured.submission_count || submissions.length}</Text>
-                    <Text style={s.challengeMeta}>Days Left: {daysLeft}</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={s.submitBtn}
-                    onPress={() => navigation.navigate('Login')}
-                  >
-                    <Text style={s.submitBtnText}>Sign Up To Participate</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          )}
-
-          <View style={[s.publicQuoteBanner, !isMobile && s.desktopWidth]}>
-            <Text style={s.publicQuoteText}>
-              {motivationalQuote}
-            </Text>
-            {quoteAuthor ? <Text style={s.publicQuoteAuthor}>— {quoteAuthor}</Text> : null}
-          </View>
-
-          {/* ===== RECENT SUBMISSIONS ===== */}
-          <View style={[s.section, s.communitySection, !isMobile && s.desktopWidth]}>
-            <Text style={s.communityTitle}>
-              Recent Community Submissions
-            </Text>
-            <View style={[s.subGrid, isMobile && { gap: 12 }]}>
-              {recent.map((sub: any) => (
-                <TouchableOpacity
-                  key={sub.id}
-                  style={[s.subCard, !isMobile && s.subCardDesktop, isMobile && { width: '47%' as any }]}
-                  onPress={() => navigation.navigate('Register')}
-                >
-                  <Image source={{ uri: fullUrl(sub.photo1_url) }} style={s.subImg} />
-                  <View style={s.subInfo}>
-                    <View style={s.subUserRow}>
-                      <View style={s.subAvatar}>
-                        <Text style={s.subAvatarText}>
-                          {(sub.user_name || 'U')[0]}
-                        </Text>
-                      </View>
-                      <Text style={s.subUserName} numberOfLines={1}>
-                        @{(sub.user_name || 'unknown').toLowerCase().replace(/\s+/g, '')}
-                      </Text>
-                    </View>
-                    <Text style={s.subCategory} numberOfLines={1}>
-                      {sub.challenge_title || sub.category || 'Community Moment'}
-                    </Text>
-                    <View style={s.subStats}>
-                      <Text style={s.subStat}>❤️ {sub.like_count || 0}</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-            {recent.length === 0 && (
-              <View style={s.emptyState}>
-                <Text style={{ fontSize: 48 }}>📷</Text>
-                <Text style={s.emptyText}>No submissions yet</Text>
-              </View>
-            )}
-            {recent.length > 0 && (
-              <TouchableOpacity
-                style={s.communitySignUpBtn}
-                onPress={() => navigation.navigate('Register')}
-              >
-                <Text style={s.communitySignUpText}>Sign Up To See More</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <HomeBottomSections
-            isMobile={isMobile}
-            onHowItWorksLayout={(e) => { howItWorksY.current = e.nativeEvent.layout.y; }}
-            onHowItWorksPress={() => navigation.navigate('HowItWorks')}
-          />
-        </>
+        <PublicLandingHome
+          featured={featured}
+          submissions={submissions}
+          recent={recent}
+          daysLeft={daysLeft}
+          navigation={navigation}
+          isMobile={isMobile}
+        />
       )}
     </ScrollView>
   );
 };
 
 /* ========== PUBLIC / SHARED STYLES ========== */
+const landing = StyleSheet.create({
+  wrap: {
+    width: '100%' as any,
+    alignSelf: 'center',
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+  },
+  wrapMobile: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 92,
+  },
+  assetImage: {
+    width: '100%',
+    height: '100%',
+  },
+  assetFill: {
+    flex: 1,
+  },
+  skySection: {
+    width: '100%' as any,
+    overflow: 'hidden',
+    marginBottom: 0,
+    borderWidth: 0,
+    backgroundColor: '#08101F',
+  },
+  skySectionMobile: {
+    marginBottom: 0,
+  },
+  skyImage: {
+    opacity: 0.78,
+  },
+  skyImageAlt: {
+    opacity: 0.64,
+  },
+  skyTint: {
+    backgroundColor: 'rgba(5, 9, 20, 0.38)',
+    paddingHorizontal: 28,
+    paddingVertical: 24,
+  },
+  skyTintAlt: {
+    backgroundColor: 'rgba(5, 9, 20, 0.48)',
+  },
+  heroSky: {
+    borderWidth: 0,
+  },
+  hero: {
+    width: '100%' as any,
+    maxWidth: PAGE_MAX_WIDTH,
+    alignSelf: 'center',
+    minHeight: 330,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 24,
+  },
+  heroMobile: {
+    minHeight: 0,
+    flexDirection: 'column-reverse',
+    alignItems: 'center',
+    gap: 10,
+    paddingTop: 8,
+  },
+  heroCopy: {
+    flex: 1,
+    maxWidth: 500,
+    paddingLeft: 18,
+  },
+  heroCopyMobile: {
+    paddingLeft: 0,
+    maxWidth: '100%' as any,
+    alignItems: 'center',
+  },
+  heroTitle: {
+    ...type.heading,
+    color: '#FFFFFF',
+    fontSize: 38,
+    lineHeight: 43,
+    marginBottom: 12,
+    textShadowColor: 'rgba(0,0,0,0.38)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 10,
+  },
+  heroTitleMobile: {
+    fontSize: 30,
+    lineHeight: 36,
+    textAlign: 'center',
+  },
+  heroWelcome: {
+    color: C.ORANGE,
+  },
+  heroSomewhere: {
+    color: '#54DFB6',
+  },
+  heroGoodTo: {
+    color: '#FFD000',
+  },
+  heroText: {
+    ...type.subtext,
+    color: '#E5EAF5',
+    fontSize: 14,
+    lineHeight: 22,
+    maxWidth: 410,
+    marginBottom: 24,
+  },
+  heroActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  heroActionsMobile: {
+    justifyContent: 'center',
+  },
+  primaryBtn: {
+    minWidth: 144,
+    borderRadius: 7,
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    alignItems: 'center',
+    backgroundColor: C.ORANGE,
+    backgroundImage: ORANGE_GRADIENT,
+    shadowColor: C.ORANGE,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+  } as any,
+  primaryBtnText: {
+    ...type.button,
+    color: '#FFFFFF',
+    fontSize: 12,
+  },
+  secondaryBtn: {
+    minWidth: 118,
+    borderRadius: 7,
+    paddingVertical: 11,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.38)',
+    backgroundColor: 'rgba(4, 8, 18, 0.44)',
+  },
+  secondaryBtnText: {
+    ...type.button,
+    color: '#FFFFFF',
+    fontSize: 12,
+  },
+  heroArt: {
+    flex: 1,
+    minHeight: 300,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroArtMobile: {
+    minHeight: 230,
+    width: '100%' as any,
+  },
+  heroPhone: {
+    width: 560,
+    height: 410,
+  },
+  heroPhoneMobile: {
+    width: 340,
+    height: 265,
+  },
+  challengePanel: {
+    width: '100%' as any,
+    maxWidth: PAGE_MAX_WIDTH,
+    alignSelf: 'center',
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    borderWidth: 0,
+    padding: 20,
+    marginTop: 0,
+    marginBottom: 0,
+    shadowOpacity: 0,
+  } as any,
+  challengeHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  challengeIcon: {
+    width: 28,
+    height: 28,
+  },
+  challengeKicker: {
+    ...type.heading,
+    color: '#FFFFFF',
+    fontSize: 17,
+  },
+  challengeBody: {
+    flexDirection: 'row',
+    gap: 24,
+    alignItems: 'stretch',
+  },
+  challengeBodyMobile: {
+    flexDirection: 'column-reverse',
+    gap: 14,
+  },
+  challengeInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  challengeTitle: {
+    ...type.heading,
+    color: '#FFFFFF',
+    fontSize: 24,
+    lineHeight: 31,
+    marginBottom: 10,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginBottom: 17,
+  },
+  metaRowMobile: {
+    gap: 8,
+  },
+  metaText: {
+    ...type.subtext,
+    color: '#D5DEEF',
+    fontSize: 11,
+    lineHeight: 17,
+  },
+  submitBtn: {
+    width: 300,
+    maxWidth: '100%' as any,
+    borderRadius: 5,
+    paddingVertical: 12,
+    alignItems: 'center',
+    backgroundColor: C.ORANGE,
+    backgroundImage: 'linear-gradient(90deg, #FF6A00 0%, #FFD000 54%, #29B6E0 100%)',
+  } as any,
+  submitBtnText: {
+    ...type.button,
+    color: '#FFFFFF',
+    fontSize: 12,
+  },
+  challengeImage: {
+    width: 330,
+    minHeight: 164,
+    borderRadius: 6,
+    backgroundColor: 'rgba(5, 9, 20, 0.26)',
+  },
+  shareSection: {
+    width: '100%' as any,
+    maxWidth: PAGE_MAX_WIDTH,
+    alignSelf: 'center',
+    alignItems: 'center',
+    marginBottom: 0,
+  },
+  sectionTitle: {
+    ...type.heading,
+    color: '#FFFFFF',
+    fontSize: 23,
+    lineHeight: 30,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  shareGrid: {
+    width: '100%' as any,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 18,
+  },
+  shareGridMobile: {
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  shareCard: {
+    width: 170,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 6,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  shareImage: {
+    width: '100%' as any,
+    height: 112,
+    backgroundColor: '#111827',
+  },
+  shareInfo: {
+    padding: 8,
+  },
+  shareUserRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  shareAvatar: {
+    width: 17,
+    height: 17,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: C.ORANGE,
+  },
+  shareAvatarText: {
+    ...type.label,
+    color: '#FFFFFF',
+    fontSize: 9,
+  },
+  shareUser: {
+    ...type.label,
+    color: '#111827',
+    fontSize: 10,
+    flex: 1,
+  },
+  shareCaption: {
+    ...type.subtext,
+    color: '#334155',
+    fontSize: 9,
+    marginBottom: 5,
+  },
+  shareMeta: {
+    ...type.label,
+    color: '#F55B09',
+    fontSize: 9,
+  },
+  browseBtn: {
+    marginTop: 20,
+    minWidth: 150,
+    borderRadius: 6,
+    paddingVertical: 11,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    backgroundColor: C.ORANGE,
+    backgroundImage: 'linear-gradient(90deg, #FF6A00 0%, #FFD000 54%, #29B6E0 100%)',
+  } as any,
+  browseBtnText: {
+    ...type.button,
+    color: '#FFFFFF',
+    fontSize: 12,
+  },
+  benefits: {
+    width: '100%' as any,
+    maxWidth: PAGE_MAX_WIDTH,
+    alignSelf: 'center',
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 0,
+  },
+  benefitGrid: {
+    width: '100%' as any,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 46,
+  },
+  benefitGridMobile: {
+    flexDirection: 'column',
+    gap: 22,
+  },
+  benefitItem: {
+    flex: 1,
+    maxWidth: 250,
+    alignItems: 'center',
+  },
+  benefitIcon: {
+    width: 112,
+    height: 72,
+    marginBottom: 10,
+  },
+  benefitTitle: {
+    ...type.heading,
+    color: '#FFFFFF',
+    fontSize: 17,
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  benefitBody: {
+    ...type.subtext,
+    color: '#D5DEEF',
+    fontSize: 11,
+    lineHeight: 16,
+    textAlign: 'center',
+  },
+  copyright: {
+    ...type.subtext,
+    color: 'rgba(255,255,255,0.72)',
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+});
+
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: 'transparent' },
   desktopWidth: {

@@ -69,6 +69,45 @@ if (process.env.DB_SOCKET) {
 }
 const pool = mysql.createPool(dbConfig);
 
+const DEFAULT_TAXONOMY = {
+  challenge_categories: [
+    'Calm & Presence',
+    'Movement & Energy',
+    'Nature & Outdoors',
+    'Home & Everyday Life',
+    'Joy & Gratitude',
+    'Connection & Community',
+    'Creativity & Seeing Differently',
+    'Strength & Resilience',
+    'Reflection & Awareness',
+    'Place & Exploration',
+  ],
+  feeling_categories: [
+    'Joy',
+    'Love / Connection',
+    'Calm / Peace',
+    'Interest / Curiosity',
+    'Pride / Confidence',
+    'Reflection',
+    'Energy',
+    'Anticipation',
+    'Vulnerability',
+    'Renewal',
+  ],
+  movement_categories: [
+    'Active',
+    'Subtle',
+    'Gentle',
+    'Energizing',
+    'Grounded',
+    'Fluid',
+    'Playful',
+    'Steady',
+    'Expressive',
+    'Restorative',
+  ],
+};
+
 // â”€â”€ Safe ALTER TABLE helper (compatible with MySQL 5.7 which lacks IF NOT EXISTS) â”€â”€
 async function safeAddColumn(table, column, definition) {
   try {
@@ -148,6 +187,19 @@ async function safeAddColumn(table, column, definition) {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (challenge_id) REFERENCES challenges(id) ON DELETE CASCADE
       )`,
+      // User challenge enrollments
+      `CREATE TABLE IF NOT EXISTS user_challenges (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        challenge_id INT NOT NULL,
+        status ENUM('active','completed') DEFAULT 'active',
+        personal_end_date DATE NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_user_challenge (user_id, challenge_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (challenge_id) REFERENCES challenges(id) ON DELETE CASCADE
+      )`,
       // Likes table
       `CREATE TABLE IF NOT EXISTS likes (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -207,6 +259,8 @@ async function safeAddColumn(table, column, definition) {
     await safeAddColumn('challenges', 'category', 'VARCHAR(100) NULL');
     await safeAddColumn('challenges', 'feeling_category', 'VARCHAR(100) NULL');
     await safeAddColumn('challenges', 'movement_category', 'VARCHAR(100) NULL');
+    await safeAddColumn('challenges', 'duration_days', 'INT DEFAULT 30');
+    await safeAddColumn('challenges', 'partner_url', 'VARCHAR(500) NULL');
     await safeAddColumn('submissions', 'title', 'VARCHAR(200) NULL');
     await safeAddColumn('submissions', 'description', 'TEXT NULL');
     await safeAddColumn('submissions', 'miles_walked', 'DECIMAL(10,2) NULL');
@@ -305,11 +359,32 @@ const auth = (req, res, next) => {
 };
 
 const adminAuth = (req, res, next) => {
-  auth(req, res, () => {
-    if (!req.user.is_admin) return res.status(403).json({ error: 'Admin access required' });
-    next();
+  auth(req, res, async () => {
+    if (req.user.is_admin || req.user.role === 'admin') return next();
+    try {
+      const [users] = await pool.query('SELECT * FROM users WHERE id = ?', [req.user.id]);
+      const dbUser = users[0];
+      if (dbUser && (dbUser.is_admin || dbUser.role === 'admin')) {
+        req.user.is_admin = true;
+        req.user.role = 'admin';
+        return next();
+      }
+    } catch (err) {
+      console.error('[AdminAuth] Failed to verify admin status:', err.message);
+    }
+    return res.status(403).json({ error: 'Admin access required' });
   });
 };
+
+function optionalAuth(req) {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return null;
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch {
+    return null;
+  }
+}
 
 // ==================== AUTH ROUTES ====================
 
@@ -328,8 +403,8 @@ app.post('/api/auth/register', async (req, res) => {
       [name, email, password_hash]
     );
 
-    const token = jwt.sign({ id: result.insertId, email, is_admin: false }, JWT_SECRET, { expiresIn: '30d' });
-    res.json({ token, user: { id: result.insertId, name, email, avatar_url: null, is_admin: false, subscription_status: 'free', created_at: new Date().toISOString() } });
+    const token = jwt.sign({ id: result.insertId, email, is_admin: false, role: 'user' }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ token, user: { id: result.insertId, name, email, avatar_url: null, is_admin: false, role: 'user', subscription_status: 'free', created_at: new Date().toISOString() } });
   } catch (err) {
     res.status(500).json({ error: 'Registration failed' });
   }
@@ -347,12 +422,13 @@ app.post('/api/auth/login', async (req, res) => {
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) return res.status(401).json({ error: 'Invalid id/password' });
 
-    const token = jwt.sign({ id: user.id, email: user.email, is_admin: !!user.is_admin }, JWT_SECRET, { expiresIn: '30d' });
+    const role = user.role || (user.is_admin ? 'admin' : 'user');
+    const token = jwt.sign({ id: user.id, email: user.email, is_admin: !!user.is_admin, role }, JWT_SECRET, { expiresIn: '30d' });
     // Track last login time
     pool.query('UPDATE users SET last_login_at = NOW() WHERE id = ?', [user.id]).catch(() => {});
     res.json({
       token,
-      user: { id: user.id, name: user.name, email: user.email, avatar_url: user.avatar_url, is_admin: !!user.is_admin, subscription_status: user.subscription_status, created_at: user.created_at },
+      user: { id: user.id, name: user.name, email: user.email, avatar_url: user.avatar_url, is_admin: !!user.is_admin, role, subscription_status: user.subscription_status, created_at: user.created_at },
     });
   } catch (err) {
     res.status(500).json({ error: 'Login failed' });
@@ -361,10 +437,16 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/auth/me', auth, async (req, res) => {
   try {
-    const [users] = await pool.query('SELECT id, name, email, avatar_url, bio, location, website, phone, is_admin, subscription_status, total_miles, created_at FROM users WHERE id = ?', [req.user.id]);
+    let users;
+    try {
+      [users] = await pool.query('SELECT id, name, email, avatar_url, bio, location, website, phone, is_admin, role, subscription_status, total_miles, created_at FROM users WHERE id = ?', [req.user.id]);
+    } catch (err) {
+      if (err.code !== 'ER_BAD_FIELD_ERROR') throw err;
+      [users] = await pool.query('SELECT id, name, email, avatar_url, bio, location, website, phone, is_admin, subscription_status, total_miles, created_at FROM users WHERE id = ?', [req.user.id]);
+    }
     if (users.length === 0) return res.status(404).json({ error: 'User not found' });
     const u = users[0];
-    res.json({ user: { ...u, is_admin: !!u.is_admin } });
+    res.json({ user: { ...u, is_admin: !!u.is_admin, role: u.role || (u.is_admin ? 'admin' : 'user') } });
   } catch {
     res.status(500).json({ error: 'Failed to get user' });
   }
@@ -516,6 +598,7 @@ app.get('/api/users/me/stats', auth, async (req, res) => {
 
 app.get('/api/challenges', async (req, res) => {
   try {
+    const viewer = optionalAuth(req);
     const [challenges] = await pool.query(`
       SELECT c.*,
         COUNT(DISTINCT s.id) AS submission_count,
@@ -525,6 +608,41 @@ app.get('/api/challenges', async (req, res) => {
       GROUP BY c.id
       ORDER BY c.created_at DESC
     `);
+    if (viewer?.id && challenges.length > 0) {
+      const ids = challenges.map(c => c.id);
+      const [enrollments] = await pool.query(
+        `SELECT uc.challenge_id, uc.status, uc.personal_end_date,
+          DATEDIFF(uc.personal_end_date, CURDATE()) AS days_remaining,
+          EXISTS(SELECT 1 FROM submissions s WHERE s.user_id = ? AND s.challenge_id = uc.challenge_id) AS has_submission
+         FROM user_challenges uc
+         WHERE uc.user_id = ? AND uc.challenge_id IN (?)`,
+        [viewer.id, viewer.id, ids]
+      );
+      const byChallenge = new Map(enrollments.map(e => [
+        e.challenge_id,
+        {
+          ...e,
+          status: e.has_submission ? 'completed' : 'active',
+          days_remaining: e.days_remaining == null ? null : Number(e.days_remaining),
+          has_submission: !!e.has_submission,
+        },
+      ]));
+      const [completedRows] = await pool.query(
+        'SELECT DISTINCT challenge_id FROM submissions WHERE user_id = ? AND challenge_id IN (?)',
+        [viewer.id, ids]
+      );
+      completedRows.forEach(row => {
+        byChallenge.set(row.challenge_id, {
+          ...(byChallenge.get(row.challenge_id) || { challenge_id: row.challenge_id }),
+          status: 'completed',
+          has_submission: true,
+        });
+      });
+      challenges.forEach(c => {
+        const uc = byChallenge.get(c.id);
+        if (uc) c.user_challenge = uc;
+      });
+    }
     res.json({ challenges });
   } catch {
     res.status(500).json({ error: 'Failed to fetch challenges' });
@@ -546,11 +664,105 @@ app.post('/api/challenges/:id/end', adminAuth, async (req, res) => {
 
 app.get('/api/challenges/:id', async (req, res) => {
   try {
-    const [challenges] = await pool.query('SELECT * FROM challenges WHERE id = ?', [req.params.id]);
+    const [challenges] = await pool.query(`
+      SELECT c.*,
+        COUNT(DISTINCT s.id) AS submission_count,
+        COUNT(DISTINCT s.user_id) AS participant_count
+      FROM challenges c
+      LEFT JOIN submissions s ON s.challenge_id = c.id
+      WHERE c.id = ?
+      GROUP BY c.id
+    `, [req.params.id]);
     if (challenges.length === 0) return res.status(404).json({ error: 'Challenge not found' });
-    res.json({ challenge: challenges[0] });
+    const challenge = challenges[0];
+    const viewer = optionalAuth(req);
+    if (viewer?.id) {
+      const [enrollments] = await pool.query(
+        `SELECT uc.challenge_id, uc.status, uc.personal_end_date,
+          DATEDIFF(uc.personal_end_date, CURDATE()) AS days_remaining,
+          EXISTS(SELECT 1 FROM submissions s WHERE s.user_id = ? AND s.challenge_id = uc.challenge_id) AS has_submission
+         FROM user_challenges uc
+         WHERE uc.user_id = ? AND uc.challenge_id = ?`,
+        [viewer.id, viewer.id, req.params.id]
+      );
+      if (enrollments[0]) {
+        challenge.user_challenge = {
+          ...enrollments[0],
+          status: enrollments[0].has_submission ? 'completed' : 'active',
+          days_remaining: enrollments[0].days_remaining == null ? null : Number(enrollments[0].days_remaining),
+          has_submission: !!enrollments[0].has_submission,
+        };
+      }
+      const [completedRows] = await pool.query(
+        'SELECT id FROM submissions WHERE user_id = ? AND challenge_id = ? LIMIT 1',
+        [viewer.id, req.params.id]
+      );
+      if (completedRows[0]) {
+        challenge.user_challenge = {
+          ...(challenge.user_challenge || { challenge_id: Number(req.params.id) }),
+          status: 'completed',
+          has_submission: true,
+        };
+      }
+    }
+    res.json({ challenge });
   } catch {
     res.status(500).json({ error: 'Failed to fetch challenge' });
+  }
+});
+
+app.post('/api/challenges/:id/enter', auth, async (req, res) => {
+  try {
+    const [challenges] = await pool.query('SELECT id, duration_days, is_active FROM challenges WHERE id = ?', [req.params.id]);
+    if (challenges.length === 0) return res.status(404).json({ error: 'Challenge not found' });
+    if (!challenges[0].is_active) return res.status(400).json({ error: 'Challenge is not active' });
+    const durationDays = Number(challenges[0].duration_days || 30);
+    await pool.query(
+      `INSERT INTO user_challenges (user_id, challenge_id, status, personal_end_date)
+       VALUES (?, ?, 'active', DATE_ADD(CURDATE(), INTERVAL ? DAY))
+       ON DUPLICATE KEY UPDATE updated_at = NOW()`,
+      [req.user.id, req.params.id, durationDays]
+    );
+    const [[userChallenge]] = await pool.query(
+      `SELECT challenge_id, status, personal_end_date, DATEDIFF(personal_end_date, CURDATE()) AS days_remaining
+       FROM user_challenges WHERE user_id = ? AND challenge_id = ?`,
+      [req.user.id, req.params.id]
+    );
+    res.json({ success: true, user_challenge: userChallenge });
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Failed to join challenge' });
+  }
+});
+
+app.get('/api/challenges/:id/enrollment', auth, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT uc.challenge_id, uc.status, uc.personal_end_date,
+        DATEDIFF(uc.personal_end_date, CURDATE()) AS days_remaining,
+        EXISTS(SELECT 1 FROM submissions s WHERE s.user_id = ? AND s.challenge_id = uc.challenge_id) AS has_submission
+       FROM user_challenges uc
+       WHERE uc.user_id = ? AND uc.challenge_id = ?`,
+      [req.user.id, req.user.id, req.params.id]
+    );
+    if (!rows[0]) {
+      const [completedRows] = await pool.query(
+        'SELECT id FROM submissions WHERE user_id = ? AND challenge_id = ? LIMIT 1',
+        [req.user.id, req.params.id]
+      );
+      if (completedRows[0]) {
+        return res.json({ enrolled: true, user_challenge: { challenge_id: Number(req.params.id), status: 'completed', has_submission: true } });
+      }
+      return res.json({ enrolled: false, user_challenge: null });
+    }
+    const userChallenge = {
+      ...rows[0],
+      status: rows[0].has_submission ? 'completed' : 'active',
+      days_remaining: rows[0].days_remaining == null ? null : Number(rows[0].days_remaining),
+      has_submission: !!rows[0].has_submission,
+    };
+    res.json({ enrolled: true, user_challenge: userChallenge });
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Failed to fetch enrollment' });
   }
 });
 
@@ -692,12 +904,17 @@ async function notifyChallengeCreated(challenge) {
 
 app.post('/api/challenges', adminAuth, async (req, res) => {
   try {
-    const { title, description, cover_image_url, start_date, end_date, start_time, end_time, is_active, category, feeling_category, movement_category, photo_inspiration, reflection_prompt, is_pro_only, tags } = req.body;
-    if (!title || !start_date || !end_date) return res.status(400).json({ error: 'Title and dates required' });
+    const { title, description, cover_image_url, start_date, end_date, start_time, end_time, is_active, category, feeling_category, movement_category, duration_days, partner_url, photo_inspiration, reflection_prompt, is_pro_only, tags } = req.body;
+    if (!title) return res.status(400).json({ error: 'Title required' });
+    const durationDays = parseInt(duration_days) || 30;
+    const fallbackStartDate = new Date().toISOString().slice(0, 10);
+    const fallbackEnd = new Date();
+    fallbackEnd.setDate(fallbackEnd.getDate() + durationDays);
+    const fallbackEndDate = fallbackEnd.toISOString().slice(0, 10);
 
     const [result] = await pool.query(
-      'INSERT INTO challenges (title, description, cover_image_url, start_date, end_date, start_time, end_time, is_active, category, feeling_category, movement_category, photo_inspiration, reflection_prompt, is_pro_only, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [title, description || null, cover_image_url || null, start_date, end_date, start_time || null, end_time || null, is_active !== false, category || null, feeling_category || null, movement_category || null, photo_inspiration || null, reflection_prompt || null, is_pro_only ? 1 : 0, tags || null]
+      'INSERT INTO challenges (title, description, cover_image_url, start_date, end_date, start_time, end_time, is_active, category, feeling_category, movement_category, duration_days, partner_url, photo_inspiration, reflection_prompt, is_pro_only, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [title, description || null, cover_image_url || null, start_date || fallbackStartDate, end_date || fallbackEndDate, start_time || null, end_time || null, is_active !== false, category || null, feeling_category || null, movement_category || null, durationDays, partner_url || null, photo_inspiration || null, reflection_prompt || null, is_pro_only ? 1 : 0, tags || null]
     );
 
     const newId = result.insertId;
@@ -713,10 +930,10 @@ app.post('/api/challenges', adminAuth, async (req, res) => {
 
 app.put('/api/challenges/:id', adminAuth, async (req, res) => {
   try {
-    const { title, description, cover_image_url, start_date, end_date, start_time, end_time, is_active, category, feeling_category, movement_category, photo_inspiration, reflection_prompt, is_pro_only, tags } = req.body;
+    const { title, description, cover_image_url, start_date, end_date, start_time, end_time, is_active, category, feeling_category, movement_category, duration_days, partner_url, photo_inspiration, reflection_prompt, is_pro_only, tags } = req.body;
     await pool.query(
-      'UPDATE challenges SET title=?, description=?, cover_image_url=?, start_date=?, end_date=?, start_time=?, end_time=?, is_active=?, category=?, feeling_category=?, movement_category=?, photo_inspiration=?, reflection_prompt=?, is_pro_only=?, tags=? WHERE id=?',
-      [title, description, cover_image_url, start_date, end_date, start_time || null, end_time || null, is_active, category || null, feeling_category || null, movement_category || null, photo_inspiration || null, reflection_prompt || null, is_pro_only ? 1 : 0, tags || null, req.params.id]
+      'UPDATE challenges SET title=?, description=?, cover_image_url=?, start_date=?, end_date=?, start_time=?, end_time=?, is_active=?, category=?, feeling_category=?, movement_category=?, duration_days=?, partner_url=?, photo_inspiration=?, reflection_prompt=?, is_pro_only=?, tags=? WHERE id=?',
+      [title, description, cover_image_url, start_date || null, end_date || null, start_time || null, end_time || null, is_active, category || null, feeling_category || null, movement_category || null, parseInt(duration_days) || 30, partner_url || null, photo_inspiration || null, reflection_prompt || null, is_pro_only ? 1 : 0, tags || null, req.params.id]
     );
     res.json({ success: true });
   } catch (e) {
@@ -733,6 +950,60 @@ async function handleDeleteChallenge(req, res) {
 }
 app.delete('/api/challenges/:id', adminAuth, handleDeleteChallenge);
 app.post('/api/challenges/:id/delete', adminAuth, handleDeleteChallenge);
+
+app.get('/api/taxonomy', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('challenge_categories','feeling_categories','movement_categories')"
+    );
+    const taxonomy = { ...DEFAULT_TAXONOMY };
+    rows.forEach(row => {
+      try {
+        const parsed = JSON.parse(row.setting_value || '[]');
+        if (Array.isArray(parsed) && parsed.length > 0) taxonomy[row.setting_key] = parsed;
+      } catch {}
+    });
+    res.json(taxonomy);
+  } catch (e) {
+    res.json(DEFAULT_TAXONOMY);
+  }
+});
+
+app.get('/api/admin/taxonomy', adminAuth, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('challenge_categories','feeling_categories','movement_categories')"
+    );
+    const taxonomy = { ...DEFAULT_TAXONOMY };
+    rows.forEach(row => {
+      try {
+        const parsed = JSON.parse(row.setting_value || '[]');
+        if (Array.isArray(parsed) && parsed.length > 0) taxonomy[row.setting_key] = parsed;
+      } catch {}
+    });
+    res.json(taxonomy);
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Failed to fetch taxonomy' });
+  }
+});
+
+app.put('/api/admin/taxonomy', adminAuth, async (req, res) => {
+  try {
+    const { key, items } = req.body;
+    if (!['challenge_categories', 'feeling_categories', 'movement_categories'].includes(key)) {
+      return res.status(400).json({ error: 'Invalid taxonomy key' });
+    }
+    if (!Array.isArray(items)) return res.status(400).json({ error: 'items must be an array' });
+    const clean = items.map(item => String(item).trim()).filter(Boolean);
+    await pool.query(
+      'INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?, updated_at = NOW()',
+      [key, JSON.stringify(clean), JSON.stringify(clean)]
+    );
+    res.json({ ok: true, key, items: clean });
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Failed to update taxonomy' });
+  }
+});
 
 // ==================== SUBMISSIONS ROUTES ====================
 
@@ -804,7 +1075,7 @@ app.post('/api/submissions', auth, async (req, res) => {
       return res.status(403).json({ error: 'pro_required', message: 'This challenge is exclusive to Pro members.' });
     }
 
-    // Free tier monthly submission limit (3 per month)
+    // Free tier monthly submission limit (50 per month)
     if (!isPro) {
       const [[{ monthCount }]] = await pool.query(
         `SELECT COUNT(*) as monthCount FROM submissions
@@ -824,7 +1095,11 @@ app.post('/api/submissions', auth, async (req, res) => {
     const [existing] = await pool.query('SELECT id FROM submissions WHERE user_id = ? AND challenge_id = ?', [req.user.id, challenge_id]);
     if (existing.length > 0) return res.status(400).json({ error: 'You already submitted to this challenge' });
 
-    const miles = req.body.miles_walked != null ? parseFloat(req.body.miles_walked) : null;
+    const miles = req.body.miles_walked != null
+      ? parseFloat(req.body.miles_walked)
+      : req.body.miles != null
+        ? parseFloat(req.body.miles)
+        : null;
 
     const [result] = await pool.query(
       'INSERT INTO submissions (user_id, challenge_id, title, description, photo1_url, photo2_url, miles_walked) VALUES (?, ?, ?, ?, ?, ?, ?)',
@@ -835,6 +1110,13 @@ app.post('/api/submissions', auth, async (req, res) => {
     if (miles != null && miles > 0) {
       await pool.query('UPDATE users SET total_miles = COALESCE(total_miles, 0) + ? WHERE id = ?', [miles, req.user.id]);
     }
+
+    await pool.query(
+      `INSERT INTO user_challenges (user_id, challenge_id, status, personal_end_date)
+       VALUES (?, ?, 'completed', DATE_ADD(CURDATE(), INTERVAL ? DAY))
+       ON DUPLICATE KEY UPDATE status = 'completed', updated_at = NOW()`,
+      [req.user.id, challenge_id, Number(challenges[0].duration_days || 30)]
+    );
 
     res.json({ id: result.insertId, success: true });
   } catch (err) {
@@ -887,7 +1169,7 @@ async function handleDeleteComment(req, res) {
   try {
     const [comments] = await pool.query('SELECT user_id FROM comments WHERE id = ?', [req.params.id]);
     if (comments.length === 0) return res.status(404).json({ error: 'Comment not found' });
-    if (comments[0].user_id !== req.user.id && !req.user.is_admin) {
+    if (comments[0].user_id !== req.user.id && !req.user.is_admin && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Not authorized' });
     }
     await pool.query('DELETE FROM comments WHERE id = ?', [req.params.id]);
@@ -903,7 +1185,7 @@ app.patch('/api/comments/:id', auth, async (req, res) => {
   try {
     const [comments] = await pool.query('SELECT user_id FROM comments WHERE id = ?', [req.params.id]);
     if (comments.length === 0) return res.status(404).json({ error: 'Comment not found' });
-    if (comments[0].user_id !== req.user.id && !req.user.is_admin) {
+    if (comments[0].user_id !== req.user.id && !req.user.is_admin && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Not authorized' });
     }
     const { text } = req.body;

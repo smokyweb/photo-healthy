@@ -9,7 +9,7 @@ import { C, borderRadius } from '../theme';
 const FAQS = [
   {
     q: 'Is Photo Healthy free to use?',
-    a: 'Yes! Creating an account and participating in challenges is completely free with a generous monthly usage included. Pro membership unlocks additional features like unlimited submissions and exclusive challenges.',
+    a: 'Yes! Creating an account and participating in challenges is completely free. Pro membership unlocks additional features like unlimited submissions and exclusive challenges, with a generous monthly usage included.',
   },
   {
     q: 'How many photos can I submit?',
