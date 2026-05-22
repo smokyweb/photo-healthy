@@ -419,26 +419,28 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userStats, days
     {/* Recent Community Submissions (full-width cards) */}
     <View style={li.section}>
       <Text style={li.sectionTitle}>Recent Community Submissions</Text>
-      {(recent.length > 0 ? recent : [
-        { id: 1, user_name: 'sarah_lens', title: 'Golden hour reflections', photo1_url: null, _localPhoto: PHOTO2_MOUNTAIN, like_count: 234, comment_count: 18 },
-        { id: 2, user_name: 'mike_photo', title: 'City lights at dusk', photo1_url: null, _localPhoto: PHOTO8_ALLEY, like_count: 189, comment_count: 24 },
-      ]).map((sub: any) => (
-        <TouchableOpacity
-          key={sub.id}
-          style={li.communityCard}
-          onPress={() => sub.photo1_url && navigation.navigate('SubmissionDetail', { id: sub.id })}
-        >
-          <Image source={sub._localPhoto || { uri: fullUrl(sub.photo1_url) }} style={li.communityImg} resizeMode="contain" />
-          <View style={li.communityInfo}>
-            <Text style={li.communityUser}>@{sub.user_name || 'unknown'}</Text>
-            <Text style={li.communityTitle}>{sub.title || 'Untitled'}</Text>
-            <View style={li.communityStats}>
-              <Text style={li.communityStat}>❤️ {sub.like_count || 0}</Text>
-              <Text style={li.communityStat}>💬 {sub.comment_count || 0}</Text>
+      <View style={li.communityGrid}>
+        {(recent.length > 0 ? recent : [
+          { id: 1, user_name: 'sarah_lens', title: 'Golden hour reflections', photo1_url: null, _localPhoto: PHOTO2_MOUNTAIN, like_count: 234, comment_count: 18 },
+          { id: 2, user_name: 'mike_photo', title: 'City lights at dusk', photo1_url: null, _localPhoto: PHOTO8_ALLEY, like_count: 189, comment_count: 24 },
+        ]).slice(0, 4).map((sub: any) => (
+          <TouchableOpacity
+            key={sub.id}
+            style={li.communityCard}
+            onPress={() => sub.photo1_url && navigation.navigate('SubmissionDetail', { id: sub.id })}
+          >
+            <Image source={sub._localPhoto || { uri: fullUrl(sub.photo1_url) }} style={li.communityImg} resizeMode="contain" />
+            <View style={li.communityInfo}>
+              <Text style={li.communityUser}>@{sub.user_name || 'unknown'}</Text>
+              <Text style={li.communityTitle}>{sub.title || 'Untitled'}</Text>
+              <View style={li.communityStats}>
+                <Text style={li.communityStat}>❤️ {sub.like_count || 0}</Text>
+                <Text style={li.communityStat}>💬 {sub.comment_count || 0}</Text>
+              </View>
             </View>
-          </View>
-        </TouchableOpacity>
-      ))}
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
 
     {/* Quick Actions Grid (3 buttons) */}
@@ -446,16 +448,17 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userStats, days
       <Text style={li.sectionTitle}>Quick Actions</Text>
       <View style={li.quickGrid}>
         {[
-          { icon: '🛍️', title: 'Shop', desc: 'Browse photography gear', nav: 'Shop' },
-          { icon: '🤝', title: 'Partners', desc: 'View our partners', nav: 'Partners' },
-          { icon: '�', title: 'How It Works', desc: 'Learn how it works', nav: 'HowItWorks' },
+          { icon: 'trophy', title: 'Browse Challenges', desc: 'Discover new photography challenges', nav: 'ChallengesTab' },
+          { icon: 'camera', title: 'View Gallery', desc: 'See all your submitted photos', nav: 'Gallery' },
+          { icon: 'analytics', title: 'Subscription', desc: 'Unlock photo experiences', nav: 'Subscription' },
+          { icon: 'shop', title: 'Visit Shop', desc: 'Browse photography gear', nav: 'Shop' },
         ].map((item, i) => (
           <TouchableOpacity
             key={i}
             style={li.quickCard}
             onPress={() => navigation.navigate(item.nav)}
           >
-            <Text style={{ fontSize: 28 }}>{item.icon}</Text>
+            <View style={li.quickIcon}><IconGlyph name={item.icon} color="#FFFFFF" size={18} /></View>
             <Text style={li.quickTitle}>{item.title}</Text>
             <Text style={li.quickDesc}>{item.desc}</Text>
           </TouchableOpacity>
@@ -2286,14 +2289,23 @@ const pm = StyleSheet.create({
 
 /* ========== LOGGED-IN STYLES ========== */
 const li = StyleSheet.create({
-  section: { paddingHorizontal: 20, marginBottom: 24 },
-  sectionTitle: { ...type.heading, color: C.TEXT, fontSize: 20, marginBottom: 16 },
+  section: {
+    maxWidth: 1180,
+    width: '100%' as any,
+    alignSelf: 'center',
+    paddingHorizontal: 28,
+    marginBottom: 28,
+  },
+  sectionTitle: { ...type.heading, color: C.TEXT, fontSize: 21, marginBottom: 16 },
 
   // Welcome Banner
   welcomeBanner: {
     borderRadius: 16,
     overflow: 'hidden' as const,
-    marginHorizontal: 16,
+    maxWidth: 1180,
+    width: '100%' as any,
+    alignSelf: 'center',
+    marginHorizontal: 28,
     marginTop: 12,
     height: 120,
     marginBottom: 24,
@@ -2309,30 +2321,33 @@ const li = StyleSheet.create({
   welcomeTitle: { ...type.heading, color: '#FFFFFF', fontSize: 22 },
   welcomeDate: { ...type.subtext, color: '#94A3B8', fontSize: 13, marginTop: 4 },
   noAlertsBadge: {
-    backgroundColor: C.TEAL,
+    backgroundColor: '#0A2235',
+    borderWidth: 1,
+    borderColor: C.TEAL,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
   },
-  noAlertsText: { ...type.button, color: '#FFFFFF', fontSize: 12 },
+  noAlertsText: { ...type.button, color: C.TEAL, fontSize: 12 },
 
   // Active Challenge Card
   challengeCard: {
-    backgroundColor: C.CARD_BG,
-    borderRadius: 20,
+    flexDirection: 'row',
+    backgroundColor: '#272B40',
+    borderRadius: 10,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: C.CARD_BORDER,
+    borderColor: '#363B55',
   },
-  challengeCover: { width: '100%' as any, height: 200 },
-  challengeInfo: { padding: 20 },
+  challengeCover: { width: '42%' as any, minHeight: 360, backgroundColor: '#1A1E30' },
+  challengeInfo: { flex: 1, padding: 26, justifyContent: 'center' },
   challengeTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
   },
-  challengeTitle: { ...type.heading, color: C.TEXT, fontSize: 20, flex: 1 },
+  challengeTitle: { ...type.heading, color: C.TEXT, fontSize: 24, flex: 1 },
   activeBadge: {
     backgroundColor: C.TEAL,
     borderRadius: 12,
@@ -2341,7 +2356,7 @@ const li = StyleSheet.create({
     marginLeft: 8,
   },
   activeBadgeText: { ...type.button, color: '#FFFFFF', fontSize: 11 },
-  challengeDesc: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 14, lineHeight: 20, marginBottom: 12 },
+  challengeDesc: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 15, lineHeight: 23, marginBottom: 14 },
   challengeCategoryLabel: {
     ...type.label,
     color: C.TEXT_SECONDARY,
@@ -2351,12 +2366,12 @@ const li = StyleSheet.create({
   },
 
   // Mini stat cards (2x2)
-  miniGrid: { gap: 10, marginBottom: 16 },
+  miniGrid: { gap: 10, marginBottom: 18 },
   miniRow: { flexDirection: 'row', gap: 10 },
   miniCard: {
     flex: 1,
     backgroundColor: '#1E2235',
-    borderRadius: 12,
+    borderRadius: 7,
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
@@ -2397,10 +2412,13 @@ const li = StyleSheet.create({
 
   // Quote banner
   quoteBanner: {
-    backgroundColor: C.CARD_BG2,
-    marginHorizontal: 20,
+    maxWidth: 1180,
+    width: '100%' as any,
+    alignSelf: 'center',
+    backgroundColor: '#272B40',
+    marginHorizontal: 28,
     marginBottom: 24,
-    borderRadius: 14,
+    borderRadius: 8,
     padding: 20,
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
@@ -2418,8 +2436,8 @@ const li = StyleSheet.create({
   statsRow: { flexDirection: 'row', gap: 12 },
   statCard: {
     flex: 1,
-    backgroundColor: C.CARD_BG,
-    borderRadius: 14,
+    backgroundColor: '#272B40',
+    borderRadius: 7,
     paddingVertical: 16,
     alignItems: 'center',
     borderWidth: 1,
@@ -2431,15 +2449,21 @@ const li = StyleSheet.create({
   statNote: { ...type.subtext, color: C.TEAL, fontSize: 10, marginTop: 4, textAlign: 'center' },
 
   // Community submissions (full-width)
+  communityGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 14,
+  },
   communityCard: {
-    backgroundColor: C.CARD_BG,
-    borderRadius: 14,
+    width: '48.8%' as any,
+    backgroundColor: '#272B40',
+    borderRadius: 7,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
     marginBottom: 16,
   },
-  communityImg: { width: '100%' as any, height: 180, backgroundColor: '#1A1E30' },
+  communityImg: { width: '100%' as any, height: 190, backgroundColor: '#1A1E30' },
   communityInfo: { padding: 14 },
   communityUser: { ...type.label, color: C.TEAL, fontSize: 14, marginBottom: 2 },
   communityTitle: { ...type.label, color: C.TEXT, fontSize: 15, marginBottom: 8 },
@@ -2447,16 +2471,25 @@ const li = StyleSheet.create({
   communityStat: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 13 },
 
   // Quick actions (2x2)
-  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
   quickCard: {
-    width: '47%' as any,
-    backgroundColor: C.CARD_BG,
-    borderRadius: 14,
+    width: '23.9%' as any,
+    backgroundColor: '#272B40',
+    borderRadius: 7,
     padding: 20,
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
   },
-  quickTitle: { ...type.heading, color: C.TEXT, fontSize: 14, marginTop: 8 },
+  quickIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 5,
+    backgroundColor: '#1D2337',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  quickTitle: { ...type.heading, color: C.TEXT, fontSize: 14, marginTop: 0 },
   quickDesc: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 12, marginTop: 4 },
 
   // Footer
