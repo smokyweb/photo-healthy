@@ -768,11 +768,11 @@ const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation
       </SkySection>
 
       <SkySection style={isMobile && landing.skySectionMobile} bgPosition="center 124%" bgSize="140% auto" alt>
-        <View style={landing.benefits}>
+        <View style={[landing.benefits, isMobile && landing.benefitsMobile]}>
           <Text style={landing.sectionTitle}>What this becomes over time</Text>
           <View style={[landing.benefitGrid, isMobile && landing.benefitGridMobile]}>
             {benefits.map((item) => (
-              <View key={item.title} style={landing.benefitItem}>
+              <View key={item.title} style={[landing.benefitItem, isMobile && landing.benefitItemMobile]}>
                 <AssetView source={LOGO_IMG} style={landing.benefitIcon} resizeMode="contain" />
                 <Text style={landing.benefitTitle}>{item.title}</Text>
                 <Text style={landing.benefitBody}>{item.body}</Text>
@@ -1287,6 +1287,10 @@ const landing = StyleSheet.create({
     marginTop: 4,
     marginBottom: 0,
   },
+  benefitsMobile: {
+    maxWidth: '100%' as any,
+    paddingHorizontal: 0,
+  },
   benefitGrid: {
     width: '100%' as any,
     flexDirection: 'row',
@@ -1295,22 +1299,35 @@ const landing = StyleSheet.create({
   },
   benefitGridMobile: {
     flexDirection: 'column',
-    gap: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 0,
   },
   benefitItem: {
     flex: 1,
     maxWidth: 250,
     alignItems: 'center',
   },
+  benefitItemMobile: {
+    flex: 0,
+    width: '100%' as any,
+    maxWidth: 360,
+    alignSelf: 'center',
+    paddingHorizontal: 22,
+    paddingVertical: 18,
+    marginBottom: 18,
+  },
   benefitIcon: {
     width: 112,
     height: 72,
     marginBottom: 10,
+    alignSelf: 'center',
   },
   benefitTitle: {
     ...type.heading,
     color: '#FFFFFF',
     fontSize: 17,
+    lineHeight: 22,
     textAlign: 'center',
     marginBottom: 6,
   },
@@ -1320,6 +1337,7 @@ const landing = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
     textAlign: 'center',
+    maxWidth: 300,
   },
   copyright: {
     ...type.subtext,
