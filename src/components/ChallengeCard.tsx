@@ -21,10 +21,13 @@ interface Challenge {
   submission_count?: number;
   participant_count?: number;
   end_date?: string;
+  duration_days?: number;
+  is_active?: boolean;
   is_pro_only?: boolean;
   user_challenge?: {
     days_remaining?: number;
     status?: string;
+    has_submission?: boolean;
   } | null;
 }
 
@@ -41,15 +44,40 @@ function getDaysLeft(endDate?: string): number | null {
 
 export default function ChallengeCard({ challenge, onPress }: Props) {
   const daysLeft = getDaysLeft(challenge.end_date);
-  const isEnded = challenge.status === 'ended' || challenge.status === 'completed' || (daysLeft !== null && daysLeft === 0);
+  const hardStopExpired = !!challenge.end_date && new Date(challenge.end_date).getTime() < Date.now();
+  const isOpen = (challenge.is_active || challenge.status === 'active') && !hardStopExpired;
   const isUpcoming = challenge.status === 'upcoming';
   const imageUrl = fullUrl(challenge.cover_image_url || challenge.cover_image || '');
   const participantCount = challenge.participant_count ?? challenge.submission_count ?? 0;
   const userStatus = challenge.user_challenge?.status;
-  const statusLabel = userStatus === 'completed' ? 'Completed' : userStatus === 'active' ? 'Active' : isEnded ? 'Ended' : isUpcoming ? 'Upcoming' : 'Open';
+  const personalDaysLeft = Number(challenge.user_challenge?.days_remaining ?? 0);
+  const hasMissedDeadline = userStatus === 'active' && personalDaysLeft < 0;
+  const isCompleted = userStatus === 'completed' || !!challenge.user_challenge?.has_submission;
+  const isArchived = !isCompleted && (challenge.status === 'archived' || challenge.is_active === false || hardStopExpired || hasMissedDeadline);
+  const isActive = userStatus === 'active' && !isArchived && isOpen;
+  const statusLabel = isCompleted ? 'Completed' : isActive ? 'Active' : isArchived ? 'Archived' : isUpcoming ? 'Upcoming' : 'New';
+  const statusColor = isCompleted
+    ? C.TEAL + 'dd'
+    : isActive
+      ? C.ORANGE + 'dd'
+      : isArchived
+        ? 'rgba(0,0,0,0.68)'
+        : isUpcoming
+          ? C.WARNING + 'dd'
+          : C.SUCCESS + 'dd';
   const category = normalizeChallengeCategory(challenge.category);
   const feeling = normalizeFeelingCategory(challenge.feeling_category || challenge.feeling_tag || challenge.mood_tag);
   const movement = normalizeMovementCategory(challenge.movement_category || challenge.movement_tag);
+  const timeLabel = isCompleted
+    ? 'Submitted'
+    : isActive
+      ? `${Math.max(0, personalDaysLeft)} days left to complete`
+      : isArchived
+        ? hasMissedDeadline ? 'Commitment window missed' : 'Challenge archived'
+        : daysLeft !== null
+          ? `${daysLeft} days until hard stop`
+          : `${challenge.duration_days || 30} days after joining`;
+  const buttonLabel = isCompleted ? 'Completed' : isActive ? 'Complete Challenge' : isArchived ? 'Archived' : 'Join Challenge';
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
@@ -62,8 +90,8 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
           </View>
         )}
         <View style={styles.overlayBadges}>
-          <View style={[styles.statusBadge, { backgroundColor: userStatus === 'completed' ? C.TEAL + 'dd' : userStatus === 'active' ? C.ORANGE + 'dd' : isEnded ? 'rgba(0,0,0,0.65)' : isUpcoming ? C.WARNING + 'dd' : C.SUCCESS + 'dd' }]}>
-            <Text style={[styles.statusBadgeText, { color: isEnded && !userStatus ? C.TEXT_MUTED : '#FFFFFF' }]}>
+          <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+            <Text style={[styles.statusBadgeText, { color: isArchived ? C.TEXT_MUTED : '#FFFFFF' }]}>
               {statusLabel}
             </Text>
           </View>
@@ -76,9 +104,7 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
         {challenge.user_challenge && (
           <View style={styles.enrolledBadge}>
             <Text style={styles.enrolledBadgeText}>
-              {(challenge.user_challenge.days_remaining ?? 0) >= 0
-                ? `${Math.max(0, challenge.user_challenge.days_remaining ?? 0)}d deadline`
-                : 'Expired'}
+              {isCompleted ? 'Submitted' : personalDaysLeft >= 0 ? `${Math.max(0, personalDaysLeft)}d left` : 'Missed'}
             </Text>
           </View>
         )}
@@ -107,7 +133,7 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
             </View>
           </View>
           <View style={styles.metaLine}>
-            <Text style={styles.stat}>{daysLeft !== null && !isEnded ? `${daysLeft} days left` : isEnded ? 'Challenge ended' : 'Open now'}</Text>
+            <Text style={styles.stat}>{timeLabel}</Text>
           </View>
           <View style={styles.metaLine}>
             <View style={styles.personIcon}>
@@ -120,9 +146,7 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
 
         <View style={styles.viewBtnWrap}>
           <TouchableOpacity style={styles.viewBtn} activeOpacity={0.85} onPress={onPress}>
-            <Text style={styles.viewBtnText}>
-              {userStatus === 'completed' ? 'Completed' : userStatus === 'active' ? 'Complete Challenge' : 'Join Challenge'} →
-            </Text>
+            <Text style={styles.viewBtnText}>{buttonLabel} -></Text>
           </TouchableOpacity>
         </View>
       </View>

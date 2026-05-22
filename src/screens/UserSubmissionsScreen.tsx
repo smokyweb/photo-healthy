@@ -25,11 +25,15 @@ export default function UserSubmissionsScreen() {
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const goBackToProfile = () => {
+    if (navigation.canGoBack?.()) navigation.goBack();
+    else navigation.navigate('Main' as never, { screen: 'ProfileTab' } as never);
+  };
 
   const load = async () => {
     if (!userId) { setLoading(false); return; }
     try {
-      const data = await getSubmissions({ userId: String(userId), limit: '100' });
+      const data = await getSubmissions({ user_id: String(userId), userId: String(userId), limit: '100' });
       setSubmissions(data?.submissions || data || []);
     } catch {}
     setLoading(false);
@@ -48,7 +52,7 @@ export default function UserSubmissionsScreen() {
       contentContainerStyle={{ flexGrow: 1 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={C.ORANGE} />}
     >
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
+      <TouchableOpacity onPress={goBackToProfile} style={styles.back}>
         <Text style={styles.backText}>\u2190 Back</Text>
       </TouchableOpacity>
 

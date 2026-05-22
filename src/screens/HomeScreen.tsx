@@ -33,6 +33,13 @@ const API_BASE_URL = 'https://photoai.betaplanets.com';
 const fullUrl = (url?: string | null) =>
   url ? (url.startsWith('http') ? url : `${API_BASE_URL}${url}`) : '';
 
+const isJoinableChallenge = (challenge: any) => {
+  if (!challenge) return false;
+  if (!(challenge.is_active || challenge.status === 'active')) return false;
+  if (!challenge.end_date) return true;
+  return new Date(challenge.end_date).getTime() >= Date.now();
+};
+
 const PAGE_MAX_WIDTH = 1120;
 const FONT_LEXEND = 'Lexend';
 const FONT_INTER = 'Inter';
@@ -299,6 +306,13 @@ const HomeBottomSections = ({ isMobile, showHow = true, onHowItWorksLayout, onHo
 const LoggedInHome = ({ user, featured, challenges, submissions, userStats, daysLeft, navigation, recent, streak, motivationalQuote, quoteAuthor }: any) => {
   const firstName = (user.name || 'User').split(' ')[0];
   const today = formatDate(new Date());
+  const [notifications, setNotifications] = useState<any[]>([]);
+  useEffect(() => {
+    api.getMyNotifications?.()
+      .then((data: any) => setNotifications(data?.notifications || []))
+      .catch(() => setNotifications([]));
+  }, []);
+  const latestNotification = notifications[0];
   const fallbackMilesTracked = submissions
     .filter((s: any) => !s.user_id || s.user_id === user?.id)
     .reduce((sum: number, s: any) => sum + (parseFloat(s.miles ?? s.distance ?? s.miles_tracked ?? 0) || 0), 0);
@@ -321,7 +335,9 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userStats, days
           <Text style={li.welcomeDate}>{today}</Text>
         </View>
         <View style={li.noAlertsBadge}>
-          <Text style={li.noAlertsText}>No Alerts</Text>
+          <Text style={li.noAlertsText}>
+            {latestNotification ? latestNotification.title : 'No Alerts'}
+          </Text>
         </View>
       </View>
     </ImageBackground>
@@ -370,7 +386,9 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userStats, days
             <View style={li.challengeActions}>
               <TouchableOpacity
                 style={li.submitBtn}
-                onPress={() => navigation.navigate('ChallengesTab')}
+                onPress={() => featured?.id
+                  ? navigation.navigate('SubmitPhoto', { challengeId: featured.id, id: featured.id })
+                  : navigation.navigate('ChallengesTab')}
               >
                 <Text style={li.submitBtnText}>Submit Photos</Text>
               </TouchableOpacity>
@@ -473,6 +491,13 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userStats, days
 
 const MobileLoggedInHome = ({ user, featured, challenges, submissions, userStats, daysLeft, navigation, recent, streak, motivationalQuote }: any) => {
   const firstName = (user?.name || 'User').split(' ')[0];
+  const [notifications, setNotifications] = useState<any[]>([]);
+  useEffect(() => {
+    api.getMyNotifications?.()
+      .then((data: any) => setNotifications(data?.notifications || []))
+      .catch(() => setNotifications([]));
+  }, []);
+  const latestNotification = notifications[0];
   const fallbackMilesTracked = submissions
     .filter((s: any) => !s.user_id || s.user_id === user?.id)
     .reduce((sum: number, s: any) => sum + (parseFloat(s.miles ?? s.distance ?? s.miles_tracked ?? 0) || 0), 0);
@@ -509,7 +534,7 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, userStats
             <Text style={pm.welcomeDate}>{formatDate(new Date())}</Text>
           </View>
           <View style={pm.alertPill}>
-            <Text style={pm.alertText}>No Alerts</Text>
+            <Text style={pm.alertText}>{latestNotification ? latestNotification.title : 'No Alerts'}</Text>
           </View>
         </View>
       </ImageBackground>
@@ -550,7 +575,12 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, userStats
             </View>
           </View>
           <View style={pm.challengeActions}>
-            <TouchableOpacity style={pm.submitBtn} onPress={() => navigation.navigate('ChallengesTab')}>
+            <TouchableOpacity
+              style={pm.submitBtn}
+              onPress={() => challenge?.id
+                ? navigation.navigate('SubmitPhoto', { challengeId: challenge.id, id: challenge.id })
+                : navigation.navigate('ChallengesTab')}
+            >
               <Text style={pm.submitText}>Submit Photos</Text>
             </TouchableOpacity>
           </View>
@@ -719,8 +749,9 @@ const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation
                 <View style={landing.challengeInfo}>
               <Text style={landing.challengeTitle}>{featured.title || 'Current Photo Challenge'}</Text>
               <View style={[landing.metaRow, isMobile && landing.metaRowMobile]}>
-                <Text style={landing.metaText}>Category: {featured.category || 'Photo Challenge'}</Text>
-                <Text style={landing.metaText}>Submissions: {featured.submission_count || submissions.length || 132}</Text>
+              <Text style={landing.metaText}>Category: {featured.category || 'Photo Challenge'}</Text>
+              <Text style={landing.metaText}>Submissions: {featured.submission_count ?? submissions.filter((s: any) => s.challenge_id === featured.id).length}</Text>
+              <Text style={landing.metaText}>Participants: {featured.participant_count ?? submissions.filter((s: any) => s.challenge_id === featured.id).length}</Text>
                 <Text style={landing.metaText}>Ends: {daysLeft || 4}d</Text>
                   </View>
                   <TouchableOpacity style={landing.submitBtn} onPress={() => navigation.navigate('Register')}>
@@ -833,9 +864,9 @@ const HomeScreen = () => {
     load();
   }, [user?.id]);
 
-  const featured = challenges.find(
-    (c) => c.is_active && new Date(c.end_date) > new Date(),
-  ) || challenges[0];
+  const featured = challenges.find(isJoinableChallenge) ||
+    challenges.find((c) => c.is_active || c.status === 'active') ||
+    challenges[0];
   const recent = [...submissions]
     .sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
     .slice(0, 8);

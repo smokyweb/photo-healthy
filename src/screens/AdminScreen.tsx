@@ -65,6 +65,7 @@ export default function AdminScreen() {
   const [orders, setOrders] = useState<any[]>([]);
   const [orderSearch, setOrderSearch] = useState('');
   const [orderFilter, setOrderFilter] = useState<string>('Active');
+  const [orderSort, setOrderSort] = useState<'newest'|'oldest'|'customer'|'amount_high'|'amount_low'>('newest');
   const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
   const [trackingInput, setTrackingInput] = useState<Record<number, string>>({});
   const [trackingMsg, setTrackingMsg] = useState<Record<number, string>>({});
@@ -146,7 +147,7 @@ export default function AdminScreen() {
           break;
         }
         case 'Orders': {
-          const data = await adminGetOrders();
+          const data = await adminGetOrders({ sort: orderSort });
           setOrders(data?.orders || data || []);
           break;
         }
@@ -169,6 +170,10 @@ export default function AdminScreen() {
   };
 
   useEffect(() => { loadTab(activeTab); }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'Orders') loadTab('Orders');
+  }, [orderSort]);
 
   // Load user detail data when selectedUser changes
   useEffect(() => {
@@ -391,8 +396,8 @@ export default function AdminScreen() {
             />
           )}
           {challengeImgPreview ? (
-            <View style={{ marginBottom: 12 }}>
-              <Image source={{ uri: challengeImgPreview }} style={{ width: '100%', aspectRatio: 16/9, borderRadius: 10 }} resizeMode="cover" />
+            <View style={styles.challengePreviewWrap}>
+              <Image source={{ uri: challengeImgPreview }} style={styles.challengePreviewImg} resizeMode="cover" />
               <TouchableOpacity onPress={() => { setChallengeImgFile(null); setChallengeImgPreview(''); setChallengeForm(f => ({ ...f, cover_image_url: '' })); }}>
                 <Text style={{ color: C.DANGER, fontSize: 12, marginTop: 4 }}>Remove image</Text>
               </TouchableOpacity>
@@ -465,8 +470,8 @@ export default function AdminScreen() {
         const dateStr = ch.start_date ? new Date(ch.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
         const endDateStr = ch.end_date ? new Date(ch.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
         return (
-          <View key={ch.id} style={[styles.challengeAdminCard]}>
-            {/* Cover image - 16:9 aspect */}
+          <View key={ch.id} style={styles.challengeAdminCard}>
+            {/* Cover image thumbnail */}
             {imgUri ? (
               <Image source={{ uri: imgUri }} style={styles.challengeAdminImg} resizeMode="cover" />
             ) : (
@@ -475,8 +480,8 @@ export default function AdminScreen() {
                 <Text style={{ color: C.TEXT_MUTED, fontSize: 11, marginTop: 4 }}>No image</Text>
               </View>
             )}
-            {/* Info below image */}
-            <View style={{ padding: 12 }}>
+            {/* Info beside image */}
+            <View style={styles.challengeAdminInfo}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Text style={[styles.listItemTitle, { flex: 1, fontSize: 15, marginBottom: 4 }]}>{ch.title}</Text>
                 <View style={{ flexDirection: 'row', gap: 4 }}>
@@ -714,7 +719,18 @@ export default function AdminScreen() {
           ))
         ) : userDetailTab === 'Orders' ? (
           userActivity.orders.map((o: any) => (
-            <View key={o.id} style={styles.listItem}>
+            <TouchableOpacity
+              key={o.id}
+              style={styles.listItem}
+              activeOpacity={0.8}
+              onPress={async () => {
+                const d = await adminGetOrders({ sort: orderSort });
+                setOrders(d?.orders || []);
+                setExpandedOrders(new Set([o.id]));
+                setSelectedUser(null);
+                setActiveTab('Orders');
+              }}
+            >
               <View style={styles.listItemInfo}>
                 <Text style={styles.listItemTitle}>Order #{o.id}</Text>
                 <Text style={styles.listItemSub}>{(o.total_amount && Number(o.total_amount) > 0) || (o.total && Number(o.total) > 0) ? ('$' + Number(o.total_amount || o.total).toFixed(2)) : '$0.00'}</Text>
@@ -722,11 +738,27 @@ export default function AdminScreen() {
                   {o.status} {o.created_at ? '- ' + new Date(o.created_at).toLocaleDateString() : ''}
                 </Text>
               </View>
-            </View>
+              <Text style={{ color: C.TEXT_MUTED, fontSize: 16 }}>›</Text>
+            </TouchableOpacity>
           ))
         ) : (
           userActivity.comments.map((c: any) => (
-            <View key={c.id} style={styles.listItem}>
+            <View key={c.id} style={[styles.listItem, { flexDirection: 'column', alignItems: 'stretch' }]}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={{ flexDirection: 'row', alignItems: 'center' }}
+                onPress={() => {
+                  if (!c.submission_id) return;
+                  setSelectedSubmission({
+                    id: c.submission_id,
+                    title: c.submission_title || 'Submission',
+                    image_url: c.submission_photo || null,
+                  });
+                  loadSubmissionComments(c.submission_id);
+                  setSelectedUser(null);
+                  setActiveTab('Feed');
+                }}
+              >
               <View style={[styles.commentBubble, { marginRight: 10 }]}>
                 <Text style={{ fontSize: 16 }}>💬</Text>
               </View>
@@ -735,6 +767,48 @@ export default function AdminScreen() {
                 {c.submission_title ? <Text style={styles.listItemSub}>on: {c.submission_title}</Text> : null}
                 <Text style={styles.listItemMeta}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : ''}</Text>
               </View>
+              <Text style={{ color: C.TEXT_MUTED, fontSize: 16 }}>›</Text>
+              </TouchableOpacity>
+              {editingComment?.id === c.id ? (
+                <View style={{ marginTop: 10 }}>
+                  <TextInput
+                    style={[styles.input, { marginBottom: 8 }]}
+                    value={editingComment.text}
+                    onChangeText={v => setEditingComment(e => e ? { ...e, text: v } : null)}
+                    multiline
+                    autoFocus
+                  />
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <GradientButton
+                      label="Save"
+                      variant="primary"
+                      size="sm"
+                      style={{ flex: 1 } as any}
+                      onPress={async () => {
+                        await handleSaveCommentEdit(c.id, editingComment.text);
+                        setUserActivity(prev => ({
+                          ...prev,
+                          comments: prev.comments.map(cm => cm.id === c.id ? { ...cm, text: editingComment.text } : cm),
+                        }));
+                      }}
+                    />
+                    <GradientButton label="Cancel" variant="outline" size="sm" style={{ flex: 1 } as any} onPress={() => setEditingComment(null)} />
+                  </View>
+                </View>
+              ) : (
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, justifyContent: 'flex-end' }}>
+                  <GradientButton label="Edit" variant="outline" size="sm" onPress={() => setEditingComment({ id: c.id, text: c.text || '' })} />
+                  <GradientButton
+                    label="Delete"
+                    variant="danger"
+                    size="sm"
+                    onPress={async () => {
+                      await handleDeleteSubmissionComment(c.id);
+                      setUserActivity(prev => ({ ...prev, comments: prev.comments.filter(cm => cm.id !== c.id) }));
+                    }}
+                  />
+                </View>
+              )}
             </View>
           ))
         )}
@@ -1506,6 +1580,13 @@ export default function AdminScreen() {
       failed: 'Payment Failed',
       refunded: 'Refunded',
     };
+    const SORT_LABELS = {
+      newest: 'Newest',
+      oldest: 'Oldest',
+      customer: 'Customer',
+      amount_high: 'Amount high',
+      amount_low: 'Amount low',
+    };
 
     const getItems = (o) => {
       try { return JSON.parse(o.items_json || '[]'); } catch { return []; }
@@ -1528,6 +1609,13 @@ export default function AdminScreen() {
         String(o.id).includes(orderSearch);
       return statusMatch && searchMatch;
     });
+    const sorted = [...filtered].sort((a, b) => {
+      if (orderSort === 'oldest') return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+      if (orderSort === 'customer') return String(a.customer_name || a.user_name || a.customer_email || '').localeCompare(String(b.customer_name || b.user_name || b.customer_email || ''));
+      if (orderSort === 'amount_high') return Number(b.total_amount || b.total || 0) - Number(a.total_amount || a.total || 0);
+      if (orderSort === 'amount_low') return Number(a.total_amount || a.total || 0) - Number(b.total_amount || b.total || 0);
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    });
 
     // Count by status
     const counts = {};
@@ -1535,7 +1623,7 @@ export default function AdminScreen() {
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🚚 Orders ({filtered.length})</Text>
+        <Text style={styles.sectionTitle}>🚚 Orders ({sorted.length})</Text>
 
         {/* Paid orders need action banner */}
         {(counts['paid'] || 0) > 0 && (
@@ -1580,8 +1668,23 @@ export default function AdminScreen() {
           ))}
         </ScrollView>
 
+        <Text style={{ color: C.TEXT_MUTED, fontSize: 12, marginBottom: 8 }}>Sort orders</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={true} persistentScrollbar style={{ marginBottom: 12 }}>
+          {(Object.keys(SORT_LABELS) as Array<keyof typeof SORT_LABELS>).map(sortKey => (
+            <TouchableOpacity
+              key={sortKey}
+              style={[styles.chipOption, orderSort === sortKey && styles.chipOptionActive, { marginRight: 6 }]}
+              onPress={() => setOrderSort(sortKey)}
+            >
+              <Text style={[styles.chipOptionText, orderSort === sortKey && styles.chipOptionTextActive]}>
+                {SORT_LABELS[sortKey]}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
         {/* Order list */}
-        {filtered.map(o => {
+        {sorted.map(o => {
           const isExpanded = expandedOrders.has(o.id);
           const items = getItems(o);
           const statusColor = ORDER_STATUS_COLORS[o.status] || '#F59E0B';
@@ -1684,12 +1787,12 @@ export default function AdminScreen() {
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                     {o.status === 'pending' && (
                       <GradientButton label="✅ Mark Paid" variant="teal" size="sm" onPress={async () => {
-                        try { await adminMarkOrderPaid(o.id); const d = await adminGetOrders(); setOrders(d?.orders || []); Alert.alert('Updated', 'Marked as paid.'); } catch (e: any) { Alert.alert('Error', e.message); }
+                        try { await adminMarkOrderPaid(o.id); const d = await adminGetOrders({ sort: orderSort }); setOrders(d?.orders || []); Alert.alert('Updated', 'Marked as paid.'); } catch (e: any) { Alert.alert('Error', e.message); }
                       }} />
                     )}
                     {(o.status === 'paid' || o.status === 'pending') && (
                       <GradientButton label="📦 Mark Packed" variant="outline" size="sm" onPress={async () => {
-                        try { await adminProcessOrder(o.id); const d = await adminGetOrders(); setOrders(d?.orders || []); Alert.alert('Updated', 'Marked as packed.'); } catch (e: any) { Alert.alert('Error', e.message); }
+                        try { await adminProcessOrder(o.id); const d = await adminGetOrders({ sort: orderSort }); setOrders(d?.orders || []); Alert.alert('Updated', 'Marked as packed.'); } catch (e: any) { Alert.alert('Error', e.message); }
                       }} />
                     )}
                   </View>
@@ -1713,7 +1816,7 @@ export default function AdminScreen() {
                         try {
                           const tracking = trackingInput[o.id] || '';
                           await adminFulfillOrder(o.id, tracking);
-                          const d = await adminGetOrders();
+                          const d = await adminGetOrders({ sort: orderSort });
                           setOrders(d?.orders || []);
                           setTrackingMsg(m => ({ ...m, [o.id]: '\u2713 Marked shipped!' + (tracking ? ' Tracking: ' + tracking : '') }));setTimeout(() => setTrackingMsg(m => { const n={...m}; delete n[o.id]; return n; }), 4000);
                         } catch (e: any) { setTrackingMsg(m => ({ ...m, [o.id]: 'Error: ' + (e.message || 'Failed') })); }
@@ -1721,7 +1824,7 @@ export default function AdminScreen() {
                     )}
                     {trackingInput[o.id] && !(['refunded','cancelled','failed'].includes(o.status)) && (
                       <GradientButton label="📍 Update Tracking" variant="outline" size="sm" onPress={async () => {
-                        try { await adminUpdateTracking(o.id, trackingInput[o.id]); const d = await adminGetOrders(); setOrders(d?.orders || []); setTrackingMsg(m => ({ ...m, [o.id]: '✓ Tracking updated!' })); setTimeout(() => setTrackingMsg(m => { const n={...m}; delete n[o.id]; return n; }), 4000); } catch (e: any) { setTrackingMsg(m => ({ ...m, [o.id]: 'Error: ' + e.message })); }
+                        try { await adminUpdateTracking(o.id, trackingInput[o.id]); const d = await adminGetOrders({ sort: orderSort }); setOrders(d?.orders || []); setTrackingMsg(m => ({ ...m, [o.id]: '✓ Tracking updated!' })); setTimeout(() => setTrackingMsg(m => { const n={...m}; delete n[o.id]; return n; }), 4000); } catch (e: any) { setTrackingMsg(m => ({ ...m, [o.id]: 'Error: ' + e.message })); }
                       }} />
                     )}
                   </View>
@@ -2045,10 +2148,30 @@ const styles = StyleSheet.create({
     borderColor: C.CARD_BORDER,
     overflow: 'hidden',
     marginBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'stretch',
   },
   challengeAdminImg: {
+    width: 176,
+    minHeight: 128,
+    flexShrink: 0,
+  },
+  challengeAdminInfo: {
+    flex: 1,
+    padding: 12,
+    minWidth: 0,
+  },
+  challengePreviewWrap: {
+    marginBottom: 12,
+    alignSelf: 'flex-start',
     width: '100%',
-    aspectRatio: 16 / 9,
+    maxWidth: 340,
+  },
+  challengePreviewImg: {
+    width: '100%',
+    height: 180,
+    borderRadius: 10,
+    backgroundColor: C.CARD_BG2,
   },
   adminChip: {
     paddingHorizontal: 8, paddingVertical: 3,

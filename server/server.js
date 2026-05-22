@@ -215,7 +215,8 @@ async function safeAddColumn(table, column, definition) {
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
         submission_id INT NOT NULL,
-        content TEXT NOT NULL,
+        text TEXT NOT NULL,
+        content TEXT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE
@@ -249,6 +250,19 @@ async function safeAddColumn(table, column, definition) {
         status ENUM('new','read','replied') DEFAULT 'new',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`,
+      // User dashboard notifications
+      `CREATE TABLE IF NOT EXISTS user_notifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        type VARCHAR(50) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        message TEXT,
+        is_read TINYINT(1) DEFAULT 0,
+        related_id INT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_user_notifications_user (user_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )`,
     ];
     for (const sql of migrations) {
       await pool.query(sql).catch(() => {});
@@ -264,6 +278,9 @@ async function safeAddColumn(table, column, definition) {
     await safeAddColumn('submissions', 'title', 'VARCHAR(200) NULL');
     await safeAddColumn('submissions', 'description', 'TEXT NULL');
     await safeAddColumn('submissions', 'miles_walked', 'DECIMAL(10,2) NULL');
+    await safeAddColumn('submissions', 'photo3_url', 'VARCHAR(500) NULL');
+    await safeAddColumn('submissions', 'photo4_url', 'VARCHAR(500) NULL');
+    await safeAddColumn('comments', 'text', 'TEXT NULL');
     await safeAddColumn('users', 'total_miles', 'DECIMAL(10,2) DEFAULT 0');
     await safeAddColumn('users', 'is_suspended', 'BOOLEAN DEFAULT FALSE');
     await safeAddColumn('users', 'suspended_reason', 'VARCHAR(500) NULL');
@@ -340,6 +357,7 @@ async function safeAddColumn(table, column, definition) {
     await safeAddColumn('orders', 'fulfilled_at', 'TIMESTAMP NULL');
     await safeAddColumn('orders', 'archived', 'TINYINT(1) DEFAULT 0');
     await safeAddColumn('orders', 'customer_name', 'VARCHAR(255) NULL');
+    await safeAddColumn('user_notifications', 'related_id', 'INT NULL');
 
   } catch (e) {
     console.error('[DB] Migration error:', e.message);
@@ -479,6 +497,19 @@ async function logSubEvent(userId, eventType, description, amount = null) {
   } catch {}
 }
 
+async function createUserNotification(userId, { type, title, message, relatedId = null }) {
+  if (!userId) return;
+  try {
+    await pool.query(
+      `INSERT INTO user_notifications (user_id, type, title, message, related_id)
+       VALUES (?, ?, ?, ?, ?)`,
+      [userId, type, title, message || null, relatedId]
+    );
+  } catch (e) {
+    console.error('[notification]', e.message);
+  }
+}
+
 // GET /api/admin/users/:id/orders â€” all orders for a specific user
 app.get('/api/admin/users/:id/orders', adminAuth, async (req, res) => {
   try {
@@ -490,6 +521,125 @@ app.get('/api/admin/users/:id/orders', adminAuth, async (req, res) => {
     );
     res.json({ orders });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/admin/users/:id/submissions - submissions for a specific user
+app.get('/api/admin/users/:id/submissions', adminAuth, async (req, res) => {
+  try {
+    const [submissions] = await pool.query(
+      `SELECT s.*,
+              s.photo1_url as image_url,
+              u.name as user_name,
+              c.title as challenge_title,
+              c.id as challenge_id,
+              c.category as challenge_category,
+              c.feeling_category as challenge_feeling_category,
+              c.movement_category as challenge_movement_category,
+              COALESCE((SELECT COUNT(*) FROM likes WHERE submission_id = s.id), 0) as like_count,
+              COALESCE((SELECT COUNT(*) FROM comments WHERE submission_id = s.id), 0) as comment_count
+       FROM submissions s
+       LEFT JOIN users u ON s.user_id = u.id
+       LEFT JOIN challenges c ON s.challenge_id = c.id
+       WHERE s.user_id = ?
+       ORDER BY s.created_at DESC
+       LIMIT 200`,
+      [req.params.id]
+    );
+    res.json({ submissions });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/admin/users/:id/comments - comments for a specific user
+app.get('/api/admin/users/:id/comments', adminAuth, async (req, res) => {
+  try {
+    const [comments] = await pool.query(
+      `SELECT cm.id,
+              COALESCE(cm.text, cm.content) as text,
+              cm.created_at,
+              s.title as submission_title,
+              s.id as submission_id,
+              s.photo1_url as submission_photo,
+              u.name as user_name
+       FROM comments cm
+       LEFT JOIN submissions s ON cm.submission_id = s.id
+       LEFT JOIN users u ON cm.user_id = u.id
+       WHERE cm.user_id = ?
+       ORDER BY cm.created_at DESC
+       LIMIT 300`,
+      [req.params.id]
+    );
+    res.json({ comments });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/admin/activity - moderation timeline of all photos and comments
+app.get('/api/admin/activity', adminAuth, async (req, res) => {
+  try {
+    const [items] = await pool.query(
+      `(SELECT
+          s.id,
+          'submission' as type,
+          s.title,
+          s.description,
+          s.photo1_url as image_url,
+          s.photo1_url,
+          s.photo2_url,
+          s.photo3_url,
+          s.photo4_url,
+          s.created_at,
+          s.user_id,
+          u.name as user_name,
+          c.title as challenge_title,
+          c.id as challenge_id,
+          c.category as challenge_category,
+          c.feeling_category as challenge_feeling_category,
+          c.movement_category as challenge_movement_category,
+          NULL as submission_id,
+          NULL as submission_title,
+          COALESCE((SELECT COUNT(*) FROM likes WHERE submission_id = s.id), 0) as like_count,
+          COALESCE((SELECT COUNT(*) FROM comments WHERE submission_id = s.id), 0) as comment_count
+        FROM submissions s
+        LEFT JOIN users u ON s.user_id = u.id
+        LEFT JOIN challenges c ON s.challenge_id = c.id)
+       UNION ALL
+       (SELECT
+          cm.id,
+          'comment' as type,
+          COALESCE(cm.text, cm.content) as title,
+          NULL as description,
+          s.photo1_url as image_url,
+          s.photo1_url,
+          s.photo2_url,
+          s.photo3_url,
+          s.photo4_url,
+          cm.created_at,
+          cm.user_id,
+          u.name as user_name,
+          c.title as challenge_title,
+          c.id as challenge_id,
+          c.category as challenge_category,
+          c.feeling_category as challenge_feeling_category,
+          c.movement_category as challenge_movement_category,
+          s.id as submission_id,
+          s.title as submission_title,
+          0 as like_count,
+          0 as comment_count
+        FROM comments cm
+        LEFT JOIN users u ON cm.user_id = u.id
+        LEFT JOIN submissions s ON cm.submission_id = s.id
+        LEFT JOIN challenges c ON s.challenge_id = c.id)
+       ORDER BY created_at DESC
+       LIMIT 400`
+    );
+    res.json({ items });
+  } catch (e) {
+    console.error('[admin/activity]', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // GET /api/admin/users/:id/subscription-history â€” membership event log
@@ -601,11 +751,21 @@ app.get('/api/challenges', async (req, res) => {
     const viewer = optionalAuth(req);
     const [challenges] = await pool.query(`
       SELECT c.*,
-        COUNT(DISTINCT s.id) AS submission_count,
-        COUNT(DISTINCT s.user_id) AS participant_count
+        (SELECT COUNT(*) FROM submissions s WHERE s.challenge_id = c.id) AS submission_count,
+        (
+          (SELECT COUNT(DISTINCT uc.user_id) FROM user_challenges uc WHERE uc.challenge_id = c.id)
+          +
+          (SELECT COUNT(DISTINCT s.user_id)
+           FROM submissions s
+           LEFT JOIN user_challenges uc2
+             ON uc2.challenge_id = s.challenge_id AND uc2.user_id = s.user_id
+           WHERE s.challenge_id = c.id AND uc2.id IS NULL)
+        ) AS participant_count,
+        (SELECT COUNT(*)
+         FROM comments cm
+         JOIN submissions s2 ON s2.id = cm.submission_id
+         WHERE s2.challenge_id = c.id) AS comment_count
       FROM challenges c
-      LEFT JOIN submissions s ON s.challenge_id = c.id
-      GROUP BY c.id
       ORDER BY c.created_at DESC
     `);
     if (viewer?.id && challenges.length > 0) {
@@ -666,12 +826,22 @@ app.get('/api/challenges/:id', async (req, res) => {
   try {
     const [challenges] = await pool.query(`
       SELECT c.*,
-        COUNT(DISTINCT s.id) AS submission_count,
-        COUNT(DISTINCT s.user_id) AS participant_count
+        (SELECT COUNT(*) FROM submissions s WHERE s.challenge_id = c.id) AS submission_count,
+        (
+          (SELECT COUNT(DISTINCT uc.user_id) FROM user_challenges uc WHERE uc.challenge_id = c.id)
+          +
+          (SELECT COUNT(DISTINCT s.user_id)
+           FROM submissions s
+           LEFT JOIN user_challenges uc2
+             ON uc2.challenge_id = s.challenge_id AND uc2.user_id = s.user_id
+           WHERE s.challenge_id = c.id AND uc2.id IS NULL)
+        ) AS participant_count,
+        (SELECT COUNT(*)
+         FROM comments cm
+         JOIN submissions s2 ON s2.id = cm.submission_id
+         WHERE s2.challenge_id = c.id) AS comment_count
       FROM challenges c
-      LEFT JOIN submissions s ON s.challenge_id = c.id
       WHERE c.id = ?
-      GROUP BY c.id
     `, [req.params.id]);
     if (challenges.length === 0) return res.status(404).json({ error: 'Challenge not found' });
     const challenge = challenges[0];
@@ -713,9 +883,12 @@ app.get('/api/challenges/:id', async (req, res) => {
 
 app.post('/api/challenges/:id/enter', auth, async (req, res) => {
   try {
-    const [challenges] = await pool.query('SELECT id, duration_days, is_active FROM challenges WHERE id = ?', [req.params.id]);
+    const [challenges] = await pool.query('SELECT id, duration_days, is_active, end_date FROM challenges WHERE id = ?', [req.params.id]);
     if (challenges.length === 0) return res.status(404).json({ error: 'Challenge not found' });
     if (!challenges[0].is_active) return res.status(400).json({ error: 'Challenge is not active' });
+    if (challenges[0].end_date && new Date(challenges[0].end_date).getTime() < Date.now()) {
+      return res.status(400).json({ error: 'Challenge is archived' });
+    }
     const durationDays = Number(challenges[0].duration_days || 30);
     await pool.query(
       `INSERT INTO user_challenges (user_id, challenge_id, status, personal_end_date)
@@ -1031,9 +1204,10 @@ app.get('/api/submissions', async (req, res) => {
       conditions.push('s.challenge_id = ?');
       params.push(challengeFilter);
     }
-    if (req.query.user_id) {
+    const userFilter = req.query.user_id || req.query.userId;
+    if (userFilter) {
       conditions.push('s.user_id = ?');
-      params.push(req.query.user_id);
+      params.push(userFilter);
     }
     if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
     query += ' ORDER BY s.created_at DESC';
@@ -1075,6 +1249,18 @@ app.post('/api/submissions', auth, async (req, res) => {
     // Check challenge exists and is active
     const [challenges] = await pool.query('SELECT * FROM challenges WHERE id = ? AND is_active = TRUE', [challenge_id]);
     if (challenges.length === 0) return res.status(400).json({ error: 'Challenge not found or inactive' });
+    if (challenges[0].end_date && new Date(challenges[0].end_date).getTime() < Date.now()) {
+      return res.status(400).json({ error: 'Challenge is archived' });
+    }
+
+    const [[commitment]] = await pool.query(
+      `SELECT personal_end_date, DATEDIFF(personal_end_date, CURDATE()) AS days_remaining
+       FROM user_challenges WHERE user_id = ? AND challenge_id = ?`,
+      [req.user.id, challenge_id]
+    );
+    if (commitment && Number(commitment.days_remaining) < 0) {
+      return res.status(403).json({ error: 'Your 30 day challenge window has expired' });
+    }
 
     // Pro-only challenge gate
     if (challenges[0].is_pro_only && !isPro) {
@@ -1788,6 +1974,51 @@ const stripe = stripeKey ? require('stripe')(stripeKey) : null;
 // Raw body parser for Stripe webhooks (must come before express.json globally)
 app.use('/api/webhook/stripe', express.raw({ type: 'application/json' }));
 
+function extractStripeShipping(session) {
+  const address = session.shipping_details?.address || session.customer_details?.address || null;
+  return {
+    address,
+    name: session.shipping_details?.name || session.customer_details?.name || session.customer_email || null,
+    email: session.customer_email || session.customer_details?.email || null,
+    paymentIntent: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id || null,
+    shippingMethod: session.shipping_cost?.shipping_rate || session.shipping_details?.name || null,
+  };
+}
+
+async function backfillOrderShippingFromStripe(order) {
+  if (!stripe || !order?.stripe_session_id || String(order.stripe_session_id).startsWith('free_')) return order;
+  if (order.shipping_address_json && order.customer_name && order.stripe_payment_intent) return order;
+  try {
+    const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id, {
+      expand: ['payment_intent'],
+    });
+    const shipping = extractStripeShipping(session);
+    if (!shipping.address && !shipping.name && !shipping.email && !shipping.paymentIntent) return order;
+    const next = {
+      ...order,
+      customer_email: order.customer_email || shipping.email,
+      customer_name: order.customer_name || shipping.name,
+      stripe_payment_intent: order.stripe_payment_intent || shipping.paymentIntent,
+      shipping_address_json: order.shipping_address_json || (shipping.address ? JSON.stringify({ name: shipping.name, ...shipping.address }) : null),
+      shipping_method: order.shipping_method || shipping.shippingMethod,
+    };
+    await pool.query(
+      `UPDATE orders SET
+        customer_email = COALESCE(customer_email, ?),
+        customer_name = COALESCE(customer_name, ?),
+        stripe_payment_intent = COALESCE(stripe_payment_intent, ?),
+        shipping_address_json = COALESCE(shipping_address_json, ?),
+        shipping_method = COALESCE(shipping_method, ?)
+       WHERE id = ?`,
+      [shipping.email, shipping.name, shipping.paymentIntent, next.shipping_address_json, shipping.shippingMethod, order.id]
+    );
+    return next;
+  } catch (e) {
+    console.error('[orders] Stripe shipping backfill:', e.message);
+    return order;
+  }
+}
+
 // GET /api/orders/my â€” authenticated user's own order history
 app.get('/api/orders/my', auth, async (req, res) => {
   try {
@@ -1805,11 +2036,28 @@ app.get('/api/orders/my', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// GET /api/notifications/my - dashboard notifications for the signed-in user
+app.get('/api/notifications/my', auth, async (req, res) => {
+  try {
+    const [notifications] = await pool.query(
+      `SELECT id, type, title, message, related_id, is_read, created_at
+       FROM user_notifications
+       WHERE user_id = ?
+       ORDER BY created_at DESC
+       LIMIT 30`,
+      [req.user.id]
+    );
+    res.json({ notifications, unread: notifications.filter(n => !n.is_read).length });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // POST /api/checkout/create-session â€” create a Stripe Checkout session
 app.post('/api/checkout/create-session', async (req, res) => {
   if (!stripe) return res.status(503).json({ error: 'Stripe not configured. Add STRIPE_SECRET_KEY to .env' });
 
-  const { items, success_url, cancel_url } = req.body;
+  const { items, success_url, cancel_url, coupon_code, gift_code } = req.body;
   if (!items || !items.length) return res.status(400).json({ error: 'No items provided' });
 
   try {
@@ -1865,6 +2113,14 @@ app.post('/api/checkout/create-session', async (req, res) => {
 
     if (!line_items.length) return res.status(400).json({ error: 'No valid line items' });
 
+    const total = line_items.reduce((sum, li) => sum + (li.price_data.unit_amount * li.quantity) / 100, 0);
+    const enrichedItems = items
+      .filter(i => productMap[i.id])
+      .map(i => {
+        const p = productMap[i.id];
+        return { id: p.id, title: p.title, price: parseFloat(p.price), quantity: i.quantity || 1, size: i.size || null, emoji: p.emoji || null };
+      });
+
     const origin = req.headers.origin || 'https://photoai.betaplanets.com';
     // Detect authenticated user (optional)
     let userId = null, userEmail = null;
@@ -1879,15 +2135,30 @@ app.post('/api/checkout/create-session', async (req, res) => {
       } catch {}
     }
 
+    if (total <= 0) {
+      await pool.query(
+        `INSERT INTO orders (user_id, stripe_session_id, status, total_amount, items_json, customer_email)
+         VALUES (?, ?, 'paid', ?, ?, ?)`,
+        [userId, `free_${Date.now()}`, 0, JSON.stringify(enrichedItems), userEmail]
+      );
+      return res.json({ success: true, free_order: true });
+    }
+
     const sessionOpts = {
       payment_method_types: ['card'],
       mode: 'payment',
       line_items,
+      allow_promotion_codes: true,
       // Use PHP trampoline to bypass LiteSpeed WAF on Stripe return URLs
       // 'ref' instead of 'session_id' â€” LiteSpeed WAF blocks 'session_id' as a suspected session token
       success_url: success_url || `${origin}/stripe-return.php?type=shop&ref={CHECKOUT_SESSION_ID}`,
       cancel_url: cancel_url || `${origin}/stripe-return.php?type=cancel`,
-      metadata: { items_json: JSON.stringify(items), user_id: userId ? String(userId) : '' },
+      metadata: {
+        items_json: JSON.stringify(items),
+        user_id: userId ? String(userId) : '',
+        coupon_code: coupon_code || '',
+        gift_code: gift_code || '',
+      },
       // Collect shipping address from customer
       shipping_address_collection: { allowed_countries: ['US', 'CA', 'GB', 'AU', 'NZ'] },
       // Flat-rate shipping options
@@ -1915,13 +2186,6 @@ app.post('/api/checkout/create-session', async (req, res) => {
     const session = await stripe.checkout.sessions.create(sessionOpts);
 
     // Save pending order â€” store enriched items (title, price, quantity) not just IDs
-    const total = line_items.reduce((sum, li) => sum + (li.price_data.unit_amount * li.quantity) / 100, 0);
-    const enrichedItems = items
-      .filter(i => productMap[i.id])
-      .map(i => {
-        const p = productMap[i.id];
-        return { id: p.id, title: p.title, price: parseFloat(p.price), quantity: i.quantity || 1, size: i.size || null, emoji: p.emoji || null };
-      });
     await pool.query(
       `INSERT INTO orders (user_id, stripe_session_id, status, total_amount, items_json, customer_email)
        VALUES (?, ?, 'pending', ?, ?, ?)`,
@@ -1957,15 +2221,16 @@ app.post('/api/checkout/verify-session', async (req, res) => {
       // No order row â€” create it (edge case: session outside app)
       const total = (session.amount_total || 0) / 100;
       const metaUserId = session.metadata?.user_id ? parseInt(session.metadata.user_id) : null;
+      const shipping = extractStripeShipping(session);
       await pool.query(
         `INSERT INTO orders (user_id, stripe_session_id, status, total_amount, items_json, customer_email, customer_name, stripe_payment_intent)
          VALUES (?, ?, 'paid', ?, ?, ?, ?, ?)`,
         [metaUserId, session_id, total, session.metadata?.items_json || '[]',
-         session.customer_email, session.customer_details?.name, session.payment_intent?.id || null]
+         shipping.email, shipping.name, shipping.paymentIntent]
       );
     } else if (existing.status === 'pending') {
-      const shippingAddr = session.shipping_details?.address || session.customer_details?.address || null;
-      const shippingMethod = session.shipping_cost?.shipping_rate ? null : (session.shipping_details?.name || null);
+      const shipping = extractStripeShipping(session);
+      const shippingAddr = shipping.address ? { name: shipping.name, ...shipping.address } : null;
       await pool.query(
         `UPDATE orders SET status = 'paid',
          customer_email = COALESCE(customer_email, ?),
@@ -1974,8 +2239,8 @@ app.post('/api/checkout/verify-session', async (req, res) => {
          shipping_address_json = ?,
          shipping_method = COALESCE(shipping_method, ?)
          WHERE stripe_session_id = ?`,
-        [session.customer_email, session.customer_details?.name, session.payment_intent?.id || null,
-         shippingAddr ? JSON.stringify(shippingAddr) : null, shippingMethod, session_id]
+        [shipping.email, shipping.name, shipping.paymentIntent,
+         shippingAddr ? JSON.stringify(shippingAddr) : null, shipping.shippingMethod, session_id]
       );
     }
 
@@ -1995,6 +2260,12 @@ app.post('/api/checkout/verify-session', async (req, res) => {
     const [[order]] = await pool.query('SELECT * FROM orders WHERE stripe_session_id = ?', [session_id]);
     if (order && !order.confirmation_sent) {
       notifyOrderConfirmation(order).catch(() => {});
+      createUserNotification(order.user_id, {
+        type: 'order_paid',
+        title: 'Order received',
+        message: `Order #${order.id} is paid and being prepared.`,
+        relatedId: order.id,
+      });
       pool.query('UPDATE orders SET confirmation_sent = 1 WHERE id = ?', [order.id]).catch(() => {});
     }
 
@@ -2052,14 +2323,27 @@ app.post('/api/webhook/stripe', async (req, res) => {
         }
       } else {
         // â”€â”€ One-time shop order payment â”€â”€
+        const shipping = extractStripeShipping(session);
+        const shippingAddr = shipping.address ? JSON.stringify({ name: shipping.name, ...shipping.address }) : null;
         await pool.query(
           `UPDATE orders SET status = 'paid', stripe_payment_intent = ?, customer_email = ?,
-           customer_name = ?, user_id = COALESCE(user_id, ?)
+           customer_name = ?, user_id = COALESCE(user_id, ?),
+           shipping_address_json = COALESCE(shipping_address_json, ?),
+           shipping_method = COALESCE(shipping_method, ?)
            WHERE stripe_session_id = ?`,
-          [session.payment_intent || null, session.customer_email || null,
-           session.customer_details?.name || null, metaUserId, session.id]
+          [shipping.paymentIntent, shipping.email,
+           shipping.name, metaUserId, shippingAddr, shipping.shippingMethod, session.id]
         );
         console.log('[Stripe] Order paid:', session.id);
+        const [[order]] = await pool.query('SELECT * FROM orders WHERE stripe_session_id = ?', [session.id]).catch(() => [[]]);
+        if (order) {
+          createUserNotification(order.user_id || metaUserId, {
+            type: 'order_paid',
+            title: 'Order received',
+            message: `Order #${order.id} is paid and being prepared.`,
+            relatedId: order.id,
+          });
+        }
       }
     } catch (e) {
       console.error('[Stripe webhook] checkout.session.completed error:', e.message);
@@ -2216,6 +2500,10 @@ app.get('/api/admin/orders', adminAuth, async (req, res) => {
     query += ' ' + (sortMap[sort] || sortMap.newest) + ' LIMIT 500';
 
     const [rows] = await pool.query(query, params);
+    const rowsWithShipping = [];
+    for (const row of rows) {
+      rowsWithShipping.push(await backfillOrderShippingFromStripe(row));
+    }
 
     // Add Stripe payment link to each order
     const STRIPE_KEY = process.env.STRIPE_SECRET_KEY || '';
@@ -2224,7 +2512,7 @@ app.get('/api/admin/orders', adminAuth, async (req, res) => {
       ? 'https://dashboard.stripe.com/test/payments/'
       : 'https://dashboard.stripe.com/payments/';
 
-    const enriched = rows.map(o => ({
+    const enriched = rowsWithShipping.map(o => ({
       ...o,
       stripe_payment_url: o.stripe_payment_intent ? stripeBase + o.stripe_payment_intent : null,
     }));
@@ -2246,6 +2534,12 @@ app.patch('/api/admin/orders/:id/mark-paid', adminAuth, async (req, res) => {
     if (!order.confirmation_sent) {
       const updated = { ...order, status: 'paid' };
       notifyOrderConfirmation(updated).catch(() => {});
+      createUserNotification(order.user_id, {
+        type: 'order_paid',
+        title: 'Order received',
+        message: `Order #${order.id} is paid and being prepared.`,
+        relatedId: order.id,
+      });
       pool.query('UPDATE orders SET confirmation_sent = 1 WHERE id = ?', [req.params.id]).catch(() => {});
     }
     res.json({ success: true });
@@ -2264,6 +2558,12 @@ async function handleOrderProcess(req, res) {
     );
     const [[order]] = await pool.query('SELECT * FROM orders WHERE id = ?', [req.params.id]);
     if (order) notifyOrderStatus({ order, type: 'processed' });
+    if (order) createUserNotification(order.user_id, {
+      type: 'order_processed',
+      title: 'Order packed',
+      message: `Order #${order.id} has been packed and is ready to ship.`,
+      relatedId: order.id,
+    });
     res.json({ ok: true, order });
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
@@ -2281,6 +2581,12 @@ async function handleOrderFulfill(req, res) {
     );
     const [[order]] = await pool.query('SELECT * FROM orders WHERE id = ?', [req.params.id]);
     if (order) notifyOrderStatus({ order, type: 'shipped' });
+    if (order) createUserNotification(order.user_id, {
+      type: 'order_shipped',
+      title: 'Order shipped',
+      message: `Order #${order.id} has shipped${tracking_number ? ` with tracking ${tracking_number}` : ''}.`,
+      relatedId: order.id,
+    });
     res.json({ ok: true, order });
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
@@ -2295,6 +2601,12 @@ app.patch('/api/admin/orders/:id/tracking', adminAuth, async (req, res) => {
     await pool.query('UPDATE orders SET tracking_number = ?, updated_at = NOW() WHERE id = ?', [tracking_number, req.params.id]);
     const [[order]] = await pool.query('SELECT * FROM orders WHERE id = ?', [req.params.id]);
     if (order) notifyOrderStatus({ order, type: 'tracking_updated' });
+    if (order) createUserNotification(order.user_id, {
+      type: 'tracking_updated',
+      title: 'Tracking updated',
+      message: `Tracking was updated for order #${order.id}: ${tracking_number}.`,
+      relatedId: order.id,
+    });
     res.json({ ok: true, order });
   } catch (e) {
     res.status(500).json({ error: e.message });

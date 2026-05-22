@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Alert, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Alert, TextInput, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useCart } from '../context/CartContext';
 import { createCheckoutSession } from '../services/api';
@@ -12,12 +12,17 @@ export default function CartScreen() {
   const { width } = useWindowDimensions();
   const { items, removeItem, updateQuantity, clearCart, total, itemCount } = useCart();
   const [loading, setLoading] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [giftCode, setGiftCode] = useState('');
   const isDesktop = width >= 900;
 
   const handleCheckout = async () => {
     setLoading(true);
     try {
-      const data = await createCheckoutSession(items.map(i => ({ id: i.id, quantity: i.quantity, size: i.size || null })));
+      const data = await createCheckoutSession(
+        items.map(i => ({ id: i.id, quantity: i.quantity, size: i.size || null })),
+        { couponCode: couponCode.trim(), giftCode: giftCode.trim() },
+      );
       if (data?.url) { (window as any).location.href = data.url; }
       else { clearCart(); navigation.navigate('CheckoutSuccess' as never); }
     } catch (e: any) { Alert.alert('Checkout Failed', e.message || 'Something went wrong.'); }
@@ -65,12 +70,36 @@ export default function CartScreen() {
             <View style={styles.checkoutInfo}>
               <Text style={styles.summaryTitle}>Checkout Details</Text>
               <Text style={styles.checkoutLine}>Shipping address and delivery options are collected during secure checkout.</Text>
-              <Text style={styles.checkoutLine}>Coupons and gift codes can be applied before payment.</Text>
+              <Text style={styles.checkoutLine}>Coupons and gift codes can be entered before checkout.</Text>
               <Text style={styles.checkoutLine}>Card details are entered on the payment screen, not saved on this cart page.</Text>
               <Text style={styles.returnNote}>Shipping and return options are determined by the customer address.</Text>
             </View>
             <View style={styles.summary}>
             <Text style={styles.summaryTitle}>Order Summary</Text>
+            <View style={styles.codeGrid}>
+              <View style={styles.codeField}>
+                <Text style={styles.codeLabel}>Coupon code</Text>
+                <TextInput
+                  value={couponCode}
+                  onChangeText={setCouponCode}
+                  placeholder="Enter coupon"
+                  placeholderTextColor={C.TEXT_MUTED}
+                  autoCapitalize="characters"
+                  style={styles.codeInput}
+                />
+              </View>
+              <View style={styles.codeField}>
+                <Text style={styles.codeLabel}>Gift code</Text>
+                <TextInput
+                  value={giftCode}
+                  onChangeText={setGiftCode}
+                  placeholder="Enter gift code"
+                  placeholderTextColor={C.TEXT_MUTED}
+                  autoCapitalize="characters"
+                  style={styles.codeInput}
+                />
+              </View>
+            </View>
             <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Subtotal ({items.reduce((s,i) => s+i.quantity, 0)} items)</Text><Text style={styles.summaryValue}>${total.toFixed(2)}</Text></View>
             <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Shipping</Text><Text style={styles.summaryValue}>Calculated at checkout</Text></View>
             <View style={[styles.summaryRow, styles.totalRow]}><Text style={styles.totalLabel}>Total</Text><Text style={styles.totalAmt}>${total.toFixed(2)}</Text></View>
@@ -115,6 +144,19 @@ const styles = StyleSheet.create({
   returnNote: { color: C.TEAL, fontSize: 13, lineHeight: 20, marginTop: 4, fontWeight: '700' },
   summary: { flex: 1, backgroundColor: C.CARD_BG, borderRadius: borderRadius.xl, padding: 20, borderWidth: 1, borderColor: C.CARD_BORDER },
   summaryTitle: { color: C.TEXT, fontSize: 16, fontWeight: '700', marginBottom: 14 },
+  codeGrid: { gap: 10, marginBottom: 16 },
+  codeField: { gap: 6 },
+  codeLabel: { color: C.TEXT_SECONDARY, fontSize: 12, fontWeight: '700' },
+  codeInput: {
+    backgroundColor: C.INPUT_BG,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+    borderRadius: borderRadius.lg,
+    color: C.TEXT,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+  },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
   summaryLabel: { color: C.TEXT_MUTED, fontSize: 14 },
   summaryValue: { color: C.TEXT_SECONDARY, fontSize: 14 },

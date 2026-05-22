@@ -210,10 +210,15 @@ export const deleteProduct = (id: number) =>
   request('POST', `/admin-api-proxy.php?path=/api/admin/products/${id}&method=DELETE`);
 
 // â”€â”€ Cart / Orders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-export const createCheckoutSession = (items: any[]) =>
-  request('POST', '/api/checkout/create-session', { items });
+export const createCheckoutSession = (items: any[], options?: { couponCode?: string; giftCode?: string }) =>
+  request('POST', '/api/checkout/create-session', {
+    items,
+    coupon_code: options?.couponCode || null,
+    gift_code: options?.giftCode || null,
+  });
 
 export const getMyOrders = () => request('GET', '/api/orders/my');
+export const getMyNotifications = () => request('GET', '/api/notifications/my');
 
 export const createBundleOrder = (data: any) =>
   request('POST', '/api/orders/bundle', data);

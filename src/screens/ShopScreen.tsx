@@ -96,6 +96,7 @@ export default function ShopScreen() {
       name: product.title || product.name,
       price: Number(product.price),
       image: fullUrl(product.image_url) || undefined,
+      size: null,
     });
     // Visual feedback - highlight the button briefly
     setCartAdded(product.id);

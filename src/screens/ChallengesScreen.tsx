@@ -12,7 +12,14 @@ import { C, borderRadius } from '../theme';
 import AppFooter from '../components/AppFooter';
 import { Image } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { CHALLENGE_CATEGORIES, FEELING_CATEGORIES, MOVEMENT_CATEGORIES } from '../constants/taxonomy';
+import {
+  CHALLENGE_CATEGORIES,
+  FEELING_CATEGORIES,
+  MOVEMENT_CATEGORIES,
+  normalizeChallengeCategory,
+  normalizeFeelingCategory,
+  normalizeMovementCategory,
+} from '../constants/taxonomy';
 
 const CHALLENGE_LOGO = require('../../assets/Pose_6-removebg-preview.png');
 
@@ -20,6 +27,30 @@ const BASE_URL = 'https://photoai.betaplanets.com';
 const fullUrl = (u?: string) => u ? (u.startsWith('http') ? u : BASE_URL + u) : undefined;
 const primaryValue = (value?: string) => (value || '').split(',')[0].trim();
 const userChallengeStatus = (challenge: any) => challenge.user_challenge?.status || null;
+const hasHardStopExpired = (challenge: any) => (
+  !!challenge.end_date && new Date(challenge.end_date).getTime() < Date.now()
+);
+const isOpenChallenge = (challenge: any) => {
+  if (!(challenge.is_active || challenge.status === 'active')) return false;
+  return !hasHardStopExpired(challenge);
+};
+const hasMissedCommitmentWindow = (challenge: any) =>
+  userChallengeStatus(challenge) === 'active' && Number(challenge.user_challenge?.days_remaining ?? 0) < 0;
+const isAvailableChallenge = (challenge: any) =>
+  isOpenChallenge(challenge) && !challenge.user_challenge;
+const isActiveUserChallenge = (challenge: any) =>
+  userChallengeStatus(challenge) === 'active' && !hasMissedCommitmentWindow(challenge) && isOpenChallenge(challenge);
+const isCompletedUserChallenge = (challenge: any) =>
+  userChallengeStatus(challenge) === 'completed' || !!challenge.user_challenge?.has_submission;
+const isArchivedUserChallenge = (challenge: any) =>
+  !isCompletedUserChallenge(challenge) &&
+  (challenge.status === 'archived' || challenge.is_active === false || hasHardStopExpired(challenge) || hasMissedCommitmentWindow(challenge));
+const challengeCategoryValue = (challenge: any) =>
+  normalizeChallengeCategory(challenge.category || challenge.challenge_category);
+const challengeFeelingValue = (challenge: any) =>
+  normalizeFeelingCategory(challenge.feeling_category || challenge.feeling_tag || challenge.challenge_feeling_category);
+const challengeMovementValue = (challenge: any) =>
+  normalizeMovementCategory(challenge.movement_category || challenge.movement_tag || challenge.challenge_movement_category);
 
 export default function ChallengesScreen() {
   const navigation = useNavigation<any>();
@@ -81,30 +112,33 @@ export default function ChallengesScreen() {
       let result = [...list];
       if (s !== 'all') {
         if (s === 'active') {
-          result = result.filter(c => userChallengeStatus(c) === 'active');
+          result = result.filter(isActiveUserChallenge);
         } else if (s === 'completed') {
-          result = result.filter(c => userChallengeStatus(c) === 'completed');
+          result = result.filter(isCompletedUserChallenge);
         } else if (s === 'archived') {
-          // Archived = manually archived by admin
-          result = result.filter(c => c.status === 'archived');
+          result = result.filter(isArchivedUserChallenge);
         } else {
           result = result.filter(c => c.status === s);
         }
+      } else {
+        result = result.filter(isAvailableChallenge);
       }
-      // Use substring match to handle emoji encoding differences
-      if (cat !== 'All') result = result.filter(c =>
-        c.category && (c.category === cat || c.category.includes(cat.replace(/^\S+\s/, '')))
-      );
+      if (cat !== 'All') result = result.filter(c => challengeCategoryValue(c) === cat);
       if (feeling !== 'All') result = result.filter(c =>
-        primaryValue(c.feeling_category || c.feeling_tag) === feeling
+        challengeFeelingValue(c) === feeling
       );
       if (movement !== 'All') result = result.filter(c =>
-        primaryValue(c.movement_category || c.movement_tag) === movement
+        challengeMovementValue(c) === movement
       );
       if (q.trim()) {
         const lq = q.toLowerCase();
         result = result.filter(
-          c => c.title?.toLowerCase().includes(lq) || c.description?.toLowerCase().includes(lq)
+          c =>
+            c.title?.toLowerCase().includes(lq) ||
+            c.description?.toLowerCase().includes(lq) ||
+            challengeCategoryValue(c).toLowerCase().includes(lq) ||
+            challengeFeelingValue(c).toLowerCase().includes(lq) ||
+            challengeMovementValue(c).toLowerCase().includes(lq)
         );
       }
       setFiltered(result);
@@ -128,10 +162,10 @@ export default function ChallengesScreen() {
   const rows = chunkArray(filtered, numCols);
 
   const tabCounts = {
-    all: challenges.length,
-    active: challenges.filter(c => userChallengeStatus(c) === 'active').length,
-    completed: challenges.filter(c => userChallengeStatus(c) === 'completed').length,
-    archived: challenges.filter(c => c.status === 'archived').length,
+    all: challenges.filter(isAvailableChallenge).length,
+    active: challenges.filter(isActiveUserChallenge).length,
+    completed: challenges.filter(isCompletedUserChallenge).length,
+    archived: challenges.filter(isArchivedUserChallenge).length,
   };
   const STATUS_TABS = [
     { key: 'all', label: 'All (' + tabCounts.all + ')' },
@@ -164,7 +198,11 @@ export default function ChallengesScreen() {
 
       {/* Featured Challenge Banner */}
       {/* {(() => {
-        const featured = challenges.find(c => c.is_active || c.status === 'active') || challenges[0];
+        const featured = challenges.find(c => {
+          if (!(c.is_active || c.status === 'active')) return false;
+          if (!c.end_date) return true;
+          return new Date(c.end_date).getTime() >= Date.now();
+        }) || challenges.find(c => c.is_active || c.status === 'active') || challenges[0];
         if (!featured) return null;
         const imgUri = fullUrl(featured.cover_image_url || featured.cover_image);
         const daysLeft = featured.end_date

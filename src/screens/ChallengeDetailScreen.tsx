@@ -195,6 +195,8 @@ export default function ChallengeDetailScreen() {
   const submissionDisplayCount = showingFilteredSubmissions
     ? filteredSubs.length
     : (challenge.submission_count ?? filteredSubs.length);
+  const participantDisplayCount = challenge.participant_count ?? 0;
+  const commentDisplayCount = challenge.comment_count ?? submissions.reduce((sum, sub) => sum + (Number(sub.comment_count ?? sub.comments_count ?? sub.comments ?? 0) || 0), 0);
   const countText = (value: any) => {
     const n = Number(value);
     return Number.isFinite(n) ? String(n) : '0';
@@ -260,6 +262,8 @@ export default function ChallengeDetailScreen() {
                 val: movementLabel,
               },
               { label: 'Days Left', val: daysLeft !== null ? String(daysLeft) : '—' },
+              { label: 'Submissions', val: countText(submissionDisplayCount) },
+              { label: 'Comments', val: countText(commentDisplayCount) },
             ].map(({ label, val }) => (
               <View key={label} style={styles.statItem}>
                 <Text style={styles.statLabel}>{label}</Text>
@@ -271,7 +275,7 @@ export default function ChallengeDetailScreen() {
           {/* Participants */}
           {(challenge.participant_count !== undefined || challenge.submission_count !== undefined) && (
             <Text style={styles.participantsText}>
-              👥 {challenge.participant_count ?? challenge.submission_count ?? 0} participants
+              👥 {countText(participantDisplayCount)} participants
             </Text>
           )}
 

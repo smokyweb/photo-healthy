@@ -50,9 +50,13 @@ export default function ProductDetailScreen() {
       return;
     }
     const name = product.title || product.name || 'Product';
-    for (let i = 0; i < qty; i++) {
-      addItem({ id: product.id, name, price: Number(product.price), image: fullUrl(product.image_url) || undefined });
-    }
+    addItem({
+      id: product.id,
+      name,
+      price: Number(product.price),
+      image: fullUrl(product.image_url) || undefined,
+      size: selectedSize,
+    }, qty);
     setAdded(true);
     setTimeout(() => setAdded(false), 2500);
   };

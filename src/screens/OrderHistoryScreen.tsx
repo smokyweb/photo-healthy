@@ -23,6 +23,10 @@ export default function OrderHistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const goBackToProfile = () => {
+    if (navigation.canGoBack?.()) navigation.goBack();
+    else navigation.navigate('Main' as never, { screen: 'ProfileTab' } as never);
+  };
 
   const load = async () => {
     try {
@@ -71,7 +75,7 @@ export default function OrderHistoryScreen() {
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={goBackToProfile}>
           <Text style={styles.back}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>My Orders</Text>

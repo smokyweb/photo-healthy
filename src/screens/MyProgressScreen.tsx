@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, RefreshControl, useWindowDimensions } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -22,12 +22,16 @@ export default function MyProgressScreen() {
   const [stats, setStats] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const goBackToProfile = () => {
+    if (navigation.canGoBack?.()) navigation.goBack();
+    else navigation.navigate('Main' as never, { screen: 'ProfileTab' } as never);
+  };
 
   const load = async () => {
     if (!user) { setLoading(false); return; }
     try {
       const [sData, stData] = await Promise.all([
-        getSubmissions({ userId: String(user.id), limit: '100' }),
+        getSubmissions({ user_id: String(user.id), userId: String(user.id), limit: '100' }),
         getUserStats(),
       ]);
       setSubmissions(sData?.submissions || sData || []);
@@ -44,11 +48,11 @@ export default function MyProgressScreen() {
   if (loading) return <LoadingSpinner fullScreen />;
 
   const STAT_CARDS = [
-    { label: 'Photos Submitted', value: stats.submissions ?? stats.submission_count ?? 0, icon: 'ðŸ“·' },
-    { label: 'Challenges Joined', value: stats.challenges ?? stats.challenge_count ?? 0, icon: 'ðŸ†' },
-    { label: 'Likes Received', value: stats.likesReceived ?? stats.total_likes ?? 0, icon: 'â¤ï¸' },
-    { label: 'Miles Logged', value: parseFloat(stats.totalMiles ?? stats.total_miles ?? 0).toFixed(1), icon: 'ðŸš¶' },
-    { label: 'Day Streak', value: stats.streak ?? 0, icon: 'ðŸ”¥' },
+    { label: 'Photos Submitted', value: stats.submissions ?? stats.submission_count ?? 0, icon: '📷' },
+    { label: 'Challenges Joined', value: stats.challenges ?? stats.challenge_count ?? 0, icon: '🏆' },
+    { label: 'Likes Received', value: stats.likesReceived ?? stats.total_likes ?? 0, icon: '❤️' },
+    { label: 'Miles Logged', value: parseFloat(stats.totalMiles ?? stats.total_miles ?? 0).toFixed(1), icon: '🚶' },
+    { label: 'Day Streak', value: stats.streak ?? 0, icon: '🔥' },
   ];
 
   const colWidth = `${Math.floor(100 / numCols) - 1}%`;
@@ -70,8 +74,8 @@ export default function MyProgressScreen() {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>â† Back</Text>
+          <TouchableOpacity onPress={goBackToProfile}>
+            <Text style={styles.backText}>← Back</Text>
           </TouchableOpacity>
           <Text style={styles.title}>My Progress</Text>
           <View style={{ width: 50 }} />
@@ -95,14 +99,14 @@ export default function MyProgressScreen() {
 
         {submissions.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={{ fontSize: 48, marginBottom: 12 }}>{'ðŸ“·'}</Text>
+            <Text style={{ fontSize: 48, marginBottom: 12 }}>{'📷'}</Text>
             <Text style={styles.emptyTitle}>No photos yet</Text>
             <Text style={styles.emptyBody}>Enter a challenge and start submitting to track your progress!</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('Main' as never, { screen: 'ChallengesTab' } as never)}
               style={styles.cta}
             >
-              <Text style={styles.ctaText}>Browse Challenges â†’</Text>
+              <Text style={styles.ctaText}>Browse Challenges →</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -120,7 +124,7 @@ export default function MyProgressScreen() {
                     <Image source={{ uri: imgUrl }} style={styles.photoImg} resizeMode="contain" />
                   ) : (
                     <View style={[styles.photoImg, styles.photoPlaceholder]}>
-                      <Text style={{ fontSize: 28 }}>{'ðŸ“·'}</Text>
+                      <Text style={{ fontSize: 28 }}>{'📷'}</Text>
                     </View>
                   )}
                   {sub.title ? (

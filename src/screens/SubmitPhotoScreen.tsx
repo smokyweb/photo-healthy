@@ -5,12 +5,12 @@ import {
   ScrollView, Alert, Platform, useWindowDimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { createSubmission, uploadPhoto, getChallenge, getUserStats } from '../services/api';
+import { createSubmission, uploadPhoto, getChallenge, getUserStats, enterChallenge } from '../services/api';
 import Input from '../components/Input';
 import GradientButton from '../components/GradientButton';
 import AppFooter from '../components/AppFooter';
 import { C, borderRadius } from '../theme';
-import { normalizeFeelingCategory, normalizeMovementCategory } from '../constants/taxonomy';
+import { normalizeChallengeCategory, normalizeFeelingCategory, normalizeMovementCategory } from '../constants/taxonomy';
 
 const SUBMIT_LOGO = require('../../assets/Pose_2-removebg-preview.png');
 
@@ -84,6 +84,11 @@ export default function SubmitPhotoScreen() {
     setError('');
     setLoading(true);
     try {
+      if (challengeId) {
+        await enterChallenge(challengeId).catch((err: any) => {
+          if (!String(err?.message || '').toLowerCase().includes('duplicate')) throw err;
+        });
+      }
       // Upload all photos
       const uploadedUrls: string[] = [];
       for (const p of photos) {
@@ -122,8 +127,10 @@ export default function SubmitPhotoScreen() {
   };
 
   const photoSlots = Array(MAX_PHOTOS).fill(null).map((_, i) => photos[i] || null);
+  const normalizedCategory = normalizeChallengeCategory(challenge?.category);
   const normalizedMovement = normalizeMovementCategory(challenge?.movement_category || challenge?.movement_tag);
   const normalizedFeeling = normalizeFeelingCategory(challenge?.feeling_category || challenge?.feeling_tag || challenge?.mood_tag);
+  const categoryValue = normalizedCategory === '-' ? 'Category' : normalizedCategory;
   const movementValue = normalizedMovement === '-' ? 'Movement' : normalizedMovement;
   const feelingValue = normalizedFeeling === '-' ? 'Feeling' : normalizedFeeling;
   const enteredMiles = miles && /^\d*\.?\d+$/.test(miles) ? parseFloat(miles) : 0;
@@ -176,6 +183,30 @@ export default function SubmitPhotoScreen() {
         </View>
 
         <Text style={styles.subtitle}>Share your healthy moment with the community</Text>
+
+        {challenge ? (
+          <TouchableOpacity
+            style={styles.challengeContext}
+            activeOpacity={0.82}
+            onPress={() => navigation.navigate('ChallengeDetail' as never, { challengeId, id: challengeId } as never)}
+          >
+            <Text style={styles.contextLabel}>Submitting to</Text>
+            <Text style={styles.contextTitle}>{challenge.title || 'Current Challenge'}</Text>
+            <View style={styles.contextTags}>
+              {[
+                { label: 'Category', value: categoryValue },
+                { label: 'Feeling', value: feelingValue },
+                { label: 'Movement', value: movementValue },
+              ].map(tag => (
+                <View key={tag.label} style={styles.contextTag}>
+                  <Text style={styles.contextTagLabel}>{tag.label}</Text>
+                  <Text style={styles.contextTagValue}>{tag.value}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={styles.backToContest}>Back to contest</Text>
+          </TouchableOpacity>
+        ) : null}
 
         {error ? (
           <View style={styles.errorBox}>
@@ -258,7 +289,7 @@ export default function SubmitPhotoScreen() {
           activeOpacity={0.7}
         >
           <View style={[styles.checkbox, agreed && styles.checkboxChecked]}>
-            {agreed && <Text style={styles.checkmark}>âœ“</Text>}
+            {agreed && <Text style={styles.checkmark}>{'\u2713'}</Text>}
           </View>
           <Text style={styles.checkLabel}>
             I agree to the{' '}
@@ -274,11 +305,16 @@ export default function SubmitPhotoScreen() {
 
         {/* Submit Button - always visible, not hidden under scroll */}
         <View style={styles.submitWrap}>
+          {error ? (
+            <View style={styles.submitErrorBox}>
+              <Text style={styles.submitErrorText}>{error}</Text>
+            </View>
+          ) : null}
           <GradientButton
             label={loading ? 'Uploading...' : `Submit ${photos.length > 1 ? photos.length + ' Photos' : 'Photo'}`}
             onPress={handleSubmit}
             loading={loading}
-            disabled={photos.length === 0 || !title.trim() || !agreed || loading}
+            disabled={loading}
           />
         </View>
 
@@ -326,6 +362,61 @@ const styles = StyleSheet.create({
   backText: { color: C.ORANGE, fontSize: 15, fontWeight: '600', width: 60 },
   heading: { color: C.TEXT, fontSize: 20, fontWeight: '800', fontFamily: "'Lexend', sans-serif" },
   subtitle: { color: C.TEXT_SECONDARY, fontSize: 14, marginBottom: 20, textAlign: 'center' },
+  challengeContext: {
+    backgroundColor: C.CARD_BG,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+    padding: 14,
+    marginBottom: 16,
+  },
+  contextLabel: {
+    color: C.TEXT_MUTED,
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  contextTitle: {
+    color: C.TEXT,
+    fontSize: 17,
+    fontWeight: '800',
+    fontFamily: "'Lexend', sans-serif",
+    marginBottom: 10,
+  },
+  contextTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  contextTag: {
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    minWidth: 120,
+  },
+  contextTagLabel: {
+    color: C.TEXT_MUTED,
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  contextTagValue: {
+    color: C.TEAL,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  backToContest: {
+    color: C.ORANGE,
+    fontSize: 12,
+    fontWeight: '800',
+    textAlign: 'right',
+  },
 
   errorBox: {
     backgroundColor: '#ef444422',
@@ -422,12 +513,26 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   checkboxChecked: { backgroundColor: C.ORANGE, borderColor: C.ORANGE },
-  checkmark: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  checkmark: { color: '#fff', fontSize: 16, fontWeight: '900', lineHeight: 18 },
   checkLabel: { flex: 1, color: C.TEXT_SECONDARY, fontSize: 13, lineHeight: 20 },
   checkLink: { color: C.ORANGE, textDecorationLine: 'underline' },
 
   submitWrap: {
     marginTop: 4,
     paddingBottom: 16,
+  },
+  submitErrorBox: {
+    backgroundColor: '#ef444422',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#ef444455',
+  },
+  submitErrorText: {
+    color: '#fecaca',
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });

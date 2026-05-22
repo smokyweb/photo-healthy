@@ -20,6 +20,10 @@ export default function EditProfileScreen() {
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
   const [changingPw, setChangingPw] = useState(false);
+  const goBackToProfile = () => {
+    if (navigation.canGoBack?.()) navigation.goBack();
+    else navigation.navigate('Main' as never, { screen: 'ProfileTab' } as never);
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -65,7 +69,7 @@ export default function EditProfileScreen() {
   return (
     <ScrollView style={styles.screen} keyboardShouldPersistTaps="handled">
       <View style={styles.container}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
+        <TouchableOpacity onPress={goBackToProfile} style={styles.back}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
 
