@@ -197,7 +197,7 @@ export default function SubmitPhotoScreen() {
             >
               {photo ? (
                 <View style={{ flex: 1 }}>
-                  <Image source={{ uri: photo.preview }} style={styles.photoImg} resizeMode="cover" />
+                  <Image source={{ uri: photo.preview }} style={styles.photoImg} resizeMode="contain" />
                   <TouchableOpacity
                     style={styles.removeBtn}
                     onPress={() => removePhoto(i)}

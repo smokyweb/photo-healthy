@@ -18,6 +18,7 @@ import * as api from '../services/api';
 import { getPublicSettings } from '../services/api';
 import AppFooter from '../components/AppFooter';
 import { C } from '../theme';
+import { normalizeChallengeCategory, normalizeFeelingCategory, normalizeMovementCategory } from '../constants/taxonomy';
 
 const LOGO_IMG = require('../../assets/29c8c384-1bd0-11f1-ad58-a2ad5845d919.png');
 const PHOTO5_URBAN = require('../../assets/photo5-urban-sunset.png');
@@ -210,7 +211,7 @@ const FooterSocialLink = ({ name, label }: { name: string; label: string }) => (
   </Pressable>
 );
 
-const HomeBottomSections = ({ isMobile, onHowItWorksLayout, onHowItWorksPress }: { isMobile: boolean; onHowItWorksLayout?: (e: any) => void; onHowItWorksPress?: () => void }) => {
+const HomeBottomSections = ({ isMobile, showHow = true, onHowItWorksLayout, onHowItWorksPress }: { isMobile: boolean; showHow?: boolean; onHowItWorksLayout?: (e: any) => void; onHowItWorksPress?: () => void }) => {
   const howItems = [
     {
       icon: 'trophy',
@@ -231,28 +232,30 @@ const HomeBottomSections = ({ isMobile, onHowItWorksLayout, onHowItWorksPress }:
 
   return (
     <View style={bottom.wrap}>
-      <View
-        style={[bottom.howItWorks, isMobile && bottom.howItWorksMobile]}
-        onLayout={onHowItWorksLayout}
-      >
-        <TouchableOpacity style={bottom.headingRow} onPress={onHowItWorksPress} activeOpacity={0.85}>
-          <View style={bottom.headingLine} />
-          <Text style={bottom.heading}>How It Works</Text>
-          <View style={bottom.headingLine} />
-        </TouchableOpacity>
+      {showHow && (
+        <View
+          style={[bottom.howItWorks, isMobile && bottom.howItWorksMobile]}
+          onLayout={onHowItWorksLayout}
+        >
+          <TouchableOpacity style={bottom.headingRow} onPress={onHowItWorksPress} activeOpacity={0.85}>
+            <View style={bottom.headingLine} />
+            <Text style={bottom.heading}>How It Works</Text>
+            <View style={bottom.headingLine} />
+          </TouchableOpacity>
 
-        <View style={[bottom.howGrid, isMobile && bottom.howGridMobile]}>
-          {howItems.map((item) => (
-            <TouchableOpacity key={item.title} style={[bottom.howItem, isMobile && bottom.howItemMobile]} onPress={onHowItWorksPress} activeOpacity={0.85}>
-              <View style={bottom.iconCircle}>
-                <IconGlyph name={item.icon} color="#FFFFFF" size={30} />
-              </View>
-              <Text style={bottom.howTitle}>{item.title}</Text>
-              <Text style={bottom.howDesc}>{item.desc}</Text>
-            </TouchableOpacity>
-          ))}
+          <View style={[bottom.howGrid, isMobile && bottom.howGridMobile]}>
+            {howItems.map((item) => (
+              <TouchableOpacity key={item.title} style={[bottom.howItem, isMobile && bottom.howItemMobile]} onPress={onHowItWorksPress} activeOpacity={0.85}>
+                <View style={bottom.iconCircle}>
+                  <IconGlyph name={item.icon} color="#FFFFFF" size={30} />
+                </View>
+                <Text style={bottom.howTitle}>{item.title}</Text>
+                <Text style={bottom.howDesc}>{item.desc}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-      </View>
+      )}
 
       <View style={[bottom.footer, isMobile && bottom.footerMobile]}>
         <View style={[bottom.footerGrid, isMobile && bottom.footerGridMobile]}>
@@ -293,12 +296,16 @@ const HomeBottomSections = ({ isMobile, onHowItWorksLayout, onHowItWorksPress }:
   );
 };
 
-const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navigation, recent, streak, motivationalQuote, quoteAuthor }: any) => {
+const LoggedInHome = ({ user, featured, challenges, submissions, userStats, daysLeft, navigation, recent, streak, motivationalQuote, quoteAuthor }: any) => {
   const firstName = (user.name || 'User').split(' ')[0];
   const today = formatDate(new Date());
-  const milesTracked = submissions
+  const fallbackMilesTracked = submissions
     .filter((s: any) => !s.user_id || s.user_id === user?.id)
     .reduce((sum: number, s: any) => sum + (parseFloat(s.miles ?? s.distance ?? s.miles_tracked ?? 0) || 0), 0);
+  const photosSubmitted = userStats?.submissions ?? userStats?.submission_count ?? submissions.filter((s: any) => s.user_id === user?.id).length;
+  const displayStreak = userStats?.streak ?? streak;
+  const milesTracked = Number(userStats?.totalMiles ?? userStats?.total_miles ?? fallbackMilesTracked) || 0;
+  const participantCount = featured?.participant_count ?? featured?.submission_count ?? submissions.filter((s: any) => s.challenge_id === featured?.id).length;
 
   return (
   <>
@@ -355,7 +362,7 @@ const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navig
                 </View>
                 <View style={li.miniCard}>
                   <Text style={li.miniLabel}>Participants</Text>
-                  <Text style={li.miniValue}>{featured.submission_count || submissions.length}</Text>
+                  <Text style={li.miniValue}>{participantCount}</Text>
                 </View>
               </View>
             </View>
@@ -392,12 +399,12 @@ const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navig
       <View style={li.statsRow}>
         <View style={li.statCard}>
           <Text style={[li.statIcon, {fontSize:20, color:'#fff'}]}>{"Photos"}</Text>
-          <Text style={li.statNum}>{submissions.filter((s: any) => s.user_id === user?.id).length}</Text>
+          <Text style={li.statNum}>{photosSubmitted}</Text>
           <Text style={li.statLabel}>Photos Submitted</Text>
         </View>
         <View style={li.statCard}>
           <Text style={[li.statIcon, {fontSize:20, color:'#fff'}]}>{"Streak"}</Text>
-          <Text style={[li.statNum, { color: streak > 0 ? C.ORANGE : C.TEXT }]}>{streak}</Text>
+          <Text style={[li.statNum, { color: displayStreak > 0 ? C.ORANGE : C.TEXT }]}>{displayStreak}</Text>
           <Text style={li.statLabel}>Day Streak</Text>
           <Text style={li.statNote}>{daysLeft} days remaining</Text>
         </View>
@@ -461,11 +468,14 @@ const LoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navig
   );
 };
 
-const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft, navigation, recent, streak, motivationalQuote }: any) => {
+const MobileLoggedInHome = ({ user, featured, challenges, submissions, userStats, daysLeft, navigation, recent, streak, motivationalQuote }: any) => {
   const firstName = (user?.name || 'User').split(' ')[0];
-  const milesTracked = submissions
+  const fallbackMilesTracked = submissions
     .filter((s: any) => !s.user_id || s.user_id === user?.id)
     .reduce((sum: number, s: any) => sum + (parseFloat(s.miles ?? s.distance ?? s.miles_tracked ?? 0) || 0), 0);
+  const photosSubmitted = userStats?.submissions ?? userStats?.submission_count ?? submissions.filter((s: any) => s.user_id === user?.id).length;
+  const displayStreak = userStats?.streak ?? streak;
+  const milesTracked = Number(userStats?.totalMiles ?? userStats?.total_miles ?? fallbackMilesTracked) || 0;
   const challenge = featured || {
     title: 'Golden Hour Magic',
     description: 'Capture the breathtaking beauty of golden hour. Show us how the warm, soft light transforms ordinary scenes.',
@@ -473,6 +483,11 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft,
     _localCover: PHOTO3_FIELD,
     submission_count: 144,
   };
+  const challengeImage = challenge.cover_image_url ? { uri: fullUrl(challenge.cover_image_url) } : (challenge._localCover || PHOTO3_FIELD);
+  const challengeCategory = normalizeChallengeCategory(challenge.category);
+  const challengeFeeling = normalizeFeelingCategory(challenge.feeling_category || challenge.feeling_tag);
+  const challengeMovement = normalizeMovementCategory(challenge.movement_category || challenge.movement_tag);
+  const challengeParticipants = challenge.participant_count ?? challenge.submission_count ?? submissions.filter((s: any) => s.challenge_id === challenge.id).length;
   const cards = recent.length > 0 ? recent : [
     { id: 1, user_name: 'hannah_jane', title: 'Golden hour reflections', photo1_url: null, _localPhoto: PHOTO7_OCEAN, like_count: 234, comment_count: 18 },
     { id: 2, user_name: 'mike_photo', title: 'City lights at dusk', photo1_url: null, _localPhoto: PHOTO1_CITY, like_count: 189, comment_count: 24 },
@@ -498,7 +513,7 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft,
 
       <View style={pm.challengeCard}>
         <Image
-          source={challenge._localCover || PHOTO3_FIELD}
+          source={challengeImage}
           style={pm.challengeImg}
           resizeMode="cover"
         />
@@ -511,12 +526,16 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft,
           <Text style={pm.kicker}>Challenge Category</Text>
           <View style={pm.metaGrid}>
             <View style={pm.metaBox}>
+              <Text style={pm.metaLabel}>Category</Text>
+              <Text style={pm.metaValue}>{challengeCategory}</Text>
+            </View>
+            <View style={pm.metaBox}>
               <Text style={pm.metaLabel}>Feeling</Text>
-              <Text style={pm.metaValue}>Joy</Text>
+              <Text style={pm.metaValue}>{challengeFeeling}</Text>
             </View>
             <View style={pm.metaBox}>
               <Text style={pm.metaLabel}>Movement</Text>
-              <Text style={pm.metaValue}>Landscape</Text>
+              <Text style={pm.metaValue}>{challengeMovement}</Text>
             </View>
             <View style={pm.metaBox}>
               <Text style={pm.metaLabel}>Days Left</Text>
@@ -524,28 +543,25 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft,
             </View>
             <View style={pm.metaBox}>
               <Text style={pm.metaLabel}>Participants</Text>
-              <Text style={pm.metaValue}>{challenge.submission_count || submissions.length || 144}</Text>
+              <Text style={pm.metaValue}>{challengeParticipants}</Text>
             </View>
           </View>
           <View style={pm.challengeActions}>
             <TouchableOpacity style={pm.submitBtn} onPress={() => navigation.navigate('ChallengesTab')}>
               <Text style={pm.submitText}>Submit Photos</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={pm.browseBtn} onPress={() => navigation.navigate('ChallengesTab')}>
-              <Text style={pm.browseText}>Browse Challenges</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </View>
 
-      <View style={pm.quote}>
+      <ImageBackground source={PHOTO9_CLOUDS} style={pm.quote} imageStyle={pm.quoteImage}>
         <Text style={pm.quoteText}>{motivationalQuote}</Text>
-      </View>
+      </ImageBackground>
 
       <View style={pm.statRow}>
         {[
-          { icon: '▾', value: String(challenges.length || 0), label: 'Challenge Completed' },
-          { icon: '◉', value: String(streak || 0), label: `Day Streak - ${daysLeft} days remaining` },
+          { icon: '▾', value: String(photosSubmitted), label: 'Photos Submitted' },
+          { icon: '◉', value: String(displayStreak), label: `Day Streak - ${daysLeft} days remaining` },
           { icon: '★', value: milesTracked.toFixed(1), label: 'Miles Tracked' },
         ].map((item) => (
           <View key={item.label} style={pm.statCard}>
@@ -557,7 +573,7 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft,
       </View>
 
       <Text style={pm.sectionTitle}>Recent Community Submissions</Text>
-      {cards.map((sub: any) => (
+      {cards.slice(0, 2).map((sub: any) => (
         <TouchableOpacity
           key={sub.id}
           style={pm.submission}
@@ -578,18 +594,19 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, daysLeft,
       <Text style={pm.sectionTitle}>Quick Actions</Text>
       <View style={pm.quickGrid}>
         {[
-          { icon: '◼', title: 'Shop', desc: 'Browse photography gear', nav: 'Shop' },
-          { icon: '▰', title: 'Partners', desc: 'View our partners', nav: 'Partners' },
-          { icon: '▣', title: 'How It Works', desc: 'Learn how it works', nav: 'HowItWorks' },
+          { icon: 'trophy', title: 'Browse Challenges', desc: 'Discover new photography challenges', nav: 'ChallengesTab' },
+          { icon: 'camera', title: 'View Gallery', desc: 'See all your submitted photos', nav: 'Gallery' },
+          { icon: 'analytics', title: 'Subscription', desc: 'Unlock photo experiences', nav: 'Subscription' },
+          { icon: 'shop', title: 'Visit Shop', desc: 'Browse photography gear', nav: 'Shop' },
         ].map((item) => (
           <TouchableOpacity key={item.title} style={pm.quickCard} onPress={() => navigation.navigate(item.nav)}>
-            <View style={pm.quickIcon}><Text style={pm.quickIconText}>{item.icon}</Text></View>
+            <View style={pm.quickIcon}><IconGlyph name={item.icon} color="#FFFFFF" size={14} /></View>
             <Text style={pm.quickTitle}>{item.title}</Text>
             <Text style={pm.quickDesc}>{item.desc}</Text>
           </TouchableOpacity>
         ))}
       </View>
-      <HomeBottomSections isMobile />
+      <HomeBottomSections isMobile showHow={false} />
     </View>
   );
 };
@@ -790,6 +807,7 @@ const HomeScreen = () => {
   const isMobile = width < 768;
   const [challenges, setChallenges] = useState<any[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
+  const [userStats, setUserStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<ScrollView>(null);
   const howItWorksY = useRef(0);
@@ -797,18 +815,20 @@ const HomeScreen = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const [cData, sData] = await Promise.all([
+        const [cData, sData, statsData] = await Promise.all([
           api.getChallenges(),
           api.getSubmissions(),
+          user ? api.getUserStats().catch(() => null) : Promise.resolve(null),
         ]);
         setChallenges(cData.challenges || []);
         setSubmissions(sData.submissions || []);
+        setUserStats(statsData);
       } catch {} finally {
         setLoading(false);
       }
     };
     load();
-  }, []);
+  }, [user?.id]);
 
   const featured = challenges.find(
     (c) => c.is_active && new Date(c.end_date) > new Date(),
@@ -879,6 +899,7 @@ const HomeScreen = () => {
           featured={featured}
           challenges={challenges}
           submissions={submissions}
+          userStats={userStats}
           daysLeft={daysLeft}
           navigation={navigation}
           recent={recent}
@@ -893,6 +914,7 @@ const HomeScreen = () => {
           featured={featured}
           challenges={challenges}
           submissions={submissions}
+          userStats={userStats}
           daysLeft={daysLeft}
           navigation={navigation}
           recent={recent}
@@ -2096,16 +2118,17 @@ const bottom = StyleSheet.create({
 
 const pm = StyleSheet.create({
   wrap: {
+    backgroundColor: '#343747',
     paddingHorizontal: 14,
-    paddingTop: 8,
-    paddingBottom: 28,
+    paddingTop: 10,
+    paddingBottom: 0,
   },
   welcome: {
-    height: 58,
+    height: 56,
     borderRadius: 8,
     overflow: 'hidden',
-    marginBottom: 16,
-    backgroundColor: '#121729',
+    marginBottom: 18,
+    backgroundColor: '#101421',
   },
   welcomeImage: {
     borderRadius: 8,
@@ -2132,14 +2155,14 @@ const pm = StyleSheet.create({
   alertText: { ...type.button, color: C.TEAL, fontSize: 8 },
 
   challengeCard: {
-    backgroundColor: '#272B40',
+    backgroundColor: '#272B3B',
     borderRadius: 7,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#363B55',
+    borderColor: '#3A4056',
     marginBottom: 14,
   },
-  challengeImg: { width: '100%', height: 138, backgroundColor: '#1A1E30' },
+  challengeImg: { width: '100%', height: 162, backgroundColor: '#1A1E30' },
   challengeBody: { padding: 12 },
   challengeHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   challengeTitle: { ...type.heading, color: '#FFFFFF', fontSize: 13, flex: 1 },
@@ -2158,9 +2181,7 @@ const pm = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
-  metaBox: {
-    width: '47%' as any,
-  },
+  metaBox: { width: '47%' as any },
   metaLabel: { ...type.subtext, color: '#B7BDCB', fontSize: 8, marginBottom: 3 },
   metaValue: { ...type.label, color: '#FFFFFF', fontSize: 8 },
   submitBtn: {
@@ -2193,11 +2214,12 @@ const pm = StyleSheet.create({
     paddingHorizontal: 18,
     marginBottom: 12,
     overflow: 'hidden',
-    backgroundColor: C.CARD_BG2,
+    backgroundColor: '#6C5A25',
     borderWidth: 1,
-    borderColor: C.CARD_BORDER,
+    borderColor: 'rgba(255, 208, 0, 0.18)',
   } as any,
-  quoteText: { ...type.subtext, color: '#FFFFFF', fontSize: 15, fontStyle: 'italic', lineHeight: 22, textAlign: 'center' },
+  quoteImage: { opacity: 0.45 },
+  quoteText: { ...type.heading, color: '#FFFFFF', fontSize: 12, fontStyle: 'italic', lineHeight: 17, textAlign: 'center' },
 
   statRow: { flexDirection: 'row', gap: 10, marginBottom: 18 },
   statCard: {
@@ -2205,7 +2227,7 @@ const pm = StyleSheet.create({
     backgroundColor: '#272B40',
     borderRadius: 4,
     padding: 10,
-    minHeight: 86,
+    minHeight: 82,
     borderWidth: 1,
     borderColor: '#363B55',
   },
@@ -2222,7 +2244,7 @@ const pm = StyleSheet.create({
   statValue: { ...type.heading, color: '#FFFFFF', fontSize: 13 },
   statLabel: { ...type.subtext, color: '#B7BDCB', fontSize: 8, lineHeight: 11, marginTop: 2 },
 
-  sectionTitle: { ...type.heading, color: '#FFFFFF', fontSize: 12, marginBottom: 10 },
+  sectionTitle: { ...type.heading, color: '#FFFFFF', fontSize: 12, marginBottom: 10, marginTop: 2 },
   submission: {
     backgroundColor: '#272B40',
     borderRadius: 6,
@@ -2231,20 +2253,20 @@ const pm = StyleSheet.create({
     borderColor: '#363B55',
     marginBottom: 12,
   },
-  submissionImg: { width: '100%', height: 118, backgroundColor: '#1A1E30' },
+  submissionImg: { width: '100%', height: 134, backgroundColor: '#1A1E30' },
   submissionBody: { padding: 10 },
   userName: { ...type.label, color: C.TEAL, fontSize: 10, marginBottom: 3 },
   subTitle: { ...type.subtext, color: '#FFFFFF', fontSize: 10, marginBottom: 7 },
   subStats: { flexDirection: 'row', gap: 12 },
   subStat: { ...type.subtext, color: '#C8CEDA', fontSize: 9 },
 
-  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 0 },
   quickCard: {
     width: '47%' as any,
     backgroundColor: '#272B40',
     borderRadius: 5,
     padding: 12,
-    minHeight: 86,
+    minHeight: 88,
     borderWidth: 1,
     borderColor: '#363B55',
   },

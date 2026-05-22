@@ -27,7 +27,7 @@ function formatDate(dateStr?: string) {
 export default function ChallengeDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { challengeId: _cid, id: _id } = route.params || {}; const challengeId = _cid || _id;
+  const { challengeId: _cid, id: _id, tagFilter: initialTagFilter } = route.params || {}; const challengeId = _cid || _id;
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
@@ -40,12 +40,22 @@ export default function ChallengeDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [subSearch, setSubSearch] = useState('');
+  const [activeTagFilter, setActiveTagFilter] = useState<{ type: 'category' | 'feeling' | 'movement'; value: string } | null>(null);
+
+  useEffect(() => {
+    if (
+      initialTagFilter?.value &&
+      ['category', 'feeling', 'movement'].includes(initialTagFilter.type)
+    ) {
+      setActiveTagFilter(initialTagFilter);
+    }
+  }, [initialTagFilter?.type, initialTagFilter?.value]);
 
   const load = async () => {
     try {
       const [cData, sData] = await Promise.all([
         getChallenge(challengeId),
-        getSubmissions({ challengeId: String(challengeId), limit: '30' }),
+        getSubmissions({ challenge_id: String(challengeId), challengeId: String(challengeId), limit: '30' }),
       ]);
       setChallenge(cData?.challenge || cData);
       setSubmissions(sData?.submissions || sData || []);
@@ -160,13 +170,35 @@ export default function ChallengeDetailScreen() {
   const personalDaysLeft = userChallenge ? Math.max(0, userChallenge.days_remaining ?? 0) : null;
   const personalDeadlineExpired = isEnrolled && userChallenge && userChallenge.days_remaining < 0;
 
-  const filteredSubs = subSearch.trim()
+  const getSubmissionTag = (sub: any, type: 'category' | 'feeling' | 'movement') => {
+    if (type === 'category') {
+      return normalizeChallengeCategory(sub.category || sub.challenge_category || challenge.category);
+    }
+    if (type === 'feeling') {
+      return normalizeFeelingCategory(sub.feeling_category || sub.feeling_tag || sub.challenge_feeling_category || challenge.feeling_category || challenge.feeling_tag);
+    }
+    return normalizeMovementCategory(sub.movement_category || sub.movement_tag || sub.challenge_movement_category || challenge.movement_category || challenge.movement_tag);
+  };
+
+  const searchedSubs = subSearch.trim()
     ? submissions.filter(
         s =>
           (s.user_name || '').toLowerCase().includes(subSearch.toLowerCase()) ||
           (s.title || '').toLowerCase().includes(subSearch.toLowerCase()),
       )
     : submissions;
+
+  const filteredSubs = activeTagFilter
+    ? searchedSubs.filter(s => getSubmissionTag(s, activeTagFilter.type) === activeTagFilter.value)
+    : searchedSubs;
+  const showingFilteredSubmissions = !!activeTagFilter || !!subSearch.trim();
+  const submissionDisplayCount = showingFilteredSubmissions
+    ? filteredSubs.length
+    : (challenge.submission_count ?? filteredSubs.length);
+  const countText = (value: any) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? String(n) : '0';
+  };
 
   return (
     <ScrollView
@@ -333,7 +365,7 @@ export default function ChallengeDetailScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>
-            Community Submissions ({filteredSubs.length})
+            Community Submissions ({submissionDisplayCount})
           </Text>
         </View>
 
@@ -354,40 +386,88 @@ export default function ChallengeDetailScreen() {
           )}
         </View>
 
+        {activeTagFilter && (
+          <View style={styles.activeFilterRow}>
+            <Text style={styles.activeFilterText}>
+              Showing {activeTagFilter.type}: {activeTagFilter.value}
+            </Text>
+            <TouchableOpacity onPress={() => setActiveTagFilter(null)} style={styles.clearFilterBtn}>
+              <Text style={styles.clearFilterText}>Clear</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Submissions 3-col grid */}
         {filteredSubs.length > 0 ? (
           <View style={styles.subGrid}>
             {filteredSubs.map((sub: any) => {
               const imgUrl = fullUrl(sub.photo1_url || sub.image_url);
+              const subTags = [
+                { type: 'category' as const, label: 'Category', value: getSubmissionTag(sub, 'category') },
+                { type: 'feeling' as const, label: 'Feeling', value: getSubmissionTag(sub, 'feeling') },
+                { type: 'movement' as const, label: 'Movement', value: getSubmissionTag(sub, 'movement') },
+              ].filter(tag => tag.value && tag.value !== '-');
               return (
-                <TouchableOpacity
+                <View
                   key={sub.id}
                   style={styles.subCard}
-                  onPress={() =>
-                    navigation.navigate('SubmissionDetail' as never, { submissionId: sub.id, id: sub.id } as never)
-                  }
-                  activeOpacity={0.88}
                 >
-                  {imgUrl ? (
-                    <Image source={{ uri: imgUrl }} style={styles.subImg} resizeMode="cover" />
-                  ) : (
-                    <View style={[styles.subImg, styles.subImgPlaceholder]}>
-                      <Text style={{ fontSize: 24 }}>📷</Text>
+                >
+                  <TouchableOpacity
+                    onPress={() =>
+                      navigation.navigate('SubmissionDetail' as never, {
+                        submissionId: sub.id,
+                        id: sub.id,
+                        challengeTags: {
+                          category: getSubmissionTag(sub, 'category'),
+                          feeling: getSubmissionTag(sub, 'feeling'),
+                          movement: getSubmissionTag(sub, 'movement'),
+                        },
+                      } as never)
+                    }
+                    activeOpacity={0.88}
+                  >
+                    {imgUrl ? (
+                      <Image source={{ uri: imgUrl }} style={styles.subImg} resizeMode="contain" />
+                    ) : (
+                      <View style={[styles.subImg, styles.subImgPlaceholder]}>
+                        <Text style={{ fontSize: 24 }}>📷</Text>
+                      </View>
+                    )}
+                    <View style={styles.subInfo}>
+                      <Text style={styles.subUser} numberOfLines={1}>
+                        @{sub.user_name || 'user'}
+                      </Text>
+                      <Text style={styles.subTitle} numberOfLines={1}>
+                        {sub.title || 'Untitled'}
+                      </Text>
                     </View>
-                  )}
-                  <View style={styles.subInfo}>
-                    <Text style={styles.subUser} numberOfLines={1}>
-                      @{sub.user_name || 'user'}
-                    </Text>
-                    <Text style={styles.subTitle} numberOfLines={1}>
-                      {sub.title || 'Untitled'}
-                    </Text>
+                  </TouchableOpacity>
+                  <View style={styles.subInfoTags}>
+                    <View style={styles.subTagRow}>
+                      {subTags.map(tag => {
+                        const isActiveTag = activeTagFilter?.type === tag.type && activeTagFilter?.value === tag.value;
+                        return (
+                          <TouchableOpacity
+                            key={tag.type}
+                            style={[styles.subTagChip, isActiveTag && styles.subTagChipActive]}
+                            onPress={() => setActiveTagFilter({ type: tag.type, value: tag.value })}
+                            activeOpacity={0.75}
+                            accessibilityLabel={`Filter submissions by ${tag.label} ${tag.value}`}
+                          >
+                            <Text style={[styles.subTagText, isActiveTag && styles.subTagTextActive]} numberOfLines={1}>
+                              {tag.value}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
                     <View style={styles.subMeta}>
-                      <Text style={styles.subMetaText}>â¤ï¸ {sub.like_count || 0}</Text>
-                      <Text style={styles.subMetaText}>💬 {sub.comment_count || 0}</Text>
+                      <Text style={styles.subMetaText}>â¤ï¸ {countText(sub.like_count ?? sub.likes)}</Text>
+                      <Text style={styles.subMetaText}>💬 {countText(sub.comment_count ?? sub.comments_count ?? sub.comments)}</Text>
                     </View>
                   </View>
-                </TouchableOpacity>
+                </View>
               );
             })}
           </View>
@@ -590,6 +670,34 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "'Inter', sans-serif",
   } as any,
+  activeFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    backgroundColor: C.CARD_BG,
+    borderWidth: 1,
+    borderColor: C.TEAL + '66',
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginTop: -6,
+    marginBottom: 14,
+  },
+  activeFilterText: {
+    color: C.TEXT,
+    fontSize: 13,
+    fontWeight: '700',
+    flex: 1,
+  },
+  clearFilterBtn: {
+    borderRadius: borderRadius.pill,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  clearFilterText: { color: C.ORANGE, fontSize: 12, fontWeight: '800' },
 
   // Submissions 3-col grid
   subGrid: {
@@ -605,13 +713,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
   },
-  subImg: { width: '100%', aspectRatio: 1 },
+  subImg: { width: '100%', aspectRatio: 1, backgroundColor: C.CARD_BG2 },
   subImgPlaceholder: {
     backgroundColor: C.CARD_BG2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  subInfo: { padding: 8 },
+  subInfo: { padding: 8, paddingBottom: 4 },
+  subInfoTags: { paddingHorizontal: 8, paddingBottom: 8 },
   subUser: { color: C.TEXT_SECONDARY, fontSize: 13 },
   subTitle: {
     color: C.TEXT,
@@ -620,6 +729,22 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontFamily: "'Inter', sans-serif",
   } as any,
+  subTagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 2 },
+  subTagChip: {
+    maxWidth: '100%',
+    borderRadius: borderRadius.pill,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  subTagChipActive: {
+    borderColor: C.TEAL,
+    backgroundColor: C.TEAL + '22',
+  },
+  subTagText: { color: C.TEXT_SECONDARY, fontSize: 11, fontWeight: '700' },
+  subTagTextActive: { color: C.TEAL },
   subMeta: { flexDirection: 'row', gap: 8, marginTop: 4 },
   subMetaText: { color: C.TEXT_SECONDARY, fontSize: 13 },
 

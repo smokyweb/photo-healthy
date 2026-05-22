@@ -10,6 +10,7 @@ import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
 import { C, borderRadius } from '../theme';
+import { normalizeChallengeCategory, normalizeFeelingCategory, normalizeMovementCategory } from '../constants/taxonomy';
 
 const BASE = 'https://photoai.betaplanets.com';
 const fullUrl = (u?: string) => u ? (u.startsWith('http') ? u : BASE + u) : null;
@@ -21,7 +22,7 @@ function initials(name: string) {
 export default function SubmissionDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { submissionId: _sid, id: _id } = route.params || {};
+  const { submissionId: _sid, id: _id, challengeTags } = route.params || {};
   // Guard against 'undefined' string from broken URL path params
   const submissionId = (_sid && _sid !== 'undefined' ? _sid : null) || (_id && _id !== 'undefined' ? _id : null);
   const { user } = useAuth();
@@ -167,6 +168,32 @@ export default function SubmissionDetailScreen() {
   const dateStr = submission.created_at
     ? new Date(submission.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : '';
+  const submissionTags = [
+    {
+      type: 'category',
+      label: 'Category',
+      value: normalizeChallengeCategory(submission.category || submission.challenge_category || challengeTags?.category),
+    },
+    {
+      type: 'feeling',
+      label: 'Feeling',
+      value: normalizeFeelingCategory(submission.feeling_category || submission.feeling_tag || submission.challenge_feeling_category || challengeTags?.feeling),
+    },
+    {
+      type: 'movement',
+      label: 'Movement',
+      value: normalizeMovementCategory(submission.movement_category || submission.movement_tag || submission.challenge_movement_category || challengeTags?.movement),
+    },
+  ].filter(tag => tag.value && tag.value !== '-');
+
+  const openChallengeForTag = (tag: typeof submissionTags[number]) => {
+    if (!submission.challenge_id) return;
+    navigation.navigate('ChallengeDetail' as never, {
+      challengeId: submission.challenge_id,
+      id: submission.challenge_id,
+      tagFilter: { type: tag.type, value: tag.value },
+    } as never);
+  };
 
   return (
     <ScrollView
@@ -212,6 +239,23 @@ export default function SubmissionDetailScreen() {
           {submission.description ? (
             <Text style={styles.description}>{submission.description}</Text>
           ) : null}
+
+          {submissionTags.length > 0 && (
+            <View style={styles.tagRow}>
+              {submissionTags.map(tag => (
+                <TouchableOpacity
+                  key={tag.type}
+                  style={styles.tagChip}
+                  onPress={() => openChallengeForTag(tag)}
+                  activeOpacity={0.75}
+                  accessibilityLabel={`View submissions with ${tag.label} ${tag.value}`}
+                >
+                  <Text style={styles.tagLabel}>{tag.label}</Text>
+                  <Text style={styles.tagValue}>{tag.value}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
           {/* Actions */}
           <View style={styles.actions}>
@@ -357,6 +401,28 @@ const styles = StyleSheet.create({
     fontFamily: "'Lexend', sans-serif", marginBottom: 10,
   },
   description: { color: C.TEXT_SECONDARY, fontSize: 15, lineHeight: 23, marginBottom: 12 },
+  tagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  tagChip: {
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+    backgroundColor: C.CARD_BG,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  tagLabel: {
+    color: C.TEXT_MUTED,
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  tagValue: { color: C.TEAL, fontSize: 13, fontWeight: '800' },
 
   actions: {
     flexDirection: 'row', gap: 20, paddingVertical: 12, alignItems: 'center',

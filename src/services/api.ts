@@ -335,8 +335,8 @@ function resizeImage(file: File, maxPx: number, quality: number): Promise<string
         tw = Math.round(tw * scale); th = Math.round(th * scale);
       }
       const canvas = document.createElement('canvas');
-      canvas.width = swap ? th : tw;
-      canvas.height = swap ? tw : th;
+      canvas.width = tw;
+      canvas.height = th;
       const ctx = canvas.getContext('2d')!;
       ctx.save();
       const cw = canvas.width, ch = canvas.height;
@@ -345,11 +345,11 @@ function resizeImage(file: File, maxPx: number, quality: number): Promise<string
         case 3: ctx.transform(-1,0,0,-1,cw,ch); break;
         case 4: ctx.transform(1,0,0,-1,0,ch); break;
         case 5: ctx.transform(0,1,1,0,0,0); break;
-        case 6: ctx.transform(0,1,-1,0,ch,0); break;
-        case 7: ctx.transform(0,-1,-1,0,ch,cw); break;
-        case 8: ctx.transform(0,-1,1,0,0,cw); break;
+        case 6: ctx.transform(0,1,-1,0,cw,0); break;
+        case 7: ctx.transform(0,-1,-1,0,cw,ch); break;
+        case 8: ctx.transform(0,-1,1,0,0,ch); break;
       }
-      ctx.drawImage(img, 0, 0, width, height);
+      ctx.drawImage(img, 0, 0, swap ? th : tw, swap ? tw : th);
       ctx.restore();
       const outType = (isHeic || type.includes('jpeg') || type.includes('jpg')) ? 'image/jpeg' : type.includes('png') ? 'image/png' : 'image/jpeg';
       resolve(canvas.toDataURL(outType, quality));

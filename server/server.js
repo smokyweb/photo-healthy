@@ -540,7 +540,7 @@ app.get('/api/users/me/access', auth, async (req, res) => {
     );
     res.json({
       isPro,
-      canSubmit: isPro || monthCount < 3,
+      canSubmit: isPro || monthCount < 50,
       monthlySubmissions: monthCount,
       monthlyLimit: isPro ? null : 50,
       remainingSubmissions: isPro ? null : Math.max(0, 50 - monthCount),
@@ -1015,6 +1015,9 @@ app.get('/api/submissions', async (req, res) => {
         u.avatar_url as user_avatar_url,
         u.subscription_status as user_subscription_status,
         c.title as challenge_title,
+        c.category as challenge_category,
+        c.feeling_category as challenge_feeling_category,
+        c.movement_category as challenge_movement_category,
         COALESCE((SELECT COUNT(*) FROM likes WHERE submission_id = s.id), 0) as like_count,
         COALESCE((SELECT COUNT(*) FROM comments WHERE submission_id = s.id), 0) as comment_count
       FROM submissions s
@@ -1023,9 +1026,10 @@ app.get('/api/submissions', async (req, res) => {
     `;
     const params = [];
     const conditions = [];
-    if (req.query.challenge_id) {
+    const challengeFilter = req.query.challenge_id || req.query.challengeId;
+    if (challengeFilter) {
       conditions.push('s.challenge_id = ?');
-      params.push(req.query.challenge_id);
+      params.push(challengeFilter);
     }
     if (req.query.user_id) {
       conditions.push('s.user_id = ?');
@@ -1044,7 +1048,9 @@ app.get('/api/submissions', async (req, res) => {
 app.get('/api/submissions/:id', async (req, res) => {
   try {
     const [submissions] = await pool.query(
-      `SELECT s.*, u.name as user_name, u.avatar_url as user_avatar_url, u.subscription_status as user_subscription_status, c.title as challenge_title
+      `SELECT s.*, u.name as user_name, u.avatar_url as user_avatar_url, u.subscription_status as user_subscription_status,
+              c.title as challenge_title, c.category as challenge_category,
+              c.feeling_category as challenge_feeling_category, c.movement_category as challenge_movement_category
        FROM submissions s JOIN users u ON s.user_id = u.id JOIN challenges c ON s.challenge_id = c.id
        WHERE s.id = ?`,
       [req.params.id]
