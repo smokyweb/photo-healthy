@@ -1202,7 +1202,8 @@ const landing = StyleSheet.create({
     width: 300,
     maxWidth: '100%' as any,
     borderRadius: 5,
-    paddingVertical: 12,
+    paddingVertical: 15,
+    minHeight: 48,
     alignItems: 'center',
     backgroundColor: C.ORANGE,
     backgroundImage: 'linear-gradient(90deg, #FF6A00 0%, #FFD000 54%, #29B6E0 100%)',
@@ -1210,7 +1211,7 @@ const landing = StyleSheet.create({
   submitBtnText: {
     ...type.button,
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 14,
   },
   challengeImage: {
     width: 330,
@@ -1776,8 +1777,9 @@ const s = StyleSheet.create({
   submitBtn: {
     backgroundImage: ORANGE_GRADIENT_135,
     backgroundColor: C.ORANGE,
-    borderRadius: 25,
-    paddingVertical: 14,
+    borderRadius: 12,
+    paddingVertical: 16,
+    minHeight: 50,
     alignItems: 'center',
     shadowColor: C.ORANGE,
     shadowOpacity: 0.35,
@@ -1787,7 +1789,7 @@ const s = StyleSheet.create({
   submitBtnText: {
     ...type.button,
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 15,
   },
   challengeImg: {
     width: '100%',
@@ -2238,14 +2240,16 @@ const pm = StyleSheet.create({
   metaValue: { ...type.label, color: '#FFFFFF', fontSize: 8 },
   submitBtn: {
     flex: 1,
-    height: 38,
-    borderRadius: 4,
+    minHeight: 50,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F55B09',
     backgroundImage: ORANGE_GRADIENT,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
   } as any,
-  submitText: { ...type.button, color: '#FFFFFF', fontSize: 10 },
+  submitText: { ...type.button, color: '#FFFFFF', fontSize: 14 },
   challengeActions: { gap: 8 },
   browseBtn: {
     flex: 1,
