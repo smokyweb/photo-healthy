@@ -75,6 +75,7 @@ const linking = {
       ProductDetail: 'shop/product/:id',
       Cart: 'cart',
       CheckoutSuccess: 'checkout/success',
+      StripeReturn: 'stripe-return.php',
       Admin: 'admin',
       Gallery: 'gallery',
       Subscription: 'subscription',
@@ -217,6 +218,7 @@ function AppNavigator() {
         <Stack.Screen name="ProductDetail">{(p) => <OuterScreenWrapper><ProductDetailScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="Cart">{(p) => <OuterScreenWrapper><CartScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="CheckoutSuccess">{(p) => <OuterScreenWrapper><CheckoutSuccessScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="StripeReturn">{(p) => <OuterScreenWrapper><CheckoutSuccessScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="Admin">{(p) => <OuterScreenWrapper><AdminScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="Gallery">{(p) => <OuterScreenWrapper><GalleryScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="Subscription">{(p) => <OuterScreenWrapper><SubscriptionScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
