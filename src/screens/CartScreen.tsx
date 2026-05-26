@@ -14,7 +14,8 @@ export default function CartScreen() {
   const [loading, setLoading] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [giftCode, setGiftCode] = useState('');
-  const isDesktop = width >= 900;
+  const isDesktop = width >= 1100;
+  const isMobile = width < 1100;
 
   const handleCheckout = async () => {
     setLoading(true);
@@ -49,8 +50,8 @@ export default function CartScreen() {
         <>
           <View style={styles.itemList}>
             {items.map(item => (
-              <View key={item.id + '-' + (item.size || '')} style={styles.item}>
-                {item.image ? (<Image source={{ uri: item.image }} style={styles.itemImg} resizeMode='cover' />) : (<View style={[styles.itemImg, styles.itemImgPlaceholder]}><Text style={{ fontSize: 28 }}>🛒</Text></View>)}
+              <View key={item.id + '-' + (item.size || '')} style={[styles.item, isMobile && styles.itemMobile]}>
+                {item.image ? (<Image source={{ uri: item.image }} style={[styles.itemImg, isMobile && styles.itemImgMobile]} resizeMode='cover' />) : (<View style={[styles.itemImg, isMobile && styles.itemImgMobile, styles.itemImgPlaceholder]}><Text style={{ fontSize: 28 }}>🛒</Text></View>)}
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
                   {item.size && <Text style={{ color: C.TEAL, fontWeight: '700', fontSize: 13 }}>Size: {item.size}</Text>}
@@ -66,15 +67,15 @@ export default function CartScreen() {
               </View>
             ))}
           </View>
-          <View style={[styles.checkoutGrid, isDesktop && styles.checkoutGridDesktop]}>
-            <View style={styles.checkoutInfo}>
+          <View style={[styles.checkoutGrid, isMobile && styles.checkoutGridMobile, isDesktop && styles.checkoutGridDesktop]}>
+            <View style={[styles.checkoutInfo, isMobile && styles.cartPanelMobile]}>
               <Text style={styles.summaryTitle}>Checkout Details</Text>
               <Text style={styles.checkoutLine}>Shipping address and delivery options are collected during secure checkout.</Text>
               <Text style={styles.checkoutLine}>Coupons and gift codes can be entered before checkout.</Text>
               <Text style={styles.checkoutLine}>Card details are entered on the payment screen, not saved on this cart page.</Text>
               <Text style={styles.returnNote}>Shipping and return options are determined by the customer address.</Text>
             </View>
-            <View style={styles.summary}>
+            <View style={[styles.summary, isMobile && styles.cartPanelMobile]}>
             <Text style={styles.summaryTitle}>Order Summary</Text>
             <View style={styles.codeGrid}>
               <View style={styles.codeField}>
@@ -103,7 +104,14 @@ export default function CartScreen() {
             <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Subtotal ({items.reduce((s,i) => s+i.quantity, 0)} items)</Text><Text style={styles.summaryValue}>${total.toFixed(2)}</Text></View>
             <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Shipping</Text><Text style={styles.summaryValue}>Calculated at checkout</Text></View>
             <View style={[styles.summaryRow, styles.totalRow]}><Text style={styles.totalLabel}>Total</Text><Text style={styles.totalAmt}>${total.toFixed(2)}</Text></View>
-            <GradientButton label={loading ? 'Redirecting...' : 'Proceed to Checkout'} onPress={handleCheckout} loading={loading} disabled={loading} style={{ marginTop: 4 } as any} />
+            <GradientButton
+              label={loading ? 'Redirecting...' : 'Proceed to Checkout'}
+              onPress={handleCheckout}
+              loading={loading}
+              disabled={loading}
+              style={styles.checkoutButton as any}
+              textStyle={styles.checkoutButtonText as any}
+            />
             <TouchableOpacity onPress={() => navigation.navigate('Shop' as never)} style={styles.continueShopping}><Text style={styles.continueShoppingText}>← Continue Shopping</Text></TouchableOpacity>
             </View>
           </View>
@@ -116,7 +124,7 @@ export default function CartScreen() {
 
 const styles = StyleSheet.create({
   screen: { backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: C.DIVIDER },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: C.DIVIDER, gap: 10 },
   back: { color: C.ORANGE, fontSize: 14, fontWeight: '600' },
   title: { color: C.TEXT, fontSize: 17, fontWeight: '700' },
   clearText: { color: '#ef4444', fontSize: 13 },
@@ -124,25 +132,29 @@ const styles = StyleSheet.create({
   emptyTitle: { color: C.TEXT, fontSize: 22, fontWeight: '800', marginBottom: 8 },
   emptyBody: { color: C.TEXT_MUTED, fontSize: 15, textAlign: 'center' },
   itemList: { padding: 16, gap: 12 },
-  item: { flexDirection: 'row', backgroundColor: C.CARD_BG, borderRadius: borderRadius.xl, overflow: 'hidden', borderWidth: 1, borderColor: C.CARD_BORDER },
+  item: { flexDirection: 'row', backgroundColor: C.CARD_BG, borderRadius: borderRadius.xl, overflow: 'hidden', borderWidth: 1, borderColor: C.CARD_BORDER, maxWidth: '100%' },
+  itemMobile: { flexDirection: 'column' },
   itemImg: { width: 100, height: 100 },
+  itemImgMobile: { width: '100%', height: 150 },
   itemImgPlaceholder: { backgroundColor: C.CARD_BG2, alignItems: 'center', justifyContent: 'center' },
-  itemInfo: { flex: 1, padding: 12 },
+  itemInfo: { flex: 1, padding: 12, minWidth: 0 },
   itemName: { color: C.TEXT, fontSize: 14, fontWeight: '700', marginBottom: 3, lineHeight: 20 },
   itemUnitPrice: { color: C.TEXT_MUTED, fontSize: 12, marginBottom: 2 },
   itemPrice: { color: C.ORANGE, fontSize: 18, fontWeight: '800', marginBottom: 8 },
-  qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   qtyBtn: { width: 30, height: 30, backgroundColor: C.CARD_BG2, borderRadius: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.CARD_BORDER },
   qtyBtnText: { color: C.TEXT, fontSize: 18, fontWeight: '700', lineHeight: 20 },
   qty: { color: C.TEXT, fontSize: 16, fontWeight: '700', minWidth: 24, textAlign: 'center' },
-  removeBtn: { marginLeft: 8 },
+  removeBtn: { marginLeft: 8, paddingVertical: 6 },
   removeBtnText: { color: '#ef4444', fontSize: 13, fontWeight: '600' },
-  checkoutGrid: { margin: 16, gap: 16 },
+  checkoutGrid: { margin: 16, gap: 16, maxWidth: '100%' },
+  checkoutGridMobile: { marginHorizontal: 12 },
   checkoutGridDesktop: { flexDirection: 'row', alignItems: 'stretch' },
-  checkoutInfo: { flex: 1, backgroundColor: C.CARD_BG, borderRadius: borderRadius.xl, padding: 20, borderWidth: 1, borderColor: C.CARD_BORDER },
+  checkoutInfo: { flex: 1, backgroundColor: C.CARD_BG, borderRadius: borderRadius.xl, padding: 20, borderWidth: 1, borderColor: C.CARD_BORDER, minWidth: 0 },
+  cartPanelMobile: { padding: 14, borderRadius: borderRadius.lg },
   checkoutLine: { color: C.TEXT_SECONDARY, fontSize: 14, lineHeight: 22, marginBottom: 10 },
   returnNote: { color: C.TEAL, fontSize: 13, lineHeight: 20, marginTop: 4, fontWeight: '700' },
-  summary: { flex: 1, backgroundColor: C.CARD_BG, borderRadius: borderRadius.xl, padding: 20, borderWidth: 1, borderColor: C.CARD_BORDER },
+  summary: { flex: 1, backgroundColor: C.CARD_BG, borderRadius: borderRadius.xl, padding: 20, borderWidth: 1, borderColor: C.CARD_BORDER, minWidth: 0 },
   summaryTitle: { color: C.TEXT, fontSize: 16, fontWeight: '700', marginBottom: 14 },
   codeGrid: { gap: 10, marginBottom: 16 },
   codeField: { gap: 6 },
@@ -156,13 +168,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
+    minWidth: 0,
   },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  summaryLabel: { color: C.TEXT_MUTED, fontSize: 14 },
-  summaryValue: { color: C.TEXT_SECONDARY, fontSize: 14 },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 10 },
+  summaryLabel: { color: C.TEXT_MUTED, fontSize: 14, flexShrink: 1 },
+  summaryValue: { color: C.TEXT_SECONDARY, fontSize: 14, flexShrink: 1, textAlign: 'right' },
   totalRow: { borderTopWidth: 1, borderTopColor: C.DIVIDER, paddingTop: 12, marginTop: 4, marginBottom: 16 },
   totalLabel: { color: C.TEXT, fontSize: 16, fontWeight: '700' },
   totalAmt: { color: C.ORANGE, fontSize: 22, fontWeight: '800' },
+  checkoutButton: { marginTop: 4, width: '100%', maxWidth: '100%', alignSelf: 'stretch', paddingHorizontal: 10, minWidth: 0, boxSizing: 'border-box' },
+  checkoutButtonText: { textAlign: 'center', flexShrink: 1 },
   continueShopping: { alignItems: 'center', marginTop: 12 },
   continueShoppingText: { color: C.TEXT_MUTED, fontSize: 13 },
 });
