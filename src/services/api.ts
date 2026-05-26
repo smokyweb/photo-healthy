@@ -143,7 +143,7 @@ export const updateChallenge = (id: number, data: any) =>
   request('POST', `/admin-api-proxy.php?path=/api/challenges/${id}&method=PUT`, data);
 
 export const deleteChallenge = (id: number) =>
-  request('POST', `/admin-api-proxy.php?path=/api/challenges/${id}/delete`);
+  request('POST', `/admin-api-proxy.php?path=/api/challenges/${id}/delete&method=POST`);
 
 export const enterChallenge = (challengeId: number) =>
   request('POST', `/api/challenges/${challengeId}/enter`);

@@ -394,18 +394,20 @@ export default function AdminScreen() {
   };
 
   const handleDeleteChallenge = (id: number, title: string) => {
-    Alert.alert('Delete Challenge', 'Delete "' + title + '"?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteChallenge(id);
-            setChallenges(cs => cs.filter(c => c.id !== id));
-          } catch (e: any) { Alert.alert('Error', e.message); }
-        },
-      },
-    ]);
+    const message = 'Delete "' + title + '" and all entries for it? This cannot be undone.';
+    const confirmed = typeof window !== 'undefined' && window.confirm
+      ? window.confirm(message)
+      : true;
+    if (!confirmed) return;
+    const runDelete = async () => {
+      try {
+        await deleteChallenge(id);
+        setChallenges(cs => cs.filter(c => c.id !== id));
+      } catch (e: any) {
+        Alert.alert('Error', e.message || 'Failed to delete challenge');
+      }
+    };
+    runDelete();
   };
 
   const renderChallenges = () => (
@@ -543,11 +545,11 @@ export default function AdminScreen() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Text style={[styles.listItemTitle, { flex: 1, fontSize: 15, marginBottom: 4 }]}>{ch.title}</Text>
                 <View style={{ flexDirection: 'row', gap: 4 }}>
-                  <TouchableOpacity onPress={() => openChallengeForm(ch)} style={styles.iconBtn}>
-                    <Text style={styles.editIcon}>✏</Text>
+                  <TouchableOpacity onPress={() => openChallengeForm(ch)} style={[styles.iconBtn, styles.challengeEditBtn]}>
+                    <Text style={[styles.editIcon, styles.challengeEditText]}>Edit</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleDeleteChallenge(ch.id, ch.title)} style={styles.iconBtn}>
-                    <Text style={styles.deleteIcon}>🗑</Text>
+                  <TouchableOpacity onPress={() => handleDeleteChallenge(ch.id, ch.title)} style={[styles.iconBtn, styles.challengeDeleteBtn]}>
+                    <Text style={[styles.deleteIcon, styles.challengeDeleteText]}>Delete</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -2359,6 +2361,24 @@ const styles = StyleSheet.create({
   iconBtn: { padding: 6 },
   editIcon: { fontSize: 16 },
   deleteIcon: { fontSize: 16 },
+  challengeEditBtn: {
+    borderWidth: 1,
+    borderColor: C.TEAL,
+    backgroundColor: C.TEAL + '18',
+    borderRadius: borderRadius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  challengeDeleteBtn: {
+    borderWidth: 1,
+    borderColor: C.ORANGE,
+    backgroundColor: C.ORANGE + '18',
+    borderRadius: borderRadius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  challengeEditText: { color: C.TEAL, fontSize: 12, fontWeight: '800' },
+  challengeDeleteText: { color: C.ORANGE, fontSize: 12, fontWeight: '800' },
   emptyText: { color: C.TEXT_MUTED, textAlign: 'center', paddingVertical: 32, fontSize: 14 },
   formCard: {
     backgroundColor: C.CARD_BG, borderRadius: borderRadius.lg,

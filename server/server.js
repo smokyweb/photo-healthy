@@ -1116,10 +1116,35 @@ app.put('/api/challenges/:id', adminAuth, async (req, res) => {
 });
 
 async function handleDeleteChallenge(req, res) {
+  const conn = await pool.getConnection();
   try {
-    await pool.query('DELETE FROM challenges WHERE id = ?', [req.params.id]);
+    await conn.beginTransaction();
+    const challengeId = req.params.id;
+    const [subs] = await conn.query('SELECT id FROM submissions WHERE challenge_id = ?', [challengeId]);
+    const subIds = subs.map(s => s.id);
+    if (subIds.length) {
+      const [comments] = await conn.query('SELECT id FROM comments WHERE submission_id IN (?)', [subIds]);
+      const commentIds = comments.map(c => c.id);
+      if (commentIds.length) {
+        await conn.query("DELETE FROM reports WHERE type = 'comment' AND target_id IN (?)", [commentIds]);
+      }
+      await conn.query("DELETE FROM reports WHERE type = 'submission' AND target_id IN (?)", [subIds]);
+      await conn.query('DELETE FROM likes WHERE submission_id IN (?)', [subIds]);
+      await conn.query('DELETE FROM comments WHERE submission_id IN (?)', [subIds]);
+      await conn.query('DELETE FROM submissions WHERE id IN (?)', [subIds]);
+    }
+    await conn.query('DELETE FROM challenge_bans WHERE challenge_id = ?', [challengeId]);
+    await conn.query('DELETE FROM user_challenges WHERE challenge_id = ?', [challengeId]);
+    await conn.query('DELETE FROM challenges WHERE id = ?', [challengeId]);
+    await conn.commit();
     res.json({ success: true });
-  } catch { res.status(500).json({ error: 'Failed to delete challenge' }); }
+  } catch (e) {
+    await conn.rollback();
+    console.error('[Challenge delete]', e.message);
+    res.status(500).json({ error: e.message || 'Failed to delete challenge' });
+  } finally {
+    conn.release();
+  }
 }
 app.delete('/api/challenges/:id', adminAuth, handleDeleteChallenge);
 app.post('/api/challenges/:id/delete', adminAuth, handleDeleteChallenge);
