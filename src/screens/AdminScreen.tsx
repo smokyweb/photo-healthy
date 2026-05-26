@@ -26,6 +26,7 @@ const TABS = ['Dashboard', 'Challenges', 'Users', 'Feed', 'Products', 'Orders', 
 export default function AdminScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
+  const isAdmin = !!(user?.is_admin || user?.role === 'admin');
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -105,18 +106,8 @@ export default function AdminScreen() {
     name: '', description: '', price: '', is_pro_only: false, featured: false, emoji: '', image_url: '', sizes: '',
   });
 
-  // Admin access check
-  if (!user?.is_admin && user?.role !== 'admin') {
-    return (
-      <View style={[styles.screen, { justifyContent: 'center', alignItems: 'center', flex: 1 }]}>
-        <Text style={{ fontSize: 48, marginBottom: 16 }}>🔒</Text>
-        <Text style={{ color: C.TEXT_MUTED, marginBottom: 24 }}>Admin access required.</Text>
-        <GradientButton label="Go Back" onPress={() => navigation.goBack()} variant="outline" />
-      </View>
-    );
-  }
-
   const loadTab = async (tab: string) => {
+    if (!isAdmin) return;
     setLoading(true);
     try {
       switch (tab) {
@@ -169,15 +160,17 @@ export default function AdminScreen() {
     setRefreshing(false);
   };
 
-  useEffect(() => { loadTab(activeTab); }, [activeTab]);
+  useEffect(() => {
+    if (isAdmin) loadTab(activeTab);
+  }, [activeTab, isAdmin]);
 
   useEffect(() => {
-    if (activeTab === 'Orders') loadTab('Orders');
-  }, [orderSort]);
+    if (isAdmin && activeTab === 'Orders') loadTab('Orders');
+  }, [orderSort, isAdmin]);
 
   // Load user detail data when selectedUser changes
   useEffect(() => {
-    if (!selectedUser) return;
+    if (!isAdmin || !selectedUser) return;
     setUserDetailLoading(true);
     setUserActivity({ submissions: [], orders: [], comments: [] });
     Promise.all([
@@ -192,7 +185,18 @@ export default function AdminScreen() {
       });
       setUserDetailLoading(false);
     });
-  }, [selectedUser?.id]);
+  }, [selectedUser?.id, isAdmin]);
+
+  // Admin access check
+  if (!isAdmin) {
+    return (
+      <View style={[styles.screen, { justifyContent: 'center', alignItems: 'center', flex: 1 }]}>
+        <Text style={{ fontSize: 48, marginBottom: 16 }}>🔒</Text>
+        <Text style={{ color: C.TEXT_MUTED, marginBottom: 24 }}>Admin access required.</Text>
+        <GradientButton label="Go Back" onPress={() => navigation.goBack()} variant="outline" />
+      </View>
+    );
+  }
 
 
   const addTaxonomyItem = async (key: 'challenge_categories' | 'feeling_categories' | 'movement_categories', value: string) => {
