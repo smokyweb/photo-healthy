@@ -9,7 +9,7 @@ import {
   adminGetDashboardStats, adminGetUsers, adminGetSettings, adminUpdateSettings,
   adminGetProducts, createProduct, updateProduct, deleteProduct,
   getChallenges, createChallenge, updateChallenge, deleteChallenge,
-  deleteSubmission, deleteComment, updateComment, getComments,
+  deleteSubmission, deleteComment, updateComment, getComments, getSubmissions,
   adminGetOrders, adminMarkOrderPaid, adminProcessOrder, adminFulfillOrder, adminUpdateTracking, deleteUser, updateUser, adminSuspendUser,
   adminGetTaxonomy, adminUpdateTaxonomy,
   adminGetActivity, adminGetUserSubmissions, adminGetUserComments, adminGetUserOrders, adminCreateUser, adminResetPassword,
@@ -51,11 +51,13 @@ export default function AdminScreen() {
   // Submissions timeline state
   const [activityItems, setActivityItems] = useState<any[]>([]);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   const [submissionComments, setSubmissionComments] = useState<any[]>([]);
   const [loadingSubmComments, setLoadingSubmComments] = useState(false);
   const [editingComment, setEditingComment] = useState<{id: number, text: string} | null>(null);
   const [submissionSearch, setSubmissionSearch] = useState('');
   const [submissionFilter, setSubmissionFilter] = useState<'All'|'Photos'|'Comments'>('All');
+  const [feedLoadError, setFeedLoadError] = useState('');
 
   const [products, setProducts] = useState<any[]>([]);
   const [productSearch, setProductSearch] = useState('');
@@ -128,8 +130,60 @@ export default function AdminScreen() {
           break;
         }
         case 'Feed': {
-          const data = await adminGetActivity();
-          setActivityItems(data?.items || []);
+          setFeedLoadError('');
+          try {
+            const data = await adminGetActivity().catch(() => ({ items: [] }));
+            let items = Array.isArray(data?.items) ? data.items : [];
+            if (items.length === 0) {
+              const subData = await getSubmissions({ limit: '200' });
+              const submissions = Array.isArray(subData)
+                ? subData
+                : Array.isArray(subData?.submissions)
+                  ? subData.submissions
+                  : [];
+              const commentGroups = await Promise.all(
+                submissions.slice(0, 120).map((sub: any) =>
+                  getComments(sub.id).catch(() => ({ comments: [] }))
+                )
+              );
+              const fallbackComments = commentGroups.flatMap((group: any, index: number) => {
+                const sub = submissions[index];
+                const comments = Array.isArray(group)
+                  ? group
+                  : Array.isArray(group?.comments)
+                    ? group.comments
+                    : [];
+                return comments.map((comment: any) => ({
+                  ...comment,
+                  type: 'comment',
+                  title: comment.text || comment.content || '',
+                  image_url: sub.photo1_url || sub.image_url || sub.photo_url,
+                  photo1_url: sub.photo1_url || sub.image_url || sub.photo_url,
+                  photo2_url: sub.photo2_url,
+                  created_at: comment.created_at,
+                  user_name: comment.user_name || comment.name,
+                  challenge_title: sub.challenge_title,
+                  challenge_id: sub.challenge_id,
+                  submission_id: sub.id,
+                  submission_title: sub.title,
+                }));
+              });
+              items = [
+                ...submissions.map((sub: any) => ({
+                  ...sub,
+                  type: 'submission',
+                  image_url: sub.photo1_url || sub.image_url || sub.photo_url,
+                  photo1_url: sub.photo1_url || sub.image_url || sub.photo_url,
+                  user_name: sub.user_name || sub.name,
+                })),
+                ...fallbackComments,
+              ].sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+            }
+            setActivityItems(items);
+          } catch (feedErr: any) {
+            setFeedLoadError(feedErr.message || 'Could not load moderation feed');
+            setActivityItems([]);
+          }
           break;
         }
         case 'Products': {
@@ -1012,6 +1066,32 @@ export default function AdminScreen() {
     } catch (e: any) { console.error('Delete failed:', e.message); }
   };
 
+  const downloadAdminPhoto = async (url: string, filename: string) => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    try {
+      const response = await fetch(url, { mode: 'cors' });
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(objectUrl);
+    } catch {
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+    }
+  };
+
   const renderSubmissions = () => {
     const filtered = activityItems.filter(item => {
       if (submissionFilter === 'Photos' && item.type !== 'submission') return false;
@@ -1035,54 +1115,91 @@ export default function AdminScreen() {
 
       return (
         <View style={styles.section}>
-          <TouchableOpacity onPress={() => { setSelectedSubmission(null); setSubmissionComments([]); }} style={{ marginBottom: 16 }}>
+          <TouchableOpacity onPress={() => { setSelectedSubmission(null); setSelectedPhotoIndex(0); setSubmissionComments([]); }} style={{ marginBottom: 16 }}>
             <Text style={{ color: C.ORANGE, fontSize: 14 }}>← Back to Timeline</Text>
           </TouchableOpacity>
 
           {/* All photos */}
           {(() => {
-            const allPhotos2 = [sub.image_url, sub.photo2_url, sub.photo3_url, sub.photo4_url]
+            const photoUrls = [
+              sub.image_url || sub.photo1_url,
+              sub.photo2_url,
+              sub.photo3_url,
+              sub.photo4_url,
+            ]
               .filter(Boolean)
-              .map(u => u && (u.startsWith('http') ? u : 'https://photoai.betaplanets.com' + u));
-            const mainImg = imgUri;
-            if (!mainImg && allPhotos2.length === 0) return (
+              .map((u: string) => u.startsWith('http') ? u : 'https://photoai.betaplanets.com' + u)
+              .filter((url: string, index: number, arr: string[]) => arr.indexOf(url) === index);
+            if (photoUrls.length === 0) return (
               <View style={{ width: '100%', height: 200, borderRadius: 12, backgroundColor: C.CARD_BG2, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
                 <Text style={{ fontSize: 48 }}>📷</Text>
               </View>
             );
+            const activeIndex = Math.min(selectedPhotoIndex, photoUrls.length - 1);
+            const activePhotoUrl = photoUrls[activeIndex];
+            const goToPhoto = (nextIndex: number) => {
+              const wrapped = (nextIndex + photoUrls.length) % photoUrls.length;
+              setSelectedPhotoIndex(wrapped);
+            };
             return (
               <View style={{ marginBottom: 12 }}>
-                {mainImg ? (
-                  <View>
-                    <Image source={{ uri: mainImg }} style={{ width: '100%', maxHeight: 340, borderRadius: 12, objectFit: 'contain' } as any} resizeMode="contain" />
-                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                <View style={{ position: 'relative', marginBottom: 10 }}>
+                  <Image source={{ uri: activePhotoUrl }} style={{ width: '100%', height: 380, borderRadius: 12, backgroundColor: C.CARD_BG2, objectFit: 'contain' } as any} resizeMode="contain" />
+                  {photoUrls.length > 1 ? (
+                    <>
                       <TouchableOpacity
-                        style={{ flex: 1, backgroundColor: '#1e293b', borderRadius: 8, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: '#334155' }}
-                        onPress={() => { if (typeof window !== 'undefined') { const a = document.createElement('a'); a.href = mainImg; a.download = 'submission-' + sub.id + '.jpg'; a.click(); } }}
+                        onPress={() => goToPhoto(activeIndex - 1)}
+                        style={[styles.photoNavBtn, { left: 10 }]}
+                        activeOpacity={0.8}
                       >
-                        <Text style={{ color: '#54DFB6', fontSize: 13, fontWeight: '700' }}>⬇ Download</Text>
+                        <Text style={styles.photoNavBtnText}>‹</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={{ flex: 1, backgroundColor: '#ef444415', borderRadius: 8, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: '#ef444440' }}
-                        onPress={() => { if (window.confirm('Delete this submission and all its photos?')) { handleDeleteActivityItem({ ...sub, type: 'submission' }); setSelectedSubmission(null); } }}
+                        onPress={() => goToPhoto(activeIndex + 1)}
+                        style={[styles.photoNavBtn, { right: 10 }]}
+                        activeOpacity={0.8}
                       >
-                        <Text style={{ color: '#ef4444', fontSize: 13, fontWeight: '700' }}>🗑 Delete</Text>
+                        <Text style={styles.photoNavBtnText}>›</Text>
                       </TouchableOpacity>
-                    </View>
-                  </View>
-                ) : null}
-                {allPhotos2.length > 0 && (
-                  <View style={{ flexDirection: 'row', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                    {allPhotos2.map((uri, i) => uri ? (
-                      <Image key={i} source={{ uri }} style={{ flex: 1, minWidth: '28%', aspectRatio: 1, borderRadius: 8 }} resizeMode="cover" />
-                    ) : null)}
-                  </View>
-                )}
-                {(mainImg || allPhotos2.length > 0) && (
-                  <Text style={{ color: C.TEXT_MUTED, fontSize: 11, marginTop: 4, textAlign: 'center' }}>
-                    {1 + allPhotos2.length} photo{1 + allPhotos2.length !== 1 ? 's' : ''}
+                    </>
+                  ) : null}
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+                  <Text style={{ color: C.TEXT_MUTED, fontSize: 12, fontWeight: '700' }}>
+                    Photo {activeIndex + 1} of {photoUrls.length}
                   </Text>
-                )}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    {photoUrls.length > 1 ? (
+                      <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                        {photoUrls.map((uri: string, index: number) => (
+                          <TouchableOpacity
+                            key={uri}
+                            style={[styles.photoDotBtn, activeIndex === index && styles.photoDotBtnActive]}
+                            onPress={() => setSelectedPhotoIndex(index)}
+                          >
+                            <Text style={[styles.photoDotText, activeIndex === index && styles.photoDotTextActive]}>{index + 1}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ) : null}
+                    <TouchableOpacity
+                      style={styles.photoDownloadIconBtn}
+                      onPress={() => downloadAdminPhoto(activePhotoUrl, 'submission-' + sub.id + '-photo-' + (activeIndex + 1) + '.jpg')}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.photoDownloadIconText}>↓</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={{ backgroundColor: '#ef444415', borderRadius: 8, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: '#ef444440' }}
+                  onPress={() => { if (window.confirm('Delete this submission and all its photos?')) { handleDeleteActivityItem({ ...sub, type: 'submission' }); setSelectedSubmission(null); } }}
+                >
+                  <Text style={{ color: '#ef4444', fontSize: 13, fontWeight: '700' }}>Delete Submission</Text>
+                </TouchableOpacity>
+                <Text style={{ color: C.TEXT_MUTED, fontSize: 11, marginTop: 4, textAlign: 'center' }}>
+                  {photoUrls.length} photo{photoUrls.length !== 1 ? 's' : ''}
+                </Text>
               </View>
             );
           })()}
@@ -1177,6 +1294,11 @@ export default function AdminScreen() {
         <Text style={[styles.listItemSub, { marginBottom: 12 }]}>
           Review photo submissions and comments here. Open a photo to edit/delete comments, or use Users to block an account.
         </Text>
+        {feedLoadError ? (
+          <Text style={{ color: C.DANGER, fontSize: 12, fontWeight: '700', marginBottom: 12 }}>
+            Feed load error: {feedLoadError}
+          </Text>
+        ) : null}
 
         <View style={styles.searchBar}>
           <TextInput
@@ -1208,6 +1330,7 @@ export default function AdminScreen() {
               style={styles.submissionItem}
               onPress={() => {
                 setSelectedSubmission(item);
+                setSelectedPhotoIndex(0);
                 loadSubmissionComments(item.id);
               }}
               activeOpacity={0.8}
@@ -1245,6 +1368,7 @@ export default function AdminScreen() {
                 // Find the submission this comment belongs to and open it
                 if (item.submission_id) {
                   const sub = activityItems.find(a => a.type !== 'comment' && a.id === item.submission_id);
+                  setSelectedPhotoIndex(0);
                   if (sub) { setSelectedSubmission(sub); loadSubmissionComments(sub.id); }
                   else { setSelectedSubmission({ id: item.submission_id, title: item.submission_title || 'Submission', image_url: null }); loadSubmissionComments(item.submission_id); }
                 }
@@ -2188,6 +2312,44 @@ const styles = StyleSheet.create({
     width: 56, height: 56, borderRadius: borderRadius.sm,
     backgroundColor: (C as any).CARD_BG2 || C.CARD_BG,
   },
+  photoNavBtn: {
+    position: 'absolute',
+    top: '50%',
+    transform: [{ translateY: -22 }],
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(10,14,26,0.82)',
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+  },
+  photoNavBtnText: { color: C.TEXT, fontSize: 30, lineHeight: 32, fontWeight: '800' },
+  photoDotBtn: {
+    minWidth: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: C.CARD_BG2,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+  },
+  photoDotBtnActive: { backgroundColor: C.TEAL + '22', borderColor: C.TEAL },
+  photoDotText: { color: C.TEXT_MUTED, fontSize: 12, fontWeight: '700' },
+  photoDotTextActive: { color: C.TEAL },
+  photoDownloadIconBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: C.TEAL + '22',
+    borderWidth: 1,
+    borderColor: C.TEAL,
+  },
+  photoDownloadIconText: { color: C.TEAL, fontSize: 20, lineHeight: 22, fontWeight: '900' },
   thumbPlaceholder: { justifyContent: 'center', alignItems: 'center' },
   listItemInfo: { flex: 1 },
   listItemTitle: { color: C.TEXT, fontWeight: '600', marginBottom: 2 },

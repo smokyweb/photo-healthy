@@ -609,7 +609,7 @@ app.get('/api/admin/activity', adminAuth, async (req, res) => {
        (SELECT
           cm.id,
           'comment' as type,
-          COALESCE(cm.text, cm.content) as title,
+          cm.text as title,
           NULL as description,
           s.photo1_url as image_url,
           s.photo1_url,
