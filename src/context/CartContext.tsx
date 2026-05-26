@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useRef, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 
 export interface CartItem {
   id: number;
@@ -29,11 +29,42 @@ const CartContext = createContext<CartContextType>({
   itemCount: 0,
 });
 
+const CART_STORAGE_KEY = 'ph_cart_items';
+
+function loadStoredCart(): CartItem[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage?.getItem(CART_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item: any) => ({
+        id: Number(item.id),
+        name: String(item.name || ''),
+        price: Number(item.price) || 0,
+        quantity: Math.max(1, Number(item.quantity) || 1),
+        image: item.image || undefined,
+        size: item.size || null,
+      }))
+      .filter(item => item.id && item.name);
+  } catch {
+    return [];
+  }
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>(loadStoredCart);
   const lastAddRef = useRef<{ key: string; time: number } | null>(null);
 
   const itemKey = (id: number, size?: string | null) => `${id}-${size || ''}`;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage?.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+    } catch {}
+  }, [items]);
 
   const addItem = (item: Omit<CartItem, 'quantity'>, quantity = 1) => {
     const key = itemKey(item.id, item.size);
