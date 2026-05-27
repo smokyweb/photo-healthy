@@ -1250,7 +1250,9 @@ app.get('/api/submissions/:id', async (req, res) => {
     const [submissions] = await pool.query(
       `SELECT s.*, u.name as user_name, u.avatar_url as user_avatar_url, u.subscription_status as user_subscription_status,
               c.title as challenge_title, c.category as challenge_category,
-              c.feeling_category as challenge_feeling_category, c.movement_category as challenge_movement_category
+              c.feeling_category as challenge_feeling_category, c.movement_category as challenge_movement_category,
+              COALESCE((SELECT COUNT(*) FROM likes WHERE submission_id = s.id), 0) as like_count,
+              COALESCE((SELECT COUNT(*) FROM comments WHERE submission_id = s.id), 0) as comment_count
        FROM submissions s JOIN users u ON s.user_id = u.id JOIN challenges c ON s.challenge_id = c.id
        WHERE s.id = ?`,
       [req.params.id]

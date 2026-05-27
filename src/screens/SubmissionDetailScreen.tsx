@@ -169,6 +169,9 @@ export default function SubmissionDetailScreen() {
   const dateStr = submission.created_at
     ? new Date(submission.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : '';
+  const rawCategory = submission.category || submission.challenge_category || submission.challengeCategory || challengeTags?.category;
+  const rawFeeling = submission.feeling_category || submission.feeling_tag || submission.challenge_feeling_category || submission.challengeFeelingCategory || challengeTags?.feeling;
+  const rawMovement = submission.movement_category || submission.movement_tag || submission.challenge_movement_category || submission.challengeMovementCategory || challengeTags?.movement;
   const submissionTags = [
     {
       type: 'name',
@@ -178,19 +181,24 @@ export default function SubmissionDetailScreen() {
     {
       type: 'category',
       label: 'Category',
-      value: normalizeChallengeCategory(submission.category || submission.challenge_category || challengeTags?.category),
+      value: normalizeChallengeCategory(rawCategory),
     },
     {
       type: 'feeling',
       label: 'Feeling',
-      value: normalizeFeelingCategory(submission.feeling_category || submission.feeling_tag || submission.challenge_feeling_category || challengeTags?.feeling),
+      value: normalizeFeelingCategory(rawFeeling),
     },
     {
       type: 'movement',
       label: 'Movement',
-      value: normalizeMovementCategory(submission.movement_category || submission.movement_tag || submission.challenge_movement_category || challengeTags?.movement),
+      value: normalizeMovementCategory(rawMovement),
     },
-  ].filter(tag => tag.value && tag.value !== '-');
+  ].map((tag, index) => ({
+    ...tag,
+    value: tag.value && tag.value !== '-'
+      ? tag.value
+      : [rawCategory, rawFeeling, rawMovement][index],
+  })).filter(tag => tag.value && tag.value !== '-');
 
   const openChallengeForTag = (tag: typeof submissionTags[number]) => {
     if (!submission.challenge_id) return;
