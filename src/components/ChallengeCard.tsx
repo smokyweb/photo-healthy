@@ -42,6 +42,11 @@ function getDaysLeft(endDate?: string): number | null {
   return diff > 0 ? diff : 0;
 }
 
+function tagDisplayValue(normalized: string, fallback?: string) {
+  const value = normalized && normalized !== '-' ? normalized : fallback;
+  return String(value || '').split(',')[0].replace(/^[^\w]+/u, '').trim();
+}
+
 export default function ChallengeCard({ challenge, onPress }: Props) {
   const daysLeft = getDaysLeft(challenge.end_date);
   const hardStopExpired = !!challenge.end_date && new Date(challenge.end_date).getTime() < Date.now();
@@ -65,9 +70,11 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
         : isUpcoming
           ? C.WARNING + 'dd'
           : C.SUCCESS + 'dd';
-  const category = normalizeChallengeCategory(challenge.category);
-  const feeling = normalizeFeelingCategory(challenge.feeling_category || challenge.feeling_tag || challenge.mood_tag);
-  const movement = normalizeMovementCategory(challenge.movement_category || challenge.movement_tag);
+  const rawFeeling = challenge.feeling_category || challenge.feeling_tag || challenge.mood_tag;
+  const rawMovement = challenge.movement_category || challenge.movement_tag;
+  const category = tagDisplayValue(normalizeChallengeCategory(challenge.category), challenge.category);
+  const feeling = tagDisplayValue(normalizeFeelingCategory(rawFeeling), rawFeeling);
+  const movement = tagDisplayValue(normalizeMovementCategory(rawMovement), rawMovement);
   const timeLabel = isCompleted
     ? 'Submitted'
     : isActive

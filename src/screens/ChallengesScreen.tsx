@@ -26,6 +26,10 @@ const CHALLENGE_LOGO = require('../../assets/Pose_6-removebg-preview.png');
 const BASE_URL = 'https://photoai.betaplanets.com';
 const fullUrl = (u?: string) => u ? (u.startsWith('http') ? u : BASE_URL + u) : undefined;
 const primaryValue = (value?: string) => (value || '').split(',')[0].trim();
+const tagDisplayValue = (normalized: string, fallback?: string) => {
+  const value = normalized && normalized !== '-' ? normalized : fallback;
+  return String(value || '').split(',')[0].replace(/^[^\w]+/u, '').trim();
+};
 const userChallengeStatus = (challenge: any) => challenge.user_challenge?.status || null;
 const hasHardStopExpired = (challenge: any) => (
   !!challenge.end_date && new Date(challenge.end_date).getTime() < Date.now()
@@ -46,11 +50,11 @@ const isArchivedUserChallenge = (challenge: any) =>
   !isCompletedUserChallenge(challenge) &&
   (challenge.status === 'archived' || challenge.is_active === false || hasHardStopExpired(challenge) || hasMissedCommitmentWindow(challenge));
 const challengeCategoryValue = (challenge: any) =>
-  normalizeChallengeCategory(challenge.category || challenge.challenge_category);
+  tagDisplayValue(normalizeChallengeCategory(challenge.category || challenge.challenge_category), challenge.category || challenge.challenge_category);
 const challengeFeelingValue = (challenge: any) =>
-  normalizeFeelingCategory(challenge.feeling_category || challenge.feeling_tag || challenge.challenge_feeling_category);
+  tagDisplayValue(normalizeFeelingCategory(challenge.feeling_category || challenge.feeling_tag || challenge.challenge_feeling_category), challenge.feeling_category || challenge.feeling_tag || challenge.challenge_feeling_category);
 const challengeMovementValue = (challenge: any) =>
-  normalizeMovementCategory(challenge.movement_category || challenge.movement_tag || challenge.challenge_movement_category);
+  tagDisplayValue(normalizeMovementCategory(challenge.movement_category || challenge.movement_tag || challenge.challenge_movement_category), challenge.movement_category || challenge.movement_tag || challenge.challenge_movement_category);
 
 export default function ChallengesScreen() {
   const navigation = useNavigation<any>();

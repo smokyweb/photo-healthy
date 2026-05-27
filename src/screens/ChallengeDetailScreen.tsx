@@ -164,15 +164,18 @@ export default function ChallengeDetailScreen() {
   const userChallenge = enrollment?.user_challenge;
   const userChallengeStatus = userChallenge?.status || challenge.user_challenge?.status;
   const hasSubmitted = userChallengeStatus === 'completed' || !!userChallenge?.has_submission || !!challenge.user_challenge?.has_submission;
-  const categoryLabel = normalizeChallengeCategory(challenge.category);
-  const feelingLabel = normalizeFeelingCategory(challenge.feeling_category || challenge.feeling_tag);
-  const movementLabel = normalizeMovementCategory(challenge.movement_category || challenge.movement_tag);
   const personalDaysLeft = userChallenge ? Math.max(0, userChallenge.days_remaining ?? 0) : null;
   const personalDeadlineExpired = isEnrolled && userChallenge && userChallenge.days_remaining < 0;
   const cleanTagValue = (normalized: string, fallback?: string) => {
     const value = normalized && normalized !== '-' ? normalized : fallback;
-    return String(value || '').trim();
+    return String(value || '').split(',')[0].replace(/^[^\w]+/u, '').trim();
   };
+  const rawCategoryLabel = challenge.category || challenge.challenge_category;
+  const rawFeelingLabel = challenge.feeling_category || challenge.feeling_tag || challenge.challenge_feeling_category;
+  const rawMovementLabel = challenge.movement_category || challenge.movement_tag || challenge.challenge_movement_category;
+  const categoryLabel = cleanTagValue(normalizeChallengeCategory(rawCategoryLabel), rawCategoryLabel);
+  const feelingLabel = cleanTagValue(normalizeFeelingCategory(rawFeelingLabel), rawFeelingLabel);
+  const movementLabel = cleanTagValue(normalizeMovementCategory(rawMovementLabel), rawMovementLabel);
 
   const getSubmissionTag = (sub: any, type: 'category' | 'feeling' | 'movement') => {
     if (type === 'category') {
