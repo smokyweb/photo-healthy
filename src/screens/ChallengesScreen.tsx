@@ -30,6 +30,18 @@ const tagDisplayValue = (normalized: string, fallback?: string) => {
   const value = normalized && normalized !== '-' ? normalized : fallback;
   return String(value || '').split(',')[0].replace(/^[^\w]+/u, '').trim();
 };
+const uniqueOptions = (defaults: string[], values: string[]) => {
+  const seen = new Set<string>();
+  return ['All', ...defaults, ...values]
+    .map(v => String(v || '').trim())
+    .filter(v => v && v !== '-' && !seen.has(v) && seen.add(v));
+};
+const filterMatches = (value: string, selected: string) => {
+  const clean = (v: string) => String(v || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const v = clean(value);
+  const s = clean(selected);
+  return v === s || v.includes(s) || s.includes(v);
+};
 const userChallengeStatus = (challenge: any) => challenge.user_challenge?.status || null;
 const hasHardStopExpired = (challenge: any) => (
   !!challenge.end_date && new Date(challenge.end_date).getTime() < Date.now()
@@ -49,6 +61,17 @@ const isCompletedUserChallenge = (challenge: any) =>
 const isArchivedUserChallenge = (challenge: any) =>
   !isCompletedUserChallenge(challenge) &&
   (challenge.status === 'archived' || challenge.is_active === false || hasHardStopExpired(challenge) || hasMissedCommitmentWindow(challenge));
+const statusFilteredChallenges = (list: any[], status: string) => {
+  if (status === 'active') return list.filter(isActiveUserChallenge);
+  if (status === 'completed') return list.filter(isCompletedUserChallenge);
+  if (status === 'archived') return list.filter(isArchivedUserChallenge);
+  if (status !== 'all') return list.filter(c => c.status === status);
+  return list.filter(isAvailableChallenge);
+};
+const optionBaseChallenges = (list: any[], status: string) => {
+  if (status === 'all') return list;
+  return statusFilteredChallenges(list, status);
+};
 const challengeCategoryValue = (challenge: any) =>
   tagDisplayValue(normalizeChallengeCategory(challenge.category || challenge.challenge_category), challenge.category || challenge.challenge_category);
 const challengeFeelingValue = (challenge: any) =>
@@ -86,6 +109,7 @@ export default function ChallengesScreen() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [category, setCategory] = useState('All');
+  const [categoryOptions, setCategoryOptions] = useState<string[]>(['All', ...CHALLENGE_CATEGORIES]);
   const [feelingFilter, setFeelingFilter] = useState('All');
   const [movementFilter, setMovementFilter] = useState('All');
   const [feelingOptions, setFeelingOptions] = useState<string[]>(['All', ...FEELING_CATEGORIES]);
@@ -100,9 +124,7 @@ export default function ChallengesScreen() {
       const data = await getChallenges();
       const list = data?.challenges || data || [];
       setChallenges(list);
-      
-      setFeelingOptions(['All', ...FEELING_CATEGORIES]);
-      setMovementOptions(['All', ...MOVEMENT_CATEGORIES]);
+
       applyFilters(list, search, status, category, feelingFilter, movementFilter);
     } catch (e) {
       console.error(e);
@@ -114,25 +136,16 @@ export default function ChallengesScreen() {
   const applyFilters = useCallback(
 (list: any[], q: string, s: string, cat: string, feeling: string, movement: string) => {
       let result = [...list];
-      if (s !== 'all') {
-        if (s === 'active') {
-          result = result.filter(isActiveUserChallenge);
-        } else if (s === 'completed') {
-          result = result.filter(isCompletedUserChallenge);
-        } else if (s === 'archived') {
-          result = result.filter(isArchivedUserChallenge);
-        } else {
-          result = result.filter(c => c.status === s);
-        }
-      } else {
-        result = result.filter(isAvailableChallenge);
-      }
-      if (cat !== 'All') result = result.filter(c => challengeCategoryValue(c) === cat);
+      const hasContentFilter = !!q.trim() || cat !== 'All' || feeling !== 'All' || movement !== 'All';
+      result = s === 'all' && hasContentFilter
+        ? result
+        : statusFilteredChallenges(result, s);
+      if (cat !== 'All') result = result.filter(c => filterMatches(challengeCategoryValue(c), cat));
       if (feeling !== 'All') result = result.filter(c =>
-        challengeFeelingValue(c) === feeling
+        filterMatches(challengeFeelingValue(c), feeling)
       );
       if (movement !== 'All') result = result.filter(c =>
-        challengeMovementValue(c) === movement
+        filterMatches(challengeMovementValue(c), movement)
       );
       if (q.trim()) {
         const lq = q.toLowerCase();
@@ -152,6 +165,18 @@ export default function ChallengesScreen() {
 
   useEffect(() => { load(); }, []);
   useEffect(() => { applyFilters(challenges, search, status, category, feelingFilter, movementFilter); }, [search, status, category, feelingFilter, movementFilter, challenges]);
+  useEffect(() => {
+    const statusList = optionBaseChallenges(challenges, status);
+    const nextCategories = uniqueOptions(CHALLENGE_CATEGORIES, statusList.map(challengeCategoryValue));
+    const nextFeelings = uniqueOptions(FEELING_CATEGORIES, statusList.map(challengeFeelingValue));
+    const nextMovements = uniqueOptions(MOVEMENT_CATEGORIES, statusList.map(challengeMovementValue));
+    setCategoryOptions(nextCategories);
+    setFeelingOptions(nextFeelings);
+    setMovementOptions(nextMovements);
+    if (!nextCategories.includes(category)) setCategory('All');
+    if (!nextFeelings.includes(feelingFilter)) setFeelingFilter('All');
+    if (!nextMovements.includes(movementFilter)) setMovementFilter('All');
+  }, [challenges, status]);
 
   const onRefresh = () => { setRefreshing(true); load(); };
 
@@ -285,7 +310,7 @@ export default function ChallengesScreen() {
         style={styles.categoryScroll}
         contentContainerStyle={styles.categoryContent}
       >
-        {['All', ...CHALLENGE_CATEGORIES].map(cat => (
+        {categoryOptions.map(cat => (
           <TouchableOpacity
             key={cat}
             style={[styles.pill, category === cat && styles.pillActive]}
