@@ -445,7 +445,7 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userStats, days
           <TouchableOpacity
             key={sub.id}
             style={li.communityCard}
-            onPress={() => sub.photo1_url && navigation.navigate('SubmissionDetail', { id: sub.id })}
+            onPress={() => sub.id && navigation.navigate('SubmissionDetail', { submissionId: sub.id, id: sub.id })}
           >
             <Image source={sub._localPhoto || { uri: fullUrl(sub.photo1_url) }} style={li.communityImg} resizeMode="contain" />
             <View style={li.communityInfo}>
@@ -610,7 +610,7 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, userStats
         <TouchableOpacity
           key={sub.id}
           style={pm.submission}
-          onPress={() => sub.photo1_url && navigation.navigate('SubmissionDetail', { id: sub.id })}
+          onPress={() => sub.id && navigation.navigate('SubmissionDetail', { submissionId: sub.id, id: sub.id })}
         >
           <Image source={sub._localPhoto || { uri: fullUrl(sub.photo1_url) }} style={pm.submissionImg} resizeMode="contain" />
           <View style={pm.submissionBody}>
@@ -699,6 +699,13 @@ const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation
     { id: 'local-4', user_name: 'Mindful', challenge_title: 'Community light', _localPhoto: PHOTO8_ALLEY, like_count: 111 },
   ];
   const shareItems = (recent.length > 0 ? recent : fallbackShareItems).slice(0, 4);
+  const openShareItem = (item: any) => {
+    if (item?.id && !String(item.id).startsWith('local-')) {
+      navigation.navigate('SubmissionDetail' as never, { submissionId: item.id, id: item.id } as never);
+    } else {
+      navigation.navigate('Main' as never, { screen: 'CommunityTab' } as never);
+    }
+  };
 
   const benefits = [
     { title: 'You start small', body: 'Small guided photo actions create easy wellness moments.' },
@@ -773,7 +780,7 @@ const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation
           <Text style={landing.sectionTitle}>Here's what people are sharing NOW</Text>
           <View style={[landing.shareGrid, isMobile && landing.shareGridMobile]}>
             {shareItems.map((item: any) => (
-              <TouchableOpacity key={item.id} style={landing.shareCard} onPress={() => navigation.navigate('Register')}>
+              <TouchableOpacity key={item.id} style={landing.shareCard} onPress={() => openShareItem(item)}>
                 <AssetView
                   source={item._localPhoto || (item.photo1_url ? { uri: fullUrl(item.photo1_url) } : PHOTO2_MOUNTAIN)}
                   style={landing.shareImage}
