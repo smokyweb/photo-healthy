@@ -11,11 +11,14 @@ interface Challenge {
   title: string;
   status?: string;
   category?: string;
+  challenge_category?: string;
   feeling_tag?: string;
   feeling_category?: string;
+  challenge_feeling_category?: string;
   mood_tag?: string;
   movement_tag?: string;
   movement_category?: string;
+  challenge_movement_category?: string;
   cover_image?: string;
   cover_image_url?: string;
   submission_count?: number;
@@ -44,7 +47,7 @@ function getDaysLeft(endDate?: string): number | null {
 
 function tagDisplayValue(normalized: string, fallback?: string) {
   const value = normalized && normalized !== '-' ? normalized : fallback;
-  return String(value || '').split(',')[0].replace(/^[^\w]+/u, '').trim();
+  return String(value || '').split(',')[0].replace(/^[^\w]+/u, '').trim() || 'Not set';
 }
 
 export default function ChallengeCard({ challenge, onPress }: Props) {
@@ -70,9 +73,10 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
         : isUpcoming
           ? C.WARNING + 'dd'
           : C.SUCCESS + 'dd';
-  const rawFeeling = challenge.feeling_category || challenge.feeling_tag || challenge.mood_tag;
-  const rawMovement = challenge.movement_category || challenge.movement_tag;
-  const category = tagDisplayValue(normalizeChallengeCategory(challenge.category), challenge.category);
+  const rawCategory = challenge.category || challenge.challenge_category;
+  const rawFeeling = challenge.feeling_category || challenge.feeling_tag || challenge.challenge_feeling_category || challenge.mood_tag;
+  const rawMovement = challenge.movement_category || challenge.movement_tag || challenge.challenge_movement_category;
+  const category = tagDisplayValue(normalizeChallengeCategory(rawCategory), rawCategory);
   const feeling = tagDisplayValue(normalizeFeelingCategory(rawFeeling), rawFeeling);
   const movement = tagDisplayValue(normalizeMovementCategory(rawMovement), rawMovement);
   const timeLabel = isCompleted
