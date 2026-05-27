@@ -171,6 +171,11 @@ export default function SubmissionDetailScreen() {
     : '';
   const submissionTags = [
     {
+      type: 'name',
+      label: 'Challenge',
+      value: submission.challenge_title || null,
+    },
+    {
       type: 'category',
       label: 'Category',
       value: normalizeChallengeCategory(submission.category || submission.challenge_category || challengeTags?.category),
@@ -189,11 +194,18 @@ export default function SubmissionDetailScreen() {
 
   const openChallengeForTag = (tag: typeof submissionTags[number]) => {
     if (!submission.challenge_id) return;
-    navigation.navigate('ChallengeDetail' as never, {
-      challengeId: submission.challenge_id,
-      id: submission.challenge_id,
-      tagFilter: { type: tag.type, value: tag.value },
-    } as never);
+    if (tag.type === 'name') {
+      navigation.navigate('ChallengeDetail' as never, {
+        challengeId: submission.challenge_id,
+        id: submission.challenge_id,
+      } as never);
+    } else {
+      navigation.navigate('ChallengeDetail' as never, {
+        challengeId: submission.challenge_id,
+        id: submission.challenge_id,
+        tagFilter: { type: tag.type, value: tag.value },
+      } as never);
+    }
   };
 
   return (
