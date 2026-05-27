@@ -56,6 +56,7 @@ export default function SubmissionDetailScreen() {
         const s = sData.value?.submission || sData.value;
         setSubmission(s);
         setLikeCount(s?.like_count || 0);
+        setLiked(!!(s?.liked_by_me || s?.likedByMe || s?.liked));
       } else {
         setError('Could not load submission.');
       }

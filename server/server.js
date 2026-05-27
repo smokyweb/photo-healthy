@@ -1247,15 +1247,20 @@ app.get('/api/submissions', async (req, res) => {
 
 app.get('/api/submissions/:id', async (req, res) => {
   try {
+    const viewer = optionalAuth(req);
     const [submissions] = await pool.query(
       `SELECT s.*, u.name as user_name, u.avatar_url as user_avatar_url, u.subscription_status as user_subscription_status,
               c.title as challenge_title, c.category as challenge_category,
               c.feeling_category as challenge_feeling_category, c.movement_category as challenge_movement_category,
               COALESCE((SELECT COUNT(*) FROM likes WHERE submission_id = s.id), 0) as like_count,
-              COALESCE((SELECT COUNT(*) FROM comments WHERE submission_id = s.id), 0) as comment_count
+              COALESCE((SELECT COUNT(*) FROM comments WHERE submission_id = s.id), 0) as comment_count,
+              CASE
+                WHEN ? IS NULL THEN 0
+                ELSE EXISTS(SELECT 1 FROM likes WHERE submission_id = s.id AND user_id = ?)
+              END as liked_by_me
        FROM submissions s JOIN users u ON s.user_id = u.id JOIN challenges c ON s.challenge_id = c.id
        WHERE s.id = ?`,
-      [req.params.id]
+      [viewer?.id || null, viewer?.id || null, req.params.id]
     );
     if (submissions.length === 0) return res.status(404).json({ error: 'Submission not found' });
     res.json({ submission: submissions[0] });
