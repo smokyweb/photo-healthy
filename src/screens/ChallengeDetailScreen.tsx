@@ -169,15 +169,22 @@ export default function ChallengeDetailScreen() {
   const movementLabel = normalizeMovementCategory(challenge.movement_category || challenge.movement_tag);
   const personalDaysLeft = userChallenge ? Math.max(0, userChallenge.days_remaining ?? 0) : null;
   const personalDeadlineExpired = isEnrolled && userChallenge && userChallenge.days_remaining < 0;
+  const cleanTagValue = (normalized: string, fallback?: string) => {
+    const value = normalized && normalized !== '-' ? normalized : fallback;
+    return String(value || '').trim();
+  };
 
   const getSubmissionTag = (sub: any, type: 'category' | 'feeling' | 'movement') => {
     if (type === 'category') {
-      return normalizeChallengeCategory(sub.category || sub.challenge_category || challenge.category);
+      const raw = sub.category || sub.challenge_category || challenge.category;
+      return cleanTagValue(normalizeChallengeCategory(raw), raw);
     }
     if (type === 'feeling') {
-      return normalizeFeelingCategory(sub.feeling_category || sub.feeling_tag || sub.challenge_feeling_category || challenge.feeling_category || challenge.feeling_tag);
+      const raw = sub.feeling_category || sub.feeling_tag || sub.challenge_feeling_category || challenge.feeling_category || challenge.feeling_tag;
+      return cleanTagValue(normalizeFeelingCategory(raw), raw);
     }
-    return normalizeMovementCategory(sub.movement_category || sub.movement_tag || sub.challenge_movement_category || challenge.movement_category || challenge.movement_tag);
+    const raw = sub.movement_category || sub.movement_tag || sub.challenge_movement_category || challenge.movement_category || challenge.movement_tag;
+    return cleanTagValue(normalizeMovementCategory(raw), raw);
   };
 
   const searchedSubs = subSearch.trim()

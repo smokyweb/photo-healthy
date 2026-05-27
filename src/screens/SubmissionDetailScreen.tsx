@@ -14,6 +14,12 @@ import { normalizeChallengeCategory, normalizeFeelingCategory, normalizeMovement
 
 const BASE = 'https://photoai.betaplanets.com';
 const fullUrl = (u?: string) => u ? (u.startsWith('http') ? u : BASE + u) : null;
+type SubmissionTagType = 'name' | 'category' | 'feeling' | 'movement';
+type SubmissionTag = {
+  type: SubmissionTagType;
+  label: string;
+  value: string;
+};
 
 function initials(name: string) {
   return (name || 'U').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
@@ -169,38 +175,38 @@ export default function SubmissionDetailScreen() {
   const dateStr = submission.created_at
     ? new Date(submission.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : '';
-  const rawCategory = submission.category || submission.challenge_category || submission.challengeCategory || challengeTags?.category;
-  const rawFeeling = submission.feeling_category || submission.feeling_tag || submission.challenge_feeling_category || submission.challengeFeelingCategory || challengeTags?.feeling;
-  const rawMovement = submission.movement_category || submission.movement_tag || submission.challenge_movement_category || submission.challengeMovementCategory || challengeTags?.movement;
-  const submissionTags = [
+  const challengeName = submission.challenge_title || challengeTags?.name || challengeTags?.challenge || '';
+  const rawCategory = submission.category || submission.challenge_category || submission.challengeCategory || challengeTags?.category || '';
+  const rawFeeling = submission.feeling_category || submission.feeling_tag || submission.challenge_feeling_category || submission.challengeFeelingCategory || challengeTags?.feeling || '';
+  const rawMovement = submission.movement_category || submission.movement_tag || submission.challenge_movement_category || submission.challengeMovementCategory || challengeTags?.movement || '';
+  const cleanTagValue = (normalized: string, fallback: string) => {
+    const value = normalized && normalized !== '-' ? normalized : fallback;
+    return String(value || '').trim();
+  };
+  const submissionTags: SubmissionTag[] = [
     {
       type: 'name',
-      label: 'Challenge',
-      value: submission.challenge_title || null,
+      label: 'Name',
+      value: String(challengeName || '').trim(),
     },
     {
       type: 'category',
       label: 'Category',
-      value: normalizeChallengeCategory(rawCategory),
+      value: cleanTagValue(normalizeChallengeCategory(rawCategory), rawCategory),
     },
     {
       type: 'feeling',
       label: 'Feeling',
-      value: normalizeFeelingCategory(rawFeeling),
+      value: cleanTagValue(normalizeFeelingCategory(rawFeeling), rawFeeling),
     },
     {
       type: 'movement',
       label: 'Movement',
-      value: normalizeMovementCategory(rawMovement),
+      value: cleanTagValue(normalizeMovementCategory(rawMovement), rawMovement),
     },
-  ].map((tag, index) => ({
-    ...tag,
-    value: tag.value && tag.value !== '-'
-      ? tag.value
-      : [rawCategory, rawFeeling, rawMovement][index],
-  })).filter(tag => tag.value && tag.value !== '-');
+  ].filter(tag => tag.value && tag.value !== '-');
 
-  const openChallengeForTag = (tag: typeof submissionTags[number]) => {
+  const openChallengeForTag = (tag: SubmissionTag) => {
     if (!submission.challenge_id) return;
     if (tag.type === 'name') {
       navigation.navigate('ChallengeDetail' as never, {
@@ -269,7 +275,7 @@ export default function SubmissionDetailScreen() {
                   style={styles.tagChip}
                   onPress={() => openChallengeForTag(tag)}
                   activeOpacity={0.75}
-                  accessibilityLabel={`View submissions with ${tag.label} ${tag.value}`}
+                  accessibilityLabel={tag.type === 'name' ? `Back to ${tag.value}` : `View submissions with ${tag.label} ${tag.value}`}
                 >
                   <Text style={styles.tagLabel}>{tag.label}</Text>
                   <Text style={styles.tagValue}>{tag.value}</Text>
