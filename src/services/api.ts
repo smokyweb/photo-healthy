@@ -295,7 +295,10 @@ export async function uploadPhoto(file: File): Promise<{ url: string }> {
     body: JSON.stringify({ data: dataUrl, type: file.type, name: file.name }),
   });
   if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-  return res.json();
+  const data = await res.json();
+  const url = data?.url || data?.photo_url || data?.image_url || data?.file_url || data?.file || data?.path || data?.location;
+  if (!url) throw new Error('Upload failed: server did not return a photo URL');
+  return { ...data, url };
 }
 
 // Read EXIF orientation from JPEG (fixes iPhone rotation)

@@ -91,9 +91,14 @@ export default function SubmitPhotoScreen() {
       }
       // Upload all photos
       const uploadedUrls: string[] = [];
-      for (const p of photos) {
+      for (let i = 0; i < photos.length; i += 1) {
+        const p = photos[i];
         const result = await uploadPhoto(p.file);
-        uploadedUrls.push(result.url || result.photo_url || result.image_url);
+        const uploadedUrl = result.url || (result as any).photo_url || (result as any).image_url;
+        if (!uploadedUrl) {
+          throw new Error(`Photo ${i + 1} did not finish uploading. Please try again.`);
+        }
+        uploadedUrls.push(uploadedUrl);
       }
       // Build submission payload with photo1_url through photo4_url
       const payload: any = {
@@ -102,6 +107,7 @@ export default function SubmitPhotoScreen() {
         description: sanitize(description, 1000),
         miles_walked: miles ? parseFloat(miles) : undefined,
         miles: miles ? parseFloat(miles) : undefined,
+        photo_urls: uploadedUrls,
       };
       uploadedUrls.forEach((url, i) => {
         payload[`photo${i + 1}_url`] = url;

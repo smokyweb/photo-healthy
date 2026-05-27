@@ -278,6 +278,7 @@ async function safeAddColumn(table, column, definition) {
     await safeAddColumn('submissions', 'title', 'VARCHAR(200) NULL');
     await safeAddColumn('submissions', 'description', 'TEXT NULL');
     await safeAddColumn('submissions', 'miles_walked', 'DECIMAL(10,2) NULL');
+    await safeAddColumn('submissions', 'photo2_url', 'VARCHAR(500) NULL');
     await safeAddColumn('submissions', 'photo3_url', 'VARCHAR(500) NULL');
     await safeAddColumn('submissions', 'photo4_url', 'VARCHAR(500) NULL');
     await safeAddColumn('user_challenges', 'updated_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
@@ -1271,8 +1272,27 @@ app.get('/api/submissions/:id', async (req, res) => {
 
 app.post('/api/submissions', auth, async (req, res) => {
   try {
-    const { challenge_id, title, description, photo1_url, photo2_url } = req.body;
-    if (!challenge_id || !title || !photo1_url) return res.status(400).json({ error: 'Challenge, title, and photo required' });
+    const { challenge_id, title, description } = req.body;
+    const collectPhotoUrls = () => {
+      const urls = [
+        req.body.photo1_url || req.body.image_url || req.body.photo_url,
+        req.body.photo2_url,
+        req.body.photo3_url,
+        req.body.photo4_url,
+      ];
+      const arrayInput = req.body.photo_urls || req.body.photos;
+      if (Array.isArray(arrayInput)) {
+        arrayInput.forEach(item => {
+          const url = typeof item === 'string'
+            ? item
+            : item?.url || item?.photo_url || item?.image_url || item?.path;
+          urls.push(url);
+        });
+      }
+      return [...new Set(urls.filter(url => typeof url === 'string' && url.trim()).map(url => url.trim()))].slice(0, 4);
+    };
+    const photoUrls = collectPhotoUrls();
+    if (!challenge_id || !title || !photoUrls[0]) return res.status(400).json({ error: 'Challenge, title, and photo required' });
 
     // Check user not suspended + get subscription status
     const [userRows] = await pool.query('SELECT is_suspended, subscription_status FROM users WHERE id = ?', [req.user.id]);
@@ -1327,8 +1347,8 @@ app.post('/api/submissions', auth, async (req, res) => {
         : null;
 
     const [result] = await pool.query(
-      'INSERT INTO submissions (user_id, challenge_id, title, description, photo1_url, photo2_url, miles_walked) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [req.user.id, challenge_id, title, description || null, photo1_url, photo2_url || null, miles]
+      'INSERT INTO submissions (user_id, challenge_id, title, description, photo1_url, photo2_url, photo3_url, photo4_url, miles_walked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [req.user.id, challenge_id, title, description || null, photoUrls[0], photoUrls[1] || null, photoUrls[2] || null, photoUrls[3] || null, miles]
     );
 
     // Update user's cumulative mileage if provided
