@@ -143,6 +143,22 @@ export default function SubmitPhotoScreen() {
   const projectedMiles = Math.round((totalMiles + enteredMiles) * 10) / 10;
   const reflectionPrompt = `Share your thoughts on how you felt doing the ${movementValue} activity and how you were moved by the ${feelingValue} experience of the challenge.`;
 
+  if (success) {
+    return (
+      <View style={styles.successScreen}>
+        <View style={styles.successCard}>
+          <View style={styles.successIcon}>
+            <Text style={styles.successIconText}>✓</Text>
+          </View>
+          <Text style={styles.successTitle}>Photo Submitted</Text>
+          <Text style={styles.successMessage}>
+            Your photos have been shared with the community. Taking you back to the challenge...
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       style={styles.screen}
@@ -175,15 +191,6 @@ export default function SubmitPhotoScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Text style={styles.backText}>← Cancel</Text>
           </TouchableOpacity>
-      {success && (
-        <View style={{ position: 'absolute' as any, top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(10,14,26,0.92)', zIndex: 9999, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-          <View style={{ backgroundColor: '#16a34a', borderRadius: 24, padding: 40, alignItems: 'center', width: '100%', maxWidth: 360, shadowColor: '#16a34a', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.5, shadowRadius: 24, elevation: 20 }}>
-            <Text style={{ fontSize: 64, marginBottom: 16 }}>✅</Text>
-            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 22, textAlign: 'center', marginBottom: 8 }}>Photo Submitted!</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 15, textAlign: 'center', lineHeight: 22 }}>Your photo has been shared with the community. Taking you to the challenge...</Text>
-          </View>
-        </View>
-      )}
           <Text style={styles.heading}>Submit Photos</Text>
           <View style={{ width: 60 }} />
         </View>
@@ -334,6 +341,52 @@ export default function SubmitPhotoScreen() {
 
 const styles = StyleSheet.create({
   screen: { backgroundColor: 'transparent' },
+  successScreen: {
+    minHeight: '100vh' as any,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  successCard: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: borderRadius.xl,
+    padding: 32,
+    alignItems: 'center',
+    backgroundColor: C.CARD_BG,
+    borderWidth: 1,
+    borderColor: C.TEAL + '66',
+  },
+  successIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: C.TEAL,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18,
+  },
+  successIconText: {
+    color: '#07111F',
+    fontSize: 42,
+    fontWeight: '900',
+    lineHeight: 48,
+  },
+  successTitle: {
+    color: C.TEXT,
+    fontSize: 24,
+    fontWeight: '800',
+    fontFamily: "'Lexend', sans-serif",
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  successMessage: {
+    color: C.TEXT_SECONDARY,
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
   logoContainer: {
     alignItems: 'center',
     paddingVertical: 24,
