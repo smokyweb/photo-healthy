@@ -280,6 +280,7 @@ async function safeAddColumn(table, column, definition) {
     await safeAddColumn('submissions', 'miles_walked', 'DECIMAL(10,2) NULL');
     await safeAddColumn('submissions', 'photo3_url', 'VARCHAR(500) NULL');
     await safeAddColumn('submissions', 'photo4_url', 'VARCHAR(500) NULL');
+    await safeAddColumn('user_challenges', 'updated_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
     await safeAddColumn('comments', 'text', 'TEXT NULL');
     await safeAddColumn('users', 'total_miles', 'DECIMAL(10,2) DEFAULT 0');
     await safeAddColumn('users', 'is_suspended', 'BOOLEAN DEFAULT FALSE');
@@ -1331,7 +1332,7 @@ app.post('/api/submissions', auth, async (req, res) => {
     await pool.query(
       `INSERT INTO user_challenges (user_id, challenge_id, status, personal_end_date)
        VALUES (?, ?, 'completed', DATE_ADD(CURDATE(), INTERVAL ? DAY))
-       ON DUPLICATE KEY UPDATE status = 'completed', updated_at = NOW()`,
+       ON DUPLICATE KEY UPDATE status = 'completed'`,
       [req.user.id, challenge_id, Number(challenges[0].duration_days || 30)]
     );
 
