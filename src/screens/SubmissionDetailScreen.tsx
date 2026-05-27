@@ -86,6 +86,7 @@ export default function SubmissionDetailScreen() {
       }
     } catch (e: any) {
       console.error('Like failed:', e.message);
+      Alert.alert('Error', e.message || 'Could not like this photo.');
     }
   };
 

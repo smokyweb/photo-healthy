@@ -1352,6 +1352,48 @@ async function handleDeleteSubmission(req, res) {
 app.delete('/api/submissions/:id', adminAuth, handleDeleteSubmission);
 app.post('/api/submissions/:id/delete', adminAuth, handleDeleteSubmission);
 
+app.post('/api/submissions/:id/like', auth, async (req, res) => {
+  try {
+    const submissionId = Number(req.params.id);
+    if (!submissionId) return res.status(400).json({ error: 'Submission ID required' });
+
+    const [[submission]] = await pool.query('SELECT id FROM submissions WHERE id = ?', [submissionId]);
+    if (!submission) return res.status(404).json({ error: 'Submission not found' });
+
+    const [existing] = await pool.query(
+      'SELECT id FROM likes WHERE user_id = ? AND submission_id = ? LIMIT 1',
+      [req.user.id, submissionId]
+    );
+
+    let liked = false;
+    if (existing.length > 0) {
+      await pool.query('DELETE FROM likes WHERE user_id = ? AND submission_id = ?', [req.user.id, submissionId]);
+    } else {
+      await pool.query(
+        'INSERT INTO likes (user_id, submission_id) VALUES (?, ?)',
+        [req.user.id, submissionId]
+      );
+      liked = true;
+    }
+
+    const [[countRow]] = await pool.query(
+      'SELECT COUNT(*) AS like_count FROM likes WHERE submission_id = ?',
+      [submissionId]
+    );
+    res.json({ liked, like_count: Number(countRow?.like_count || 0) });
+  } catch (e) {
+    if (e.code === 'ER_DUP_ENTRY') {
+      const [[countRow]] = await pool.query(
+        'SELECT COUNT(*) AS like_count FROM likes WHERE submission_id = ?',
+        [req.params.id]
+      );
+      return res.json({ liked: true, like_count: Number(countRow?.like_count || 0) });
+    }
+    console.error('[like submission]', e.message);
+    res.status(500).json({ error: e.message || 'Failed to like submission' });
+  }
+});
+
 // ==================== COMMENTS ROUTES ====================
 
 app.get('/api/comments', async (req, res) => {
