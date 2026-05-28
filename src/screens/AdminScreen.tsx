@@ -11,7 +11,7 @@ import {
   adminGetDiscountCodes, createDiscountCode, updateDiscountCode, deleteDiscountCode,
   getChallenges, createChallenge, updateChallenge, deleteChallenge,
   deleteSubmission, deleteComment, updateComment, getComments, getSubmissions,
-  adminGetOrders, adminMarkOrderPaid, adminProcessOrder, adminFulfillOrder, adminUpdateTracking, deleteUser, restoreUser, updateUser, adminSuspendUser,
+  adminGetOrders, adminMarkOrderPaid, adminProcessOrder, adminFulfillOrder, adminUpdateTracking, adminArchiveOrder, deleteUser, restoreUser, updateUser, adminSuspendUser,
   adminGetTaxonomy, adminUpdateTaxonomy,
   adminGetActivity, adminGetUserSubmissions, adminGetUserComments, adminGetUserOrders, adminCreateUser, adminResetPassword,
   uploadPhoto,
@@ -76,7 +76,7 @@ export default function AdminScreen() {
 
   const [orders, setOrders] = useState<any[]>([]);
   const [orderSearch, setOrderSearch] = useState('');
-  const [orderFilter, setOrderFilter] = useState<string>('Active');
+  const [orderFilter, setOrderFilter] = useState<string>('Paid');
   const [orderSort, setOrderSort] = useState<'newest'|'oldest'|'customer'|'amount_high'|'amount_low'>('newest');
   const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
   const [trackingInput, setTrackingInput] = useState<Record<number, string>>({});
@@ -206,7 +206,7 @@ export default function AdminScreen() {
           break;
         }
         case 'Orders': {
-          const data = await adminGetOrders({ sort: orderSort });
+          const data = await adminGetOrders({ sort: orderSort, archived: 'all' });
           setOrders(data?.orders || data || []);
           break;
         }
@@ -806,7 +806,7 @@ export default function AdminScreen() {
               style={styles.listItem}
               activeOpacity={0.8}
               onPress={async () => {
-                const d = await adminGetOrders({ sort: orderSort });
+                const d = await adminGetOrders({ sort: orderSort, archived: 'all' });
                 setOrders(d?.orders || []);
                 setExpandedOrders(new Set([o.id]));
                 setSelectedUser(null);
@@ -1956,17 +1956,27 @@ export default function AdminScreen() {
       try { return JSON.parse(o.items_json || '[]'); } catch { return []; }
     };
 
-    const filtered = orders.filter(o => {
+    const filterDefinitions = [
+      { key: 'Needs Attention', statuses: ['pending', 'failed', 'cancelled'], archived: false },
+      { key: 'Paid', statuses: ['paid'], archived: false },
+      { key: 'Packed', statuses: ['processed'], archived: false },
+      { key: 'Shipped', statuses: ['fulfilled', 'shipped'], archived: false },
+      { key: 'Archived', statuses: [] as string[], archived: true },
+      { key: 'All', statuses: [] as string[], archived: null },
+    ];
+    const orderMatchesFilter = (o: any, filterKey: string) => {
       const status = (o.status || '').toLowerCase();
-      const ACTIVE_STATUSES = ['pending', 'paid', 'processed'];
-      const HISTORY_STATUSES = ['fulfilled', 'refunded', 'failed', 'cancelled', 'shipped'];
-      const statusMatch = orderFilter === 'All'
-        ? true
-        : orderFilter === 'Active'
-          ? ACTIVE_STATUSES.includes(status)
-          : orderFilter === 'History'
-            ? HISTORY_STATUSES.includes(status)
-            : status === orderFilter.toLowerCase();
+      const isArchived = o.archived === 1 || o.archived === true;
+      const def = filterDefinitions.find(f => f.key === filterKey) || filterDefinitions[0];
+      if (def.archived === true) return isArchived;
+      if (def.archived === false && isArchived) return false;
+      if (def.key === 'All') return true;
+      return def.statuses.includes(status);
+    };
+    const filterCount = (filterKey: string) => orders.filter(o => orderMatchesFilter(o, filterKey)).length;
+
+    const filtered = orders.filter(o => {
+      const statusMatch = orderMatchesFilter(o, orderFilter);
       const searchMatch = !orderSearch.trim() ||
         (o.customer_name || o.user_name || '').toLowerCase().includes(orderSearch.toLowerCase()) ||
         (o.customer_email || o.user_email || '').toLowerCase().includes(orderSearch.toLowerCase()) ||
@@ -1982,17 +1992,22 @@ export default function AdminScreen() {
     });
 
     // Count by status
-    const counts = {};
+    const counts: Record<string, number> = {};
     orders.forEach(o => { counts[o.status] = (counts[o.status] || 0) + 1; });
 
     return (
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>🚚 Orders ({sorted.length})</Text>
 
-        {/* Paid orders need action banner */}
-        {(counts['paid'] || 0) > 0 && (
+        {/* Paid and packed orders need action banners */}
+        {filterCount('Paid') > 0 && (
           <View style={{ backgroundColor: '#54DFB622', borderRadius: 10, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#54DFB6' }}>
-            <Text style={{ color: '#54DFB6', fontWeight: '700' }}>✅ {counts['paid']} order{counts['paid'] !== 1 ? 's' : ''} paid and waiting to ship!</Text>
+            <Text style={{ color: '#54DFB6', fontWeight: '700' }}>Paid: {filterCount('Paid')} order{filterCount('Paid') !== 1 ? 's' : ''} ready to pack.</Text>
+          </View>
+        )}
+        {filterCount('Packed') > 0 && (
+          <View style={{ backgroundColor: '#29B6E022', borderRadius: 10, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#29B6E0' }}>
+            <Text style={{ color: '#29B6E0', fontWeight: '700' }}>Packed: {filterCount('Packed')} order{filterCount('Packed') !== 1 ? 's' : ''} waiting for tracking/shipping.</Text>
           </View>
         )}
 
@@ -2009,24 +2024,14 @@ export default function AdminScreen() {
 
         {/* Status filter chips */}
         <ScrollView horizontal showsHorizontalScrollIndicator={true} persistentScrollbar style={{ marginBottom: 12 }}>
-          {['Active', 'All', 'Pending', 'Paid', 'Processed', 'History'].map(f => (
+          {filterDefinitions.map(def => (
             <TouchableOpacity
-              key={f}
-              style={[styles.chipOption, orderFilter === f && styles.chipOptionActive, { marginRight: 6 }]}
-              onPress={() => setOrderFilter(f)}
+              key={def.key}
+              style={[styles.chipOption, orderFilter === def.key && styles.chipOptionActive, { marginRight: 6 }]}
+              onPress={() => setOrderFilter(def.key)}
             >
-              <Text style={[styles.chipOptionText, orderFilter === f && styles.chipOptionTextActive]}>
-                {f} {(() => {
-                  if (f === 'Active') {
-                    const n = ['pending','paid','processed'].reduce((s,k) => s + (counts[k]||0), 0);
-                    return n > 0 ? '(' + n + ')' : '';
-                  }
-                  if (f === 'History') {
-                    const n = ['fulfilled','refunded','failed','cancelled','shipped'].reduce((s,k) => s + (counts[k]||0), 0);
-                    return n > 0 ? '(' + n + ')' : '';
-                  }
-                  return f !== 'All' && counts[f.toLowerCase()] ? '(' + counts[f.toLowerCase()] + ')' : '';
-                })()}
+              <Text style={[styles.chipOptionText, orderFilter === def.key && styles.chipOptionTextActive]}>
+                {def.key} ({filterCount(def.key)})
               </Text>
             </TouchableOpacity>
           ))}
@@ -2151,12 +2156,12 @@ export default function AdminScreen() {
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                     {o.status === 'pending' && (
                       <GradientButton label="✅ Mark Paid" variant="teal" size="sm" onPress={async () => {
-                        try { await adminMarkOrderPaid(o.id); const d = await adminGetOrders({ sort: orderSort }); setOrders(d?.orders || []); Alert.alert('Updated', 'Marked as paid.'); } catch (e: any) { Alert.alert('Error', e.message); }
+                        try { await adminMarkOrderPaid(o.id); const d = await adminGetOrders({ sort: orderSort, archived: 'all' }); setOrders(d?.orders || []); setOrderFilter('Paid'); Alert.alert('Updated', 'Order moved to Paid.'); } catch (e: any) { Alert.alert('Error', e.message); }
                       }} />
                     )}
                     {(o.status === 'paid' || o.status === 'pending') && (
                       <GradientButton label="📦 Mark Packed" variant="outline" size="sm" onPress={async () => {
-                        try { await adminProcessOrder(o.id); const d = await adminGetOrders({ sort: orderSort }); setOrders(d?.orders || []); Alert.alert('Updated', 'Marked as packed.'); } catch (e: any) { Alert.alert('Error', e.message); }
+                        try { await adminProcessOrder(o.id); const d = await adminGetOrders({ sort: orderSort, archived: 'all' }); setOrders(d?.orders || []); setOrderFilter('Packed'); Alert.alert('Updated', 'Order moved to Packed. Add tracking when ready.'); } catch (e: any) { Alert.alert('Error', e.message); }
                       }} />
                     )}
                   </View>
@@ -2180,15 +2185,27 @@ export default function AdminScreen() {
                         try {
                           const tracking = trackingInput[o.id] || '';
                           await adminFulfillOrder(o.id, tracking);
-                          const d = await adminGetOrders({ sort: orderSort });
+                          const d = await adminGetOrders({ sort: orderSort, archived: 'all' });
                           setOrders(d?.orders || []);
+                          setOrderFilter('Shipped');
                           setTrackingMsg(m => ({ ...m, [o.id]: '\u2713 Marked shipped!' + (tracking ? ' Tracking: ' + tracking : '') }));setTimeout(() => setTrackingMsg(m => { const n={...m}; delete n[o.id]; return n; }), 4000);
                         } catch (e: any) { setTrackingMsg(m => ({ ...m, [o.id]: 'Error: ' + (e.message || 'Failed') })); }
                       }} />
                     )}
                     {trackingInput[o.id] && !(['refunded','cancelled','failed'].includes(o.status)) && (
                       <GradientButton label="📍 Update Tracking" variant="outline" size="sm" onPress={async () => {
-                        try { await adminUpdateTracking(o.id, trackingInput[o.id]); const d = await adminGetOrders({ sort: orderSort }); setOrders(d?.orders || []); setTrackingMsg(m => ({ ...m, [o.id]: '✓ Tracking updated!' })); setTimeout(() => setTrackingMsg(m => { const n={...m}; delete n[o.id]; return n; }), 4000); } catch (e: any) { setTrackingMsg(m => ({ ...m, [o.id]: 'Error: ' + e.message })); }
+                        try { await adminUpdateTracking(o.id, trackingInput[o.id]); const d = await adminGetOrders({ sort: orderSort, archived: 'all' }); setOrders(d?.orders || []); setTrackingMsg(m => ({ ...m, [o.id]: '✓ Tracking updated!' })); setTimeout(() => setTrackingMsg(m => { const n={...m}; delete n[o.id]; return n; }), 4000); } catch (e: any) { setTrackingMsg(m => ({ ...m, [o.id]: 'Error: ' + e.message })); }
+                      }} />
+                    )}
+                    {o.status === 'fulfilled' && !(o.archived === 1 || o.archived === true) && (
+                      <GradientButton label="Archive" variant="outline" size="sm" onPress={async () => {
+                        try {
+                          await adminArchiveOrder(o.id);
+                          const d = await adminGetOrders({ sort: orderSort, archived: 'all' });
+                          setOrders(d?.orders || []);
+                          setOrderFilter('Archived');
+                          Alert.alert('Archived', 'Order moved to Archived.');
+                        } catch (e: any) { Alert.alert('Error', e.message); }
                       }} />
                     )}
                   </View>

@@ -2731,11 +2731,13 @@ async function notifyOrderStatus({ order, type }) {
 // GET /api/admin/orders â€” admin view all orders (active + archived)
 app.get('/api/admin/orders', adminAuth, async (req, res) => {
   try {
-    const archived = req.query.archived === '1' ? 1 : 0;
+    const archivedParam = req.query.archived;
     const { sort, filter, search } = req.query;
 
-    let query = 'SELECT * FROM orders WHERE archived = ?';
-    const params = [archived];
+    let query = 'SELECT * FROM orders WHERE 1=1';
+    const params = [];
+    if (archivedParam === '1') query += ' AND archived = 1';
+    else if (archivedParam === '0') query += ' AND archived = 0';
 
     // Status filter
     if (filter && filter !== 'all') {
@@ -2834,7 +2836,7 @@ async function handleOrderFulfill(req, res) {
     const { tracking_number } = req.body;
     const now = new Date();
     await pool.query(
-      "UPDATE orders SET status = 'fulfilled', tracking_number = ?, fulfilled_at = ?, archived = 1, updated_at = NOW() WHERE id = ?",
+      "UPDATE orders SET status = 'fulfilled', tracking_number = ?, fulfilled_at = ?, archived = 0, updated_at = NOW() WHERE id = ?",
       [tracking_number || null, now, req.params.id]
     );
     const [[order]] = await pool.query('SELECT * FROM orders WHERE id = ?', [req.params.id]);
@@ -3259,7 +3261,7 @@ app.patch('/api/admin/orders/bundle/:bundleId/fulfill', adminAuth, async (req, r
     );
     if (!orders.length) return res.status(404).json({ error: 'Bundle not found' });
     await pool.query(
-      `UPDATE orders SET status = 'fulfilled', tracking_number = ?, fulfilled_at = NOW() WHERE bundle_id = ?`,
+      `UPDATE orders SET status = 'fulfilled', tracking_number = ?, fulfilled_at = NOW(), archived = 0 WHERE bundle_id = ?`,
       [tracking_number || null, req.params.bundleId]
     );
     // Notify each customer

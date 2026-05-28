@@ -247,6 +247,8 @@ export const adminFulfillOrder = (id: number, tracking_number: string) =>
   request('POST', '/admin-api-proxy.php?path=/api/admin/orders/' + id + '/fulfill&method=POST', { tracking_number });
 export const adminUpdateTracking = (id: number, tracking_number: string) =>
   request('POST', '/admin-api-proxy.php?path=/api/admin/orders/' + id + '/tracking&method=PATCH', { tracking_number });
+export const adminArchiveOrder = (id: number) =>
+  request('POST', '/admin-api-proxy.php?path=/api/admin/orders/' + id + '/archive&method=PATCH', {});
 
 // Admin activity & user detail endpoints
 export const adminGetActivity = () => adminGet('/api/admin/activity');
