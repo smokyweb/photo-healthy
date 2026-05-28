@@ -44,6 +44,7 @@ export default function SubmissionDetailScreen() {
   const [likeCount, setLikeCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
 
   const load = async () => {
     if (!submissionId) { setLoading(false); return; }
@@ -173,6 +174,7 @@ export default function SubmissionDetailScreen() {
     submission.photo3_url,
     submission.photo4_url,
   ].map(u => fullUrl(u as string)).filter(Boolean) as string[];
+  const activePhoto = allPhotos[Math.min(activePhotoIndex, Math.max(allPhotos.length - 1, 0))];
   const dateStr = submission.created_at
     ? new Date(submission.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : '';
@@ -238,7 +240,27 @@ export default function SubmissionDetailScreen() {
         {/* Photo */}
         <View style={[styles.imageSection, isDesktop && styles.imageSectionDesktop]}>
           {allPhotos.length > 0 ? (
-            <Image source={{ uri: allPhotos[0] }} style={styles.image} resizeMode="contain" />
+            <>
+              <Image source={{ uri: activePhoto }} style={styles.image} resizeMode="contain" />
+              {allPhotos.length > 1 && (
+                <View style={styles.photoStrip}>
+                  {allPhotos.map((photo, index) => (
+                    <TouchableOpacity
+                      key={`${photo}-${index}`}
+                      style={[
+                        styles.photoThumb,
+                        index === Math.min(activePhotoIndex, allPhotos.length - 1) && styles.photoThumbActive,
+                      ]}
+                      onPress={() => setActivePhotoIndex(index)}
+                      activeOpacity={0.82}
+                      accessibilityLabel={`View photo ${index + 1}`}
+                    >
+                      <Image source={{ uri: photo }} style={styles.photoThumbImage} resizeMode="cover" />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </>
           ) : (
             <View style={styles.imagePlaceholder}>
               <Text style={{ fontSize: 60 }}>{'\uD83D\uDCF7'}</Text>
@@ -402,6 +424,28 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 1,
     borderRadius: borderRadius.xl,
+  },
+  photoStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 10,
+  },
+  photoThumb: {
+    width: 72,
+    height: 72,
+    borderRadius: borderRadius.md,
+    borderWidth: 2,
+    borderColor: C.CARD_BORDER,
+    overflow: 'hidden',
+    backgroundColor: C.CARD_BG,
+  },
+  photoThumbActive: {
+    borderColor: C.ORANGE,
+  },
+  photoThumbImage: {
+    width: '100%',
+    height: '100%',
   },
   imagePlaceholder: {
     width: '100%',
