@@ -247,7 +247,7 @@ export default function SubmitPhotoScreen() {
                     onPress={() => removePhoto(i)}
                     hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
                   >
-                    <Text style={styles.removeBtnText}>âœ•</Text>
+                    <Text style={styles.removeBtnText}>X</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
