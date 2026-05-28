@@ -27,7 +27,11 @@ function formatDate(dateStr?: string) {
 export default function ChallengeDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { challengeId: _cid, id: _id, tagFilter: initialTagFilter } = route.params || {}; const challengeId = _cid || _id;
+  const { challengeId: _cid, id: _id, tagFilter: initialTagFilter } = route.params || {};
+  const rawChallengeId = _cid || _id;
+  const challengeId = typeof rawChallengeId === 'object'
+    ? rawChallengeId?.challengeId || rawChallengeId?.id
+    : String(rawChallengeId || '').match(/\d+/)?.[0] || rawChallengeId;
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
@@ -55,7 +59,7 @@ export default function ChallengeDetailScreen() {
     try {
       const [cData, sData] = await Promise.all([
         getChallenge(challengeId),
-        getSubmissions({ challenge_id: String(challengeId), challengeId: String(challengeId), limit: '30' }),
+        getSubmissions({ challenge_id: String(challengeId), limit: '30' }),
       ]);
       setChallenge(cData?.challenge || cData);
       setSubmissions(sData?.submissions || sData || []);
@@ -417,7 +421,6 @@ export default function ChallengeDetailScreen() {
                 <View
                   key={sub.id}
                   style={styles.subCard}
-                >
                 >
                   <TouchableOpacity
                     onPress={() =>
