@@ -1398,13 +1398,31 @@ export default function AdminScreen() {
     );
   };
 
-    const handleCreateProduct = async (data: any) => {
+  const productTitle = (product: any) => product?.title || product?.name || '';
+  const productPriceText = (price: any) => {
+    if (price === null || price === undefined || price === '') return '';
+    const parsed = Number(price);
+    return Number.isFinite(parsed) ? String(parsed) : '';
+  };
+  const parseProductPrice = (price: any) => {
+    const cleaned = String(price ?? '').replace(/[$,]/g, '').trim();
+    if (!cleaned) return null;
+    const parsed = Number(cleaned);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  };
+
+  const handleCreateProduct = async (data: any) => {
     try {
       const galleryArr = Array.isArray(data.gallery_images) ? data.gallery_images : [];
+      const price = parseProductPrice(data.price);
+      if (price === null) {
+        setProductSaveMsg('Error: Please enter a valid product price.');
+        return;
+      }
       await createProduct({
         title: data.name || data.title || '',
         description: data.description || null,
-        price: parseFloat(data.price) || 0,
+        price,
         emoji: data.emoji || null,
         image_url: data.image_url || null,
         gallery_images: galleryArr.length > 0 ? JSON.stringify(galleryArr) : null,
@@ -1421,6 +1439,32 @@ export default function AdminScreen() {
       setTimeout(() => setProductSaveMsg(''), 3000);
     } catch (e: any) {
       setProductSaveMsg('Error: ' + (e.message || 'Failed to create product'));
+    }
+  };
+
+  const handleSaveProductEdit = async () => {
+    if (!editingProduct) return;
+    try {
+      const price = parseProductPrice(productEditForm.price);
+      const payload: any = {
+        title: productEditForm.name || productEditForm.title || productTitle(editingProduct),
+        description: productEditForm.description || null,
+        emoji: productEditForm.emoji || null,
+        image_url: productEditForm.image_url || null,
+        sizes: productEditForm.sizes || null,
+        is_pro_only: productEditForm.is_pro_only ? 1 : 0,
+        featured: productEditForm.featured ? 1 : 0,
+      };
+      if (price !== null) payload.price = price;
+      await updateProduct(editingProduct.id, payload);
+      const refreshed = await adminGetProducts();
+      setProducts(refreshed?.products || refreshed || []);
+      setEditingProduct(null);
+      setProductEditForm({});
+      setProductSaveMsg('Product updated successfully!');
+      setTimeout(() => setProductSaveMsg(''), 3000);
+    } catch (e: any) {
+      setProductSaveMsg('Error: ' + (e.message || 'Failed to update product'));
     }
   };
 
@@ -1447,11 +1491,11 @@ export default function AdminScreen() {
     const filtered = products.filter(p => {
       if (!productSearch.trim()) return true;
       const q = productSearch.toLowerCase();
-      return (p.name || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q);
+      return productTitle(p).toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q);
     }).sort((a, b) => {
       if (productSort === 'price') return (a.price || 0) - (b.price || 0);
       if (productSort === 'type') return (a.is_pro_only ? 1 : 0) - (b.is_pro_only ? 1 : 0);
-      return (a.name || '').localeCompare(b.name || '');
+      return productTitle(a).localeCompare(productTitle(b));
     });
 
     return (
@@ -1589,7 +1633,7 @@ export default function AdminScreen() {
             <Text style={styles.formTitle}>Edit Product</Text>
             <Input label="Name *" value={productEditForm.name || ''} onChangeText={v => setProductEditForm((f: any) => ({ ...f, name: v }))} />
             <Input label="Description" value={productEditForm.description || ''} onChangeText={v => setProductEditForm((f: any) => ({ ...f, description: v }))} multiline numberOfLines={2} />
-            <Input label="Price *" value={String(productEditForm.price || '')} onChangeText={v => setProductEditForm((f: any) => ({ ...f, price: v }))} keyboardType="numeric" />
+            <Input label="Price *" value={productPriceText(productEditForm.price)} onChangeText={v => setProductEditForm((f: any) => ({ ...f, price: v }))} keyboardType="numeric" />
             <Input label="Emoji (optional)" value={productEditForm.emoji || ''} onChangeText={v => setProductEditForm((f: any) => ({ ...f, emoji: v }))} />
             <Text style={styles.fieldGroupLabel}>🖼 Featured Image</Text>
             {typeof document !== 'undefined' && (
@@ -1643,7 +1687,7 @@ export default function AdminScreen() {
             </View>
             <View style={styles.listItemInfo}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                <Text style={styles.listItemTitle}>{p.name}</Text>
+                <Text style={styles.listItemTitle}>{productTitle(p)}</Text>
                 {p.featured ? <View style={styles.badgeTeal}><Text style={styles.badgeText}>Featured</Text></View> : null}
                 {p.is_pro_only ? <View style={styles.badgeOrange}><Text style={styles.badgeText}>Pro Only</Text></View> : null}
                 {!p.is_active ? <View style={{ backgroundColor: '#ef444422', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: '#ef444455' }}><Text style={{ color: '#ef4444', fontSize: 10, fontWeight: '700' }}>HIDDEN</Text></View> : null}
@@ -1667,12 +1711,12 @@ export default function AdminScreen() {
             </View>
             <View style={{ gap: 4 }}>
               <TouchableOpacity
-                onPress={() => { setEditingProduct(p); setProductEditForm({ name: p.name, description: p.description || '', price: String(p.price || ''), is_pro_only: !!p.is_pro_only, featured: !!p.featured, emoji: p.emoji || '', image_url: p.image_url || '' }); }}
+                onPress={() => { setEditingProduct(p); setProductEditForm({ name: productTitle(p), description: p.description || '', price: productPriceText(p.price), is_pro_only: !!p.is_pro_only, featured: !!p.featured, emoji: p.emoji || '', image_url: p.image_url || '', sizes: p.sizes || '' }); }}
                 style={styles.iconBtn}
               >
                 <Text style={styles.editIcon}>✏️</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleDeleteProduct(p.id, p.name)} style={styles.iconBtn}>
+              <TouchableOpacity onPress={() => handleDeleteProduct(p.id, productTitle(p))} style={styles.iconBtn}>
                 <Text style={styles.deleteIcon}>🗑️</Text>
               </TouchableOpacity>
             </View>

@@ -2752,11 +2752,12 @@ app.get('/api/products/:id', async (req, res) => {
 app.post('/api/admin/products', adminAuth, async (req, res) => {
   try {
     const { title, description, price, category, sizes, stock, image_url, emoji, badge, featured, is_active, is_pro_only } = req.body;
-    if (!title || price === undefined) return res.status(400).json({ error: 'title and price required' });
+    const parsedPrice = Number(String(price ?? '').replace(/[$,]/g, '').trim());
+    if (!title || !Number.isFinite(parsedPrice) || parsedPrice < 0) return res.status(400).json({ error: 'title and valid price required' });
     const [result] = await pool.query(
       `INSERT INTO products (title, description, price, category, sizes, stock, image_url, emoji, badge, featured, is_active, is_pro_only)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [title, description || null, parseFloat(price), category || null, sizes || null,
+      [title, description || null, parsedPrice, category || null, sizes || null,
        stock != null ? parseInt(stock) : null, image_url || null, emoji || null, badge || null,
        featured ? 1 : 0, is_active !== false ? 1 : 0, is_pro_only ? 1 : 0]
     );
@@ -2775,7 +2776,11 @@ app.patch('/api/admin/products/:id', adminAuth, async (req, res) => {
     const vals = [];
     if (title !== undefined) { fields.push('title = ?'); vals.push(title); }
     if (description !== undefined) { fields.push('description = ?'); vals.push(description); }
-    if (price !== undefined) { fields.push('price = ?'); vals.push(parseFloat(price)); }
+    if (price !== undefined) {
+      const parsedPrice = Number(String(price ?? '').replace(/[$,]/g, '').trim());
+      if (!Number.isFinite(parsedPrice) || parsedPrice < 0) return res.status(400).json({ error: 'valid price required' });
+      fields.push('price = ?'); vals.push(parsedPrice);
+    }
     if (category !== undefined) { fields.push('category = ?'); vals.push(category); }
     if (sizes !== undefined) { fields.push('sizes = ?'); vals.push(sizes); }
     if (stock !== undefined) { fields.push('stock = ?'); vals.push(stock != null ? parseInt(stock) : null); }
