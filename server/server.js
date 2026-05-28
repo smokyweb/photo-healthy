@@ -3264,6 +3264,12 @@ app.get('/api/admin/dashboard-stats', adminAuth, async (req, res) => {
     const [[{ todaySubmissions }]] = await pool.query(`SELECT COUNT(*) as todaySubmissions FROM submissions WHERE DATE(created_at) = CURDATE()`);
     const [[storeToday]]   = await pool.query(`SELECT COUNT(*) as cnt, COALESCE(SUM(total_amount),0) as rev FROM orders WHERE DATE(created_at) = CURDATE() AND status IN ('paid','fulfilled')`);
     const [[storeMonth]]   = await pool.query(`SELECT COUNT(*) as cnt, COALESCE(SUM(total_amount),0) as rev FROM orders WHERE YEAR(created_at)=YEAR(NOW()) AND MONTH(created_at)=MONTH(NOW()) AND status IN ('paid','fulfilled')`);
+    const [[orderQueue]]   = await pool.query(`SELECT
+      SUM(status IN ('pending','paid','processed')) as active,
+      SUM(status = 'pending') as pending,
+      SUM(status = 'paid') as paid,
+      SUM(status = 'processed') as processed
+      FROM orders WHERE archived = 0`);
     const [[{ subsToday }]] = await pool.query(`SELECT COUNT(*) as subsToday FROM users WHERE DATE(subscription_started_at) = CURDATE() AND subscription_status = 'active'`);
     const [[{ subsMonth }]] = await pool.query(`SELECT COUNT(*) as subsMonth FROM users WHERE YEAR(subscription_started_at)=YEAR(NOW()) AND MONTH(subscription_started_at)=MONTH(NOW()) AND subscription_status='active'`);
     const [[{ activeSubs }]] = await pool.query(`SELECT COUNT(*) as activeSubs FROM users WHERE subscription_status = 'active'`);
@@ -3283,6 +3289,12 @@ app.get('/api/admin/dashboard-stats', adminAuth, async (req, res) => {
         newSubs: subsMonth,
         subRevenue: parseFloat((subsMonth * PRO_PRICE).toFixed(2)),
         mrr: parseFloat((activeSubs * PRO_PRICE).toFixed(2)),
+      },
+      orders: {
+        active: Number(orderQueue.active || 0),
+        pending: Number(orderQueue.pending || 0),
+        paid: Number(orderQueue.paid || 0),
+        processed: Number(orderQueue.processed || 0),
       },
     });
   } catch (e) {

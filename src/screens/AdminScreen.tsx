@@ -2326,7 +2326,8 @@ export default function AdminScreen() {
         contentContainerStyle={styles.tabBarContent}
       >
         {(() => {
-          const pendingOrders = orders.filter(o => o.status === 'pending' || o.status === 'processing').length;
+          const loadedOrderQueue = orders.filter(o => ['pending', 'paid', 'processed', 'processing'].includes(o.status)).length;
+          const pendingOrders = loadedOrderQueue || Number(stats.orders?.active || stats.orders?.pending || 0);
           const todaySubmissions = stats.today?.submissions ?? 0;
           const newUsers = stats.today?.logins ?? 0;
           const tabBadges: Record<string,number> = {
