@@ -175,6 +175,24 @@ async function safeAddColumn(table, column, definition) {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )`,
+      // Admin-managed coupon and gift codes
+      `CREATE TABLE IF NOT EXISTS discount_codes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        code VARCHAR(80) NOT NULL UNIQUE,
+        kind ENUM('coupon','gift') DEFAULT 'coupon',
+        discount_type ENUM('percent','amount') NOT NULL DEFAULT 'amount',
+        value DECIMAL(10,2) NOT NULL DEFAULT 0,
+        min_subtotal DECIMAL(10,2) NULL,
+        max_uses INT NULL,
+        used_count INT DEFAULT 0,
+        starts_at DATETIME NULL,
+        expires_at DATETIME NULL,
+        is_active TINYINT(1) DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_discount_codes_code (code),
+        INDEX idx_discount_codes_kind (kind)
+      )`,
       // Challenge bans table
       `CREATE TABLE IF NOT EXISTS challenge_bans (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -310,6 +328,15 @@ async function safeAddColumn(table, column, definition) {
     await safeAddColumn('challenges', 'tags', 'VARCHAR(500) NULL');
     await safeAddColumn('challenges', 'is_pro_only', 'BOOLEAN DEFAULT FALSE');
     await safeAddColumn('products', 'is_pro_only', 'BOOLEAN DEFAULT FALSE');
+    await safeAddColumn('discount_codes', 'kind', "ENUM('coupon','gift') DEFAULT 'coupon'");
+    await safeAddColumn('discount_codes', 'discount_type', "ENUM('percent','amount') NOT NULL DEFAULT 'amount'");
+    await safeAddColumn('discount_codes', 'value', 'DECIMAL(10,2) NOT NULL DEFAULT 0');
+    await safeAddColumn('discount_codes', 'min_subtotal', 'DECIMAL(10,2) NULL');
+    await safeAddColumn('discount_codes', 'max_uses', 'INT NULL');
+    await safeAddColumn('discount_codes', 'used_count', 'INT DEFAULT 0');
+    await safeAddColumn('discount_codes', 'starts_at', 'DATETIME NULL');
+    await safeAddColumn('discount_codes', 'expires_at', 'DATETIME NULL');
+    await safeAddColumn('discount_codes', 'is_active', 'TINYINT(1) DEFAULT 1');
     await safeAddColumn('users', 'last_login_at', 'DATETIME NULL');
     // Subscription history log
     await pool.query(`CREATE TABLE IF NOT EXISTS subscription_history (
@@ -403,6 +430,102 @@ function optionalAuth(req) {
     return jwt.verify(token, JWT_SECRET);
   } catch {
     return null;
+  }
+}
+
+function normalizeDiscountCode(code) {
+  return String(code || '').trim().toUpperCase();
+}
+
+function parseNullableDate(value) {
+  const clean = String(value || '').trim();
+  return clean ? clean : null;
+}
+
+async function resolveDiscountCodes({ couponCode, giftCode, subtotalCents }) {
+  const requested = [
+    { kind: 'coupon', code: normalizeDiscountCode(couponCode) },
+    { kind: 'gift', code: normalizeDiscountCode(giftCode) },
+  ].filter(item => item.code);
+
+  if (!requested.length) return { codes: [], discountCents: 0 };
+
+  const seen = new Set();
+  const codes = [];
+  let discountCents = 0;
+  const subtotal = subtotalCents / 100;
+
+  for (const reqCode of requested) {
+    const key = `${reqCode.kind}:${reqCode.code}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const [[code]] = await pool.query(
+      `SELECT * FROM discount_codes WHERE code = ? AND kind = ? LIMIT 1`,
+      [reqCode.code, reqCode.kind]
+    );
+
+    const label = reqCode.kind === 'gift' ? 'Gift code' : 'Coupon code';
+    if (!code) throw new Error(`${label} "${reqCode.code}" was not found.`);
+    if (!code.is_active) throw new Error(`${label} "${reqCode.code}" is not active.`);
+    if (code.starts_at && new Date(code.starts_at) > new Date()) throw new Error(`${label} "${reqCode.code}" is not active yet.`);
+    if (code.expires_at && new Date(code.expires_at) < new Date()) throw new Error(`${label} "${reqCode.code}" has expired.`);
+    if (code.max_uses != null && Number(code.used_count || 0) >= Number(code.max_uses)) throw new Error(`${label} "${reqCode.code}" has reached its usage limit.`);
+    if (code.min_subtotal != null && subtotal < Number(code.min_subtotal)) {
+      throw new Error(`${label} "${reqCode.code}" requires a subtotal of at least $${Number(code.min_subtotal).toFixed(2)}.`);
+    }
+
+    const rawDiscount = code.discount_type === 'percent'
+      ? Math.round(subtotalCents * (Number(code.value) / 100))
+      : Math.round(Number(code.value) * 100);
+    const cappedDiscount = Math.max(0, Math.min(rawDiscount, subtotalCents - discountCents));
+    if (cappedDiscount <= 0) continue;
+    discountCents += cappedDiscount;
+    codes.push({ ...code, discount_cents: cappedDiscount });
+  }
+
+  return { codes, discountCents };
+}
+
+function applyDiscountToLineItems(lineItems, discountCents) {
+  if (discountCents <= 0) return lineItems;
+
+  const expanded = [];
+  lineItems.forEach((li, index) => {
+    const unitAmount = li.price_data.unit_amount;
+    for (let i = 0; i < li.quantity; i++) expanded.push({ lineItem: li, index, unitAmount, discount: 0 });
+  });
+
+  const subtotalCents = expanded.reduce((sum, item) => sum + item.unitAmount, 0);
+  if (!subtotalCents) return lineItems;
+
+  let allocated = 0;
+  expanded.forEach((item, idx) => {
+    const share = idx === expanded.length - 1
+      ? discountCents - allocated
+      : Math.floor(discountCents * item.unitAmount / subtotalCents);
+    item.discount = Math.min(item.unitAmount, Math.max(0, share));
+    allocated += item.discount;
+  });
+
+  const adjusted = expanded.map(item => {
+    const unitAmount = Math.max(0, item.unitAmount - item.discount);
+    return {
+      ...item.lineItem,
+      quantity: 1,
+      price_data: {
+        ...item.lineItem.price_data,
+        unit_amount: unitAmount,
+      },
+    };
+  });
+
+  return adjusted.filter(li => li.price_data.unit_amount > 0);
+}
+
+async function markDiscountCodesUsed(codes) {
+  for (const code of codes) {
+    await pool.query('UPDATE discount_codes SET used_count = used_count + 1 WHERE id = ?', [code.id]);
   }
 }
 
@@ -2159,7 +2282,7 @@ app.post('/api/checkout/create-session', async (req, res) => {
     // Load product details for all items
     const ids = items.map(i => i.id);
     const [products] = await pool.query(
-      `SELECT id, title, price, image_url, emoji FROM products WHERE id IN (?) AND is_active = TRUE`,
+      `SELECT id, title, price, image_url, emoji, is_pro_only FROM products WHERE id IN (?) AND is_active = TRUE`,
       [ids]
     );
     if (!products.length) return res.status(400).json({ error: 'No valid products found' });
@@ -2208,13 +2331,29 @@ app.post('/api/checkout/create-session', async (req, res) => {
 
     if (!line_items.length) return res.status(400).json({ error: 'No valid line items' });
 
-    const total = line_items.reduce((sum, li) => sum + (li.price_data.unit_amount * li.quantity) / 100, 0);
+    const subtotalCents = line_items.reduce((sum, li) => sum + (li.price_data.unit_amount * li.quantity), 0);
+    const { codes: appliedDiscountCodes, discountCents } = await resolveDiscountCodes({
+      couponCode: coupon_code,
+      giftCode: gift_code,
+      subtotalCents,
+    });
+    const payableCents = Math.max(0, subtotalCents - discountCents);
+    const total = payableCents / 100;
+    const discounted_line_items = applyDiscountToLineItems(line_items, discountCents);
     const enrichedItems = items
       .filter(i => productMap[i.id])
       .map(i => {
         const p = productMap[i.id];
         return { id: p.id, title: p.title, price: parseFloat(p.price), quantity: i.quantity || 1, size: i.size || null, emoji: p.emoji || null };
       });
+    const discountSummary = appliedDiscountCodes.map(code => ({
+      id: code.id,
+      code: code.code,
+      kind: code.kind,
+      discount_type: code.discount_type,
+      value: Number(code.value),
+      discount: code.discount_cents / 100,
+    }));
 
     const origin = req.headers.origin || 'https://photoai.betaplanets.com';
     // Detect authenticated user (optional)
@@ -2236,13 +2375,14 @@ app.post('/api/checkout/create-session', async (req, res) => {
          VALUES (?, ?, 'paid', ?, ?, ?)`,
         [userId, `free_${Date.now()}`, 0, JSON.stringify(enrichedItems), userEmail]
       );
-      return res.json({ success: true, free_order: true });
+      await markDiscountCodesUsed(appliedDiscountCodes);
+      return res.json({ success: true, free_order: true, discount_total: discountCents / 100 });
     }
 
     const sessionOpts = {
       payment_method_types: ['card'],
       mode: 'payment',
-      line_items,
+      line_items: discounted_line_items,
       allow_promotion_codes: true,
       // Use PHP trampoline to bypass LiteSpeed WAF on Stripe return URLs
       // 'ref' instead of 'session_id' â€” LiteSpeed WAF blocks 'session_id' as a suspected session token
@@ -2253,6 +2393,8 @@ app.post('/api/checkout/create-session', async (req, res) => {
         user_id: userId ? String(userId) : '',
         coupon_code: coupon_code || '',
         gift_code: gift_code || '',
+        discount_codes: JSON.stringify(discountSummary),
+        discount_total: String(discountCents / 100),
       },
       // Collect shipping address from customer
       shipping_address_collection: { allowed_countries: ['US', 'CA', 'GB', 'AU', 'NZ'] },
@@ -2284,10 +2426,11 @@ app.post('/api/checkout/create-session', async (req, res) => {
     await pool.query(
       `INSERT INTO orders (user_id, stripe_session_id, status, total_amount, items_json, customer_email)
        VALUES (?, ?, 'pending', ?, ?, ?)`,
-      [userId, session.id, total, JSON.stringify(enrichedItems), userEmail]
+      [userId, session.id, total, JSON.stringify(enrichedItems.map(item => ({ ...item, discount_codes: discountSummary }))), userEmail]
     );
+    await markDiscountCodesUsed(appliedDiscountCodes);
 
-    res.json({ url: session.url, session_id: session.id });
+    res.json({ url: session.url, session_id: session.id, discount_total: discountCents / 100 });
   } catch (e) {
     console.error('[Stripe] create-session error:', e.message);
     res.status(500).json({ error: e.message });
@@ -2717,6 +2860,99 @@ app.patch('/api/admin/orders/:id/archive', adminAuth, async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// Discount Codes API
+
+app.get('/api/admin/discount-codes', adminAuth, async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM discount_codes ORDER BY created_at DESC');
+    res.json({ discount_codes: rows });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/admin/discount-codes', adminAuth, async (req, res) => {
+  try {
+    const {
+      code, kind = 'coupon', discount_type = 'amount', value,
+      min_subtotal, max_uses, starts_at, expires_at, is_active = true,
+    } = req.body;
+    const normalized = normalizeDiscountCode(code);
+    const parsedValue = Number(String(value ?? '').replace(/[$,%]/g, '').trim());
+    if (!normalized) return res.status(400).json({ error: 'Code is required' });
+    if (!['coupon', 'gift'].includes(kind)) return res.status(400).json({ error: 'Type must be coupon or gift' });
+    if (!['percent', 'amount'].includes(discount_type)) return res.status(400).json({ error: 'Discount must be percent or amount' });
+    if (!Number.isFinite(parsedValue) || parsedValue <= 0) return res.status(400).json({ error: 'Discount value must be greater than 0' });
+    if (discount_type === 'percent' && parsedValue > 100) return res.status(400).json({ error: 'Percent discount cannot be over 100' });
+
+    const [result] = await pool.query(
+      `INSERT INTO discount_codes
+       (code, kind, discount_type, value, min_subtotal, max_uses, starts_at, expires_at, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        normalized,
+        kind,
+        discount_type,
+        parsedValue,
+        min_subtotal ? Number(min_subtotal) : null,
+        max_uses ? parseInt(max_uses) : null,
+        parseNullableDate(starts_at),
+        parseNullableDate(expires_at),
+        is_active ? 1 : 0,
+      ]
+    );
+    const [[created]] = await pool.query('SELECT * FROM discount_codes WHERE id = ?', [result.insertId]);
+    res.json({ discount_code: created });
+  } catch (e) {
+    if (e.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'That code already exists' });
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.patch('/api/admin/discount-codes/:id', adminAuth, async (req, res) => {
+  try {
+    const allowed = ['code', 'kind', 'discount_type', 'value', 'min_subtotal', 'max_uses', 'starts_at', 'expires_at', 'is_active'];
+    const fields = [];
+    const vals = [];
+    for (const key of allowed) {
+      if (req.body[key] === undefined) continue;
+      let value = req.body[key];
+      if (key === 'code') value = normalizeDiscountCode(value);
+      if (key === 'kind' && !['coupon', 'gift'].includes(value)) return res.status(400).json({ error: 'Type must be coupon or gift' });
+      if (key === 'discount_type' && !['percent', 'amount'].includes(value)) return res.status(400).json({ error: 'Discount must be percent or amount' });
+      if (key === 'value') {
+        value = Number(String(value ?? '').replace(/[$,%]/g, '').trim());
+        if (!Number.isFinite(value) || value <= 0) return res.status(400).json({ error: 'Discount value must be greater than 0' });
+      }
+      if (key === 'min_subtotal') value = value === '' || value == null ? null : Number(value);
+      if (key === 'max_uses') value = value === '' || value == null ? null : parseInt(value);
+      if (key === 'starts_at' || key === 'expires_at') value = parseNullableDate(value);
+      if (key === 'is_active') value = value ? 1 : 0;
+      fields.push(`${key} = ?`);
+      vals.push(value);
+    }
+    if (!fields.length) return res.status(400).json({ error: 'No fields to update' });
+    vals.push(req.params.id);
+    await pool.query(`UPDATE discount_codes SET ${fields.join(', ')} WHERE id = ?`, vals);
+    const [[updated]] = await pool.query('SELECT * FROM discount_codes WHERE id = ?', [req.params.id]);
+    res.json({ discount_code: updated });
+  } catch (e) {
+    if (e.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'That code already exists' });
+    res.status(500).json({ error: e.message });
+  }
+});
+
+async function handleDeleteDiscountCode(req, res) {
+  try {
+    await pool.query('DELETE FROM discount_codes WHERE id = ?', [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+app.delete('/api/admin/discount-codes/:id', adminAuth, handleDeleteDiscountCode);
+app.post('/api/admin/discount-codes/:id/delete', adminAuth, handleDeleteDiscountCode);
 
 // â”€â”€ Products API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 

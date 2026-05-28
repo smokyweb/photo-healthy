@@ -209,6 +209,17 @@ export const updateProduct = (id: number, data: any) =>
 export const deleteProduct = (id: number) =>
   request('POST', `/admin-api-proxy.php?path=/api/admin/products/${id}&method=DELETE`);
 
+export const adminGetDiscountCodes = () => adminGet('/api/admin/discount-codes');
+
+export const createDiscountCode = (data: any) =>
+  request('POST', '/admin-api-proxy.php?path=/api/admin/discount-codes&method=POST', data);
+
+export const updateDiscountCode = (id: number, data: any) =>
+  request('POST', `/admin-api-proxy.php?path=/api/admin/discount-codes/${id}&method=PATCH`, data);
+
+export const deleteDiscountCode = (id: number) =>
+  request('POST', `/admin-api-proxy.php?path=/api/admin/discount-codes/${id}/delete&method=POST`);
+
 // â”€â”€ Cart / Orders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const createCheckoutSession = (items: any[], options?: { couponCode?: string; giftCode?: string }) =>
   request('POST', '/api/checkout/create-session', {

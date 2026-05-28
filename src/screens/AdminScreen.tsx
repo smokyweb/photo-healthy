@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   adminGetDashboardStats, adminGetUsers, adminGetSettings, adminUpdateSettings,
   adminGetProducts, createProduct, updateProduct, deleteProduct,
+  adminGetDiscountCodes, createDiscountCode, updateDiscountCode, deleteDiscountCode,
   getChallenges, createChallenge, updateChallenge, deleteChallenge,
   deleteSubmission, deleteComment, updateComment, getComments, getSubmissions,
   adminGetOrders, adminMarkOrderPaid, adminProcessOrder, adminFulfillOrder, adminUpdateTracking, deleteUser, updateUser, adminSuspendUser,
@@ -21,7 +22,7 @@ import Input from '../components/Input';
 import { C, borderRadius } from '../theme';
 import { DEFAULT_TAXONOMY } from '../constants/taxonomy';
 
-const TABS = ['Dashboard', 'Challenges', 'Users', 'Feed', 'Products', 'Orders', 'Settings', 'Taxonomy'];
+const TABS = ['Dashboard', 'Challenges', 'Users', 'Feed', 'Products', 'Discounts', 'Orders', 'Settings', 'Taxonomy'];
 
 export default function AdminScreen() {
   const navigation = useNavigation<any>();
@@ -64,6 +65,13 @@ export default function AdminScreen() {
   const [productSort, setProductSort] = useState<'name'|'price'|'type'>('name');
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [productEditForm, setProductEditForm] = useState<any>({});
+  const [discountCodes, setDiscountCodes] = useState<any[]>([]);
+  const [showDiscountForm, setShowDiscountForm] = useState(false);
+  const [editingDiscount, setEditingDiscount] = useState<any>(null);
+  const [discountForm, setDiscountForm] = useState({
+    code: '', kind: 'coupon', discount_type: 'amount', value: '',
+    min_subtotal: '', max_uses: '', starts_at: '', expires_at: '', is_active: true,
+  });
 
   const [orders, setOrders] = useState<any[]>([]);
   const [orderSearch, setOrderSearch] = useState('');
@@ -189,6 +197,11 @@ export default function AdminScreen() {
         case 'Products': {
           const data = await adminGetProducts();
           setProducts(data?.products || data || []);
+          break;
+        }
+        case 'Discounts': {
+          const data = await adminGetDiscountCodes();
+          setDiscountCodes(data?.discount_codes || data || []);
           break;
         }
         case 'Orders': {
@@ -1727,6 +1740,155 @@ export default function AdminScreen() {
     );
   };
 
+  const resetDiscountForm = () => {
+    setDiscountForm({
+      code: '', kind: 'coupon', discount_type: 'amount', value: '',
+      min_subtotal: '', max_uses: '', starts_at: '', expires_at: '', is_active: true,
+    });
+    setEditingDiscount(null);
+  };
+
+  const refreshDiscountCodes = async () => {
+    const data = await adminGetDiscountCodes();
+    setDiscountCodes(data?.discount_codes || data || []);
+  };
+
+  const startEditDiscount = (code: any) => {
+    setEditingDiscount(code);
+    setShowDiscountForm(true);
+    setDiscountForm({
+      code: code.code || '',
+      kind: code.kind || 'coupon',
+      discount_type: code.discount_type || 'amount',
+      value: String(code.value ?? ''),
+      min_subtotal: code.min_subtotal == null ? '' : String(code.min_subtotal),
+      max_uses: code.max_uses == null ? '' : String(code.max_uses),
+      starts_at: code.starts_at ? String(code.starts_at).slice(0, 10) : '',
+      expires_at: code.expires_at ? String(code.expires_at).slice(0, 10) : '',
+      is_active: code.is_active === 1 || code.is_active === true,
+    });
+  };
+
+  const saveDiscountCode = async () => {
+    try {
+      const payload = {
+        ...discountForm,
+        code: discountForm.code.trim().toUpperCase(),
+        value: discountForm.value.trim(),
+        min_subtotal: discountForm.min_subtotal.trim(),
+        max_uses: discountForm.max_uses.trim(),
+        starts_at: discountForm.starts_at.trim(),
+        expires_at: discountForm.expires_at.trim(),
+      };
+      if (editingDiscount) await updateDiscountCode(editingDiscount.id, payload);
+      else await createDiscountCode(payload);
+      await refreshDiscountCodes();
+      resetDiscountForm();
+      setShowDiscountForm(false);
+      Alert.alert('Saved', 'Discount code updated.');
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    }
+  };
+
+  const removeDiscountCode = async (code: any) => {
+    if (!window.confirm('Delete code "' + code.code + '"?')) return;
+    try {
+      await deleteDiscountCode(code.id);
+      await refreshDiscountCodes();
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    }
+  };
+
+  const renderDiscounts = () => (
+    <View style={styles.section}>
+      <View style={styles.rowBetween}>
+        <View>
+          <Text style={styles.sectionTitle}>Coupons and Gift Codes ({discountCodes.length})</Text>
+          <Text style={styles.listItemMeta}>Cart coupon and gift fields now use these admin-managed codes at checkout.</Text>
+        </View>
+        <GradientButton
+          label={showDiscountForm ? 'Close' : '+ New'}
+          onPress={() => { if (showDiscountForm) resetDiscountForm(); setShowDiscountForm(v => !v); }}
+          variant="primary"
+          size="sm"
+        />
+      </View>
+
+      {showDiscountForm && (
+        <View style={styles.formCard}>
+          <Text style={styles.formTitle}>{editingDiscount ? 'Edit Code' : 'New Code'}</Text>
+          <Input label="Code *" value={discountForm.code} onChangeText={v => setDiscountForm(f => ({ ...f, code: v.toUpperCase() }))} placeholder="SUMMER20" />
+
+          <Text style={styles.fieldGroupLabel}>Type</Text>
+          <View style={styles.segmentRow}>
+            {(['coupon', 'gift'] as const).map(kind => (
+              <TouchableOpacity key={kind} style={[styles.segmentBtn, discountForm.kind === kind && styles.segmentBtnActive]} onPress={() => setDiscountForm(f => ({ ...f, kind }))}>
+                <Text style={[styles.segmentText, discountForm.kind === kind && styles.segmentTextActive]}>{kind === 'coupon' ? 'Coupon' : 'Gift code'}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.fieldGroupLabel}>Discount</Text>
+          <View style={styles.segmentRow}>
+            {(['amount', 'percent'] as const).map(type => (
+              <TouchableOpacity key={type} style={[styles.segmentBtn, discountForm.discount_type === type && styles.segmentBtnActive]} onPress={() => setDiscountForm(f => ({ ...f, discount_type: type }))}>
+                <Text style={[styles.segmentText, discountForm.discount_type === type && styles.segmentTextActive]}>{type === 'amount' ? 'Dollar amount' : 'Percent'}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Input label={discountForm.discount_type === 'amount' ? 'Value in dollars *' : 'Percent off *'} value={discountForm.value} onChangeText={v => setDiscountForm(f => ({ ...f, value: v }))} keyboardType="numeric" placeholder={discountForm.discount_type === 'amount' ? '10.00' : '20'} />
+          <Input label="Minimum subtotal (optional)" value={discountForm.min_subtotal} onChangeText={v => setDiscountForm(f => ({ ...f, min_subtotal: v }))} keyboardType="numeric" placeholder="50.00" />
+          <Input label="Usage limit (optional)" value={discountForm.max_uses} onChangeText={v => setDiscountForm(f => ({ ...f, max_uses: v }))} keyboardType="numeric" placeholder="100" />
+          <Input label="Starts date (optional)" value={discountForm.starts_at} onChangeText={v => setDiscountForm(f => ({ ...f, starts_at: v }))} placeholder="YYYY-MM-DD" />
+          <Input label="Expires date (optional)" value={discountForm.expires_at} onChangeText={v => setDiscountForm(f => ({ ...f, expires_at: v }))} placeholder="YYYY-MM-DD" />
+
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Active</Text>
+            <Switch value={discountForm.is_active} onValueChange={v => setDiscountForm(f => ({ ...f, is_active: v }))} trackColor={{ true: C.TEAL }} />
+          </View>
+          <View style={styles.formBtns}>
+            <GradientButton label={editingDiscount ? 'Save' : 'Create'} onPress={saveDiscountCode} variant="primary" style={{ flex: 1, marginRight: 8 }} />
+            <GradientButton label="Cancel" onPress={() => { resetDiscountForm(); setShowDiscountForm(false); }} variant="outline" style={{ flex: 1 }} />
+          </View>
+        </View>
+      )}
+
+      {discountCodes.map(code => {
+        const active = code.is_active === 1 || code.is_active === true;
+        const valueLabel = code.discount_type === 'percent'
+          ? `${Number(code.value || 0).toFixed(0)}% off`
+          : `$${Number(code.value || 0).toFixed(2)} off`;
+        return (
+          <View key={code.id} style={[styles.listItem, !active && { opacity: 0.58 }]}>
+            <View style={styles.listItemInfo}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <Text style={styles.listItemTitle}>{code.code}</Text>
+                <View style={code.kind === 'gift' ? styles.badgeTeal : styles.badgeOrange}><Text style={styles.badgeText}>{code.kind === 'gift' ? 'Gift' : 'Coupon'}</Text></View>
+                {!active ? <View style={{ backgroundColor: '#ef444422', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: '#ef444455' }}><Text style={{ color: '#ef4444', fontSize: 10, fontWeight: '700' }}>OFF</Text></View> : null}
+              </View>
+              <Text style={[styles.listItemSub, { color: C.TEAL, fontWeight: '700' }]}>{valueLabel}</Text>
+              <Text style={styles.listItemMeta}>
+                Used {code.used_count || 0}{code.max_uses ? ` of ${code.max_uses}` : ''}{code.min_subtotal ? ` - Min $${Number(code.min_subtotal).toFixed(2)}` : ''}{code.expires_at ? ` - Expires ${String(code.expires_at).slice(0, 10)}` : ''}
+              </Text>
+            </View>
+            <View style={{ gap: 4 }}>
+              <TouchableOpacity onPress={() => startEditDiscount(code)} style={styles.iconBtn}>
+                <Text style={styles.editIcon}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => removeDiscountCode(code)} style={styles.iconBtn}>
+                <Text style={styles.deleteIcon}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        );
+      })}
+      {discountCodes.length === 0 && <Text style={styles.emptyText}>No discount codes yet.</Text>}
+    </View>
+  );
+
 
   const toggleOrderExpand = (id: number) => {
     setExpandedOrders(prev => {
@@ -2210,6 +2372,7 @@ export default function AdminScreen() {
           {activeTab === 'Users' && renderUsers()}
           {activeTab === 'Feed' && renderSubmissions()}
           {activeTab === 'Products' && renderProducts()}
+          {activeTab === 'Discounts' && renderDiscounts()}
           {activeTab === 'Orders' && renderOrders()}
           {activeTab === 'Settings' && renderSettings()}
           {activeTab === 'Taxonomy' && renderTaxonomy()}
@@ -2296,6 +2459,26 @@ const styles = StyleSheet.create({
   chipOptionActive: { backgroundColor: C.TEAL + '22' as any, borderColor: C.TEAL },
   chipOptionText: { color: C.TEXT_MUTED, fontSize: 12 },
   chipOptionTextActive: { color: C.TEAL, fontWeight: '700' as const },
+  segmentRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  segmentBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: borderRadius.pill,
+    backgroundColor: (C as any).CARD_BG2 || C.CARD_BG,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+  },
+  segmentBtnActive: {
+    backgroundColor: C.ORANGE + '22',
+    borderColor: C.ORANGE,
+  },
+  segmentText: { color: C.TEXT_MUTED, fontSize: 13, fontWeight: '700' },
+  segmentTextActive: { color: C.TEXT, fontWeight: '800' },
   statCard: {
     width: '47%', backgroundColor: C.CARD_BG,
     borderRadius: borderRadius.lg, padding: 14, alignItems: 'center',
