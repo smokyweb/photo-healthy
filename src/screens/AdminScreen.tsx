@@ -598,58 +598,46 @@ export default function AdminScreen() {
 
 
   const handleDeleteUser = (id: number, name: string) => {
-    Alert.alert('Delete User', 'Delete ' + name + '? This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteUser(id);
-            setUsers(us => us.filter(u => u.id !== id));
-          } catch (e: any) { Alert.alert('Error', e.message); }
-        },
-      },
-    ]);
+    if (typeof window !== 'undefined' && !window.confirm('Delete ' + name + '? This cannot be undone.')) return;
+    (async () => {
+      try {
+        await deleteUser(id);
+        setUsers(us => us.filter(u => u.id !== id));
+        if (selectedUser?.id === id) setSelectedUser(null);
+        Alert.alert('Deleted', name + ' has been deleted.');
+      } catch (e: any) { Alert.alert('Error', e.message); }
+    })();
   };
 
   const handlePromoteAdmin = (id: number, name: string) => {
-    Alert.alert('Promote to Admin', 'Promote ' + name + ' to admin?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Promote',
-        onPress: async () => {
-          try {
-            await updateUser(id, { role: 'admin', is_admin: 1 });
-            setUsers(us => us.map(u => u.id === id ? { ...u, role: 'admin', is_admin: 1 } : u));
-            Alert.alert('Promoted', name + ' is now an admin.');
-          } catch (e: any) { Alert.alert('Error', e.message); }
-        },
-      },
-    ]);
+    if (typeof window !== 'undefined' && !window.confirm('Promote ' + name + ' to admin?')) return;
+    (async () => {
+      try {
+        await updateUser(id, { role: 'admin', is_admin: 1 });
+        const updated = { ...selectedUser, role: 'admin', is_admin: 1 };
+        setUsers(us => us.map(u => u.id === id ? { ...u, role: 'admin', is_admin: 1 } : u));
+        if (selectedUser?.id === id) setSelectedUser(updated);
+        Alert.alert('Promoted', name + ' is now an admin.');
+      } catch (e: any) { Alert.alert('Error', e.message); }
+    })();
   };
 
   const handleSuspendUser = (u: any) => {
     const nextSuspended = !u.is_suspended;
     const action = nextSuspended ? 'Block' : 'Unblock';
     const reason = nextSuspended ? 'Blocked by admin' : '';
-    Alert.alert(action + ' User', action + ' ' + u.name + '?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: action,
-        style: nextSuspended ? 'destructive' : 'default',
-        onPress: async () => {
-          try {
-            await adminSuspendUser(u.id, nextSuspended, reason);
-            const updated = { ...u, is_suspended: nextSuspended, suspended_reason: reason || null };
-            setUsers(us => us.map(usr => usr.id === u.id ? updated : usr));
-            setSelectedUser(updated);
-            Alert.alert('Updated', u.name + (nextSuspended ? ' is blocked.' : ' is unblocked.'));
-          } catch (e: any) {
-            Alert.alert('Error', e.message);
-          }
-        },
-      },
-    ]);
+    if (typeof window !== 'undefined' && !window.confirm(action + ' ' + u.name + '?')) return;
+    (async () => {
+      try {
+        await adminSuspendUser(u.id, nextSuspended, reason);
+        const updated = { ...u, is_suspended: nextSuspended, suspended_reason: reason || null };
+        setUsers(us => us.map(usr => usr.id === u.id ? updated : usr));
+        setSelectedUser(updated);
+        Alert.alert('Updated', u.name + (nextSuspended ? ' is blocked.' : ' is unblocked.'));
+      } catch (e: any) {
+        Alert.alert('Error', e.message);
+      }
+    })();
   };
 
   const renderUserDetail = () => {
@@ -738,7 +726,7 @@ export default function AdminScreen() {
             />
             {!u.is_admin && <GradientButton label="👑 Make Admin" variant="outline" size="sm" onPress={() => handlePromoteAdmin(u.id, u.name)} />}
             {!u.is_admin && <GradientButton label={u.is_suspended ? 'Unblock User' : 'Block User'} variant={u.is_suspended ? 'outline' : 'danger'} size="sm" onPress={() => handleSuspendUser(u)} />}
-            <GradientButton label="🗑 Delete" variant="danger" size="sm" onPress={() => { setSelectedUser(null); handleDeleteUser(u.id, u.name); }} />
+            <GradientButton label="🗑 Delete" variant="danger" size="sm" onPress={() => handleDeleteUser(u.id, u.name)} />
           </View>
         )}
 

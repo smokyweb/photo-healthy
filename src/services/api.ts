@@ -108,7 +108,7 @@ export const changePassword = (currentPassword: string, newPassword: string) =>
 export const getUsers = () => adminGet('/api/users');
 
 export const updateUser = (id: number, data: any) =>
-  request('POST', `/admin-user-update.php?id=${id}`, data);
+  request('POST', `/admin-api-proxy.php?path=/api/users/${id}&method=PUT`, data);
 
 export const adminResetPassword = (id: number) =>
   request('POST', '/admin-api-proxy.php?path=/api/admin/users/' + id + '/reset-password&method=POST', {});
