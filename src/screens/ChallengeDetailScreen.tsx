@@ -223,7 +223,7 @@ export default function ChallengeDetailScreen() {
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
 
-      {/* â”€â”€ Hero: 2-col on desktop â”€â”€ */}
+      {/* Hero: 2-column on desktop */}
       <View style={[styles.heroWrap, isDesktop && styles.heroWrapDesktop]}>
 
         {/* Cover image */}
@@ -255,7 +255,7 @@ export default function ChallengeDetailScreen() {
             <Text style={styles.description}>{challenge.description}</Text>
           )}
 
-          {/* 2Ã—2 stats grid */}
+          {/* Stats grid */}
           <View style={styles.statsGrid}>
             {[
               { label: 'Category', val: categoryLabel },
@@ -371,7 +371,7 @@ export default function ChallengeDetailScreen() {
         </View>
       </View>
 
-      {/* â”€â”€ Community Submissions â”€â”€ */}
+      {/* Community Submissions */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>
@@ -391,7 +391,7 @@ export default function ChallengeDetailScreen() {
           />
           {subSearch.length > 0 && (
             <TouchableOpacity onPress={() => setSubSearch('')}>
-              <Text style={{ color: C.TEXT_MUTED, fontSize: 14 }}>âœ•</Text>
+              <Text style={{ color: C.TEXT_MUTED, fontSize: 14 }}>x</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -472,7 +472,7 @@ export default function ChallengeDetailScreen() {
                       })}
                     </View>
                     <View style={styles.subMeta}>
-                      <Text style={styles.subMetaText}>â¤ï¸ {countText(sub.like_count ?? sub.likes)}</Text>
+                      <Text style={styles.subMetaText}>Like {countText(sub.like_count ?? sub.likes)}</Text>
                       <Text style={styles.subMetaText}>💬 {countText(sub.comment_count ?? sub.comments_count ?? sub.comments)}</Text>
                     </View>
                   </View>
@@ -568,7 +568,7 @@ const styles = StyleSheet.create({
     fontFamily: "'Inter', sans-serif",
   } as any,
 
-  // 2Ã—2 Stats grid
+  // Stats grid
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
