@@ -322,6 +322,24 @@ export default function ChallengesScreen() {
         ))}
       </ScrollView>
 
+      <View style={styles.statusSection}>
+        <Text style={styles.statusTitle}>Status</Text>
+        <View style={styles.tabsRow}>
+          {STATUS_TABS.map(tab => (
+            <TouchableOpacity
+              key={tab.key}
+              style={[styles.tab, status === tab.key && styles.tabActive]}
+              onPress={() => setStatus(tab.key)}
+              activeOpacity={0.82}
+            >
+              <Text style={[styles.tabText, status === tab.key && styles.tabTextActive]}>
+                {tab.label.split(' (')[0]}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
       {/* Challenge Grid */}
       {filtered.length === 0 ? (
         <View style={styles.emptyState}>
@@ -651,28 +669,50 @@ const styles = StyleSheet.create({
   },
   quickFilterLabel: { color: C.TEXT_MUTED, fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
   quickFilterValue: { color: C.TEXT, fontSize: 13, fontWeight: '700', marginTop: 2 },
+  statusSection: {
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 18,
+    marginBottom: 10,
+    backgroundColor: C.CARD_BG2,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: C.CARD_BORDER,
+  },
+  statusTitle: {
+    color: C.TEXT,
+    fontSize: 24,
+    fontWeight: '800',
+    fontFamily: 'Lexend',
+    marginBottom: 16,
+  },
   tabsRow: {
     flexDirection: 'row',
-    paddingHorizontal: 12,
-    marginBottom: 8,
-    gap: 6,
+    flexWrap: 'wrap',
+    gap: 14,
   },
   tab: {
-    flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 13,
+    paddingHorizontal: 26,
     alignItems: 'center',
-    borderRadius: borderRadius.lg,
+    justifyContent: 'center',
+    borderRadius: borderRadius.pill,
     backgroundColor: C.CARD_BG,
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
+    minWidth: 112,
   },
   tabActive: {
     backgroundColor: C.ORANGE,
     borderColor: C.ORANGE,
-    backgroundImage: 'linear-gradient(90deg, #F55B09, #FFD000)' as any,
   },
-  tabText: { color: C.TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
-  tabTextActive: { color: '#fff', fontWeight: '700' },
+  tabText: {
+    color: C.TEXT_SECONDARY,
+    fontSize: 20,
+    fontWeight: '800',
+    fontFamily: 'Lexend',
+  },
+  tabTextActive: { color: '#fff' },
 
   // Category Pills
   categoryScroll: { flexGrow: 0, marginBottom: 4, marginTop: 4, minHeight: 44 },
