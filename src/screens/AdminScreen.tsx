@@ -318,16 +318,16 @@ export default function AdminScreen() {
 
         <View style={{ marginTop: 20, flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
           <View style={[styles.formCard, { flex: 1, minWidth: 140 }]}>
-            <Text style={{ color: C.TEXT_MUTED, fontSize: 11 }}>Users</Text>
-            <Text style={{ color: C.TEAL, fontSize: 20, fontWeight: '800' }}>{stats.users?.total ?? 0}</Text>
-            <Text style={{ color: C.TEXT_MUTED, fontSize: 11 }}>{stats.users?.pro ?? 0} pro</Text>
+            <Text style={styles.dashboardCardLabel}>Users</Text>
+            <Text style={styles.dashboardCardValueTeal}>{stats.users?.total ?? 0}</Text>
+            <Text style={styles.dashboardCardSub}>{stats.users?.pro ?? 0} pro</Text>
           </View>
           <View style={[styles.formCard, { flex: 1, minWidth: 140 }]}>
-            <Text style={{ color: C.TEXT_MUTED, fontSize: 11 }}>This Month</Text>
-            <Text style={{ color: C.ORANGE, fontSize: 20, fontWeight: '800' }}>
+            <Text style={styles.dashboardCardLabel}>This Month</Text>
+            <Text style={styles.dashboardCardValueOrange}>
               {'$' + Number(stats.month?.storeRevenue ?? 0).toFixed(2)}
             </Text>
-            <Text style={{ color: C.TEXT_MUTED, fontSize: 11 }}>{stats.month?.orders ?? 0} orders</Text>
+            <Text style={styles.dashboardCardSub}>{stats.month?.orders ?? 0} orders</Text>
           </View>
         </View>
       </View>
@@ -2448,11 +2448,11 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: C.CARD_BORDER,
   },
   tabBtnActive: { backgroundColor: C.ORANGE, borderColor: C.ORANGE },
-  tabText: { color: C.TEXT_MUTED, fontSize: 13, fontWeight: '500' },
-  tabTextActive: { color: '#FFFFFF', fontWeight: '700' },
+  tabText: { color: '#D6DEEA', fontSize: 15, fontWeight: '700' },
+  tabTextActive: { color: '#FFFFFF', fontWeight: '800' },
   content: { flex: 1 },
   section: { padding: 16 },
-  sectionTitle: { color: C.TEXT, fontSize: 18, fontWeight: '700', marginBottom: 14 },
+  sectionTitle: { color: C.TEXT, fontSize: 24, fontWeight: '800', marginBottom: 16 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   highlightBox: {
@@ -2475,8 +2475,8 @@ const styles = StyleSheet.create({
     padding: 10, alignItems: 'center', minWidth: 60,
     borderWidth: 1, borderColor: C.CARD_BORDER,
   },
-  miniStatValue: { fontSize: 20, fontWeight: '800' },
-  miniStatLabel: { color: C.TEXT_MUTED, fontSize: 10, marginTop: 2 },
+  miniStatValue: { fontSize: 24, fontWeight: '900' },
+  miniStatLabel: { color: '#D6DEEA', fontSize: 14, marginTop: 4, fontWeight: '700' },
   userAvatar: {
     width: 38, height: 38, borderRadius: 19,
     backgroundColor: C.ORANGE + '33', alignItems: 'center', justifyContent: 'center',
@@ -2488,10 +2488,10 @@ const styles = StyleSheet.create({
     padding: 10, alignItems: 'center', minWidth: 70,
     borderWidth: 1, borderColor: C.CARD_BORDER,
   },
-  detailChipLabel: { color: C.TEXT_MUTED, fontSize: 10, marginBottom: 2 },
-  detailChipValue: { color: C.TEXT, fontWeight: '700', fontSize: 13 },
-  detailRow: { color: (C as any).TEXT_SECONDARY || C.TEXT_MUTED, fontSize: 14, marginBottom: 6 },
-  detailLabel: { color: C.TEXT_MUTED, fontWeight: '600' },
+  detailChipLabel: { color: '#D6DEEA', fontSize: 13, marginBottom: 4, fontWeight: '800' },
+  detailChipValue: { color: C.TEXT, fontWeight: '900', fontSize: 17 },
+  detailRow: { color: '#EAF0F8', fontSize: 17, marginBottom: 8, fontWeight: '700' },
+  detailLabel: { color: '#D6DEEA', fontWeight: '800' },
   emptyState: { alignItems: 'center', paddingVertical: 32 },
   emptyIcon: { fontSize: 36, marginBottom: 8 },
   emptyTitle: { color: C.TEXT_MUTED, fontSize: 14 },
@@ -2503,8 +2503,8 @@ const styles = StyleSheet.create({
     marginRight: 6, marginBottom: 4,
   },
   chipOptionActive: { backgroundColor: C.TEAL + '22' as any, borderColor: C.TEAL },
-  chipOptionText: { color: C.TEXT_MUTED, fontSize: 12 },
-  chipOptionTextActive: { color: C.TEAL, fontWeight: '700' as const },
+  chipOptionText: { color: '#D6DEEA', fontSize: 14, fontWeight: '700' },
+  chipOptionTextActive: { color: C.TEAL, fontWeight: '900' as const },
   segmentRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -2528,11 +2528,15 @@ const styles = StyleSheet.create({
   statCard: {
     width: '47%', backgroundColor: C.CARD_BG,
     borderRadius: borderRadius.lg, padding: 14, alignItems: 'center',
-    borderWidth: 1, borderColor: C.CARD_BORDER,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
   },
-  statIcon: { fontSize: 24, marginBottom: 4 },
-  statValue: { color: C.ORANGE, fontSize: 22, fontWeight: '800', marginBottom: 2 },
-  statLabel: { color: C.TEXT_MUTED, fontSize: 11, textAlign: 'center' },
+  statIcon: { fontSize: 30, marginBottom: 6 },
+  statValue: { color: C.ORANGE, fontSize: 32, fontWeight: '900', marginBottom: 4 },
+  statLabel: { color: '#FFFFFF', fontSize: 16, textAlign: 'center', fontWeight: '800' },
+  dashboardCardLabel: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', marginBottom: 4 },
+  dashboardCardValueTeal: { color: C.TEAL, fontSize: 28, fontWeight: '900' },
+  dashboardCardValueOrange: { color: C.ORANGE, fontSize: 28, fontWeight: '900' },
+  dashboardCardSub: { color: '#D6DEEA', fontSize: 15, fontWeight: '700', marginTop: 4 },
   listItem: {
     flexDirection: 'row', alignItems: 'flex-start',
     backgroundColor: C.CARD_BG, borderRadius: borderRadius.md,
@@ -2627,9 +2631,9 @@ const styles = StyleSheet.create({
   photoDownloadIconText: { color: C.TEAL, fontSize: 20, lineHeight: 22, fontWeight: '900' },
   thumbPlaceholder: { justifyContent: 'center', alignItems: 'center' },
   listItemInfo: { flex: 1 },
-  listItemTitle: { color: C.TEXT, fontWeight: '600', marginBottom: 2 },
-  listItemSub: { color: (C as any).TEXT_SECONDARY || C.TEXT_MUTED, fontSize: 13, marginBottom: 2 },
-  listItemMeta: { color: C.TEXT_MUTED, fontSize: 11 },
+  listItemTitle: { color: C.TEXT, fontWeight: '800', marginBottom: 4, fontSize: 16 },
+  listItemSub: { color: '#EAF0F8', fontSize: 15, marginBottom: 3, fontWeight: '700' },
+  listItemMeta: { color: '#D6DEEA', fontSize: 13, fontWeight: '600' },
   actionBtns: { flexDirection: 'row', gap: 4, alignItems: 'center' },
   iconBtn: { padding: 6 },
   editIcon: { fontSize: 16 },
@@ -2657,7 +2661,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.CARD_BG, borderRadius: borderRadius.lg,
     padding: 16, marginBottom: 16, borderWidth: 1, borderColor: C.CARD_BORDER,
   },
-  formTitle: { color: C.TEXT, fontWeight: '700', fontSize: 16, marginBottom: 12 },
+  formTitle: { color: C.TEXT, fontWeight: '800', fontSize: 22, marginBottom: 14 },
   formBtns: { flexDirection: 'row', marginTop: 8 },
   switchRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -2666,7 +2670,7 @@ const styles = StyleSheet.create({
   switchLabel: { color: C.TEXT, fontSize: 14 },
   toggleRow: { flexDirection: 'row', gap: 16, marginTop: 4 },
   toggleItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  toggleLabel: { color: C.TEXT_MUTED, fontSize: 12 },
+  toggleLabel: { color: '#D6DEEA', fontSize: 14, fontWeight: '700' },
   taxInput: {
     backgroundColor: (C as any).INPUT_BG || (C as any).CARD_BG2 || C.CARD_BG,
     borderRadius: borderRadius.md,
