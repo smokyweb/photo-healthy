@@ -2,6 +2,7 @@
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, RefreshControl, Switch, Image, TextInput,
+  Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -131,6 +132,18 @@ export default function AdminScreen() {
       return next;
     });
   };
+
+  const AdminModal = ({ visible, onClose, children }: { visible: boolean; onClose: () => void; children: React.ReactNode }) => (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalPanel}>
+          <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalContent}>
+            {children}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
 
   // Product form state
   const [showProductForm, setShowProductForm] = useState(false);
@@ -463,8 +476,8 @@ export default function AdminScreen() {
         <GradientButton label="+ New" onPress={() => openChallengeForm()} variant="primary" size="sm" />
       </View>
 
-      {showChallengeForm && (
-        <View style={styles.formCard}>
+      <AdminModal visible={showChallengeForm} onClose={() => setShowChallengeForm(false)}>
+        <View style={[styles.formCard, styles.modalFormCard]}>
           <Text style={styles.formTitle}>{editingChallenge ? 'Edit Challenge' : 'New Challenge'}</Text>
           <Input label="Title *" value={challengeForm.title} onChangeText={v => setChallengeForm(f => ({ ...f, title: v }))} />
           <Input
@@ -564,7 +577,7 @@ export default function AdminScreen() {
             <GradientButton label="Cancel" onPress={() => setShowChallengeForm(false)} variant="outline" style={{ flex: 1 }} />
           </View>
         </View>
-      )}
+      </AdminModal>
 
       {challenges.map(ch => {
         const imgUri = ch.cover_image_url
@@ -722,7 +735,8 @@ export default function AdminScreen() {
             <GradientButton label="Restore User" variant="teal" size="sm" onPress={() => handleRestoreUser(u)} />
           </View>
         ) : editingUserForm ? (
-          <View style={[styles.formCard, { marginTop: 12 }]}>
+          <AdminModal visible={!!editingUserForm} onClose={() => setEditingUserForm(null)}>
+          <View style={[styles.formCard, styles.modalFormCard]}>
             <Text style={styles.formTitle}>✏ Edit User</Text>
             <Input label="Display Name" value={editingUserForm.name || ''} onChangeText={v => setEditingUserForm((f) => ({ ...f, name: v }))} />
             <Text style={styles.fieldGroupLabel}>Subscription Plan</Text>
@@ -763,6 +777,7 @@ export default function AdminScreen() {
               <GradientButton label="Cancel" variant="outline" style={{ flex: 1 }} onPress={() => setEditingUserForm(null)} />
             </View>
           </View>
+          </AdminModal>
         ) : (
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 16, marginTop: 12 }}>
             <GradientButton label="✏ Edit" variant="outline" size="sm" onPress={() => setEditingUserForm({ name: u.name, subscription_status: u.subscription_status || 'free', is_admin: !!u.is_admin })} />
@@ -976,10 +991,10 @@ export default function AdminScreen() {
         </View>
         {/* Create User form */}
         {userListMode === 'active' && <View style={{ marginBottom: 14 }}>
-          <GradientButton label={showCreateUserForm ? '✕ Cancel' : '+ Add User'} variant={showCreateUserForm ? 'outline' : 'teal'} size="sm"
-            onPress={() => { setShowCreateUserForm(v => !v); setCreateUserMsg(''); setNewUserForm({ name: '', email: '', password: '' }); }} style={{ alignSelf: 'flex-start' } as any} />
-          {showCreateUserForm && (
-            <View style={[styles.formCard, { marginTop: 12 }]}>
+          <GradientButton label="+ Add User" variant="teal" size="sm"
+            onPress={() => { setShowCreateUserForm(true); setCreateUserMsg(''); setNewUserForm({ name: '', email: '', password: '' }); }} style={{ alignSelf: 'flex-start' } as any} />
+          <AdminModal visible={showCreateUserForm} onClose={() => setShowCreateUserForm(false)}>
+            <View style={[styles.formCard, styles.modalFormCard]}>
               <Text style={styles.formTitle}>Add New User</Text>
               <Input label="Full Name *" value={newUserForm.name} onChangeText={v => setNewUserForm(f => ({ ...f, name: v }))} />
               <Input label="Email Address *" value={newUserForm.email} onChangeText={v => setNewUserForm(f => ({ ...f, email: v }))} keyboardType="email-address" />
@@ -1022,7 +1037,7 @@ export default function AdminScreen() {
                   } catch (e: any) { setCreateUserMsg('Error: ' + (e.message || 'Failed to create user')); }
                 }} />
             </View>
-          )}
+          </AdminModal>
         </View>}
         <View style={styles.searchBar}>
           <TextInput
@@ -1575,7 +1590,7 @@ export default function AdminScreen() {
       <View style={styles.section}>
         <View style={styles.rowBetween}>
           <Text style={styles.sectionTitle}>Products ({products.length})</Text>
-          <GradientButton label="+ New" onPress={() => setShowProductForm(v => !v)} variant="primary" size="sm" />
+          <GradientButton label="+ New" onPress={() => setShowProductForm(true)} variant="primary" size="sm" />
         </View>
 
         {/* Search */}
@@ -1602,8 +1617,8 @@ export default function AdminScreen() {
         </View>
 
         {/* New product form */}
-        {showProductForm && (
-          <View style={styles.formCard}>
+        <AdminModal visible={showProductForm} onClose={() => setShowProductForm(false)}>
+          <View style={[styles.formCard, styles.modalFormCard]}>
             <Text style={styles.formTitle}>🛒 New Product</Text>
             <Input label="Name *" value={productForm.name} onChangeText={v => setProductForm(f => ({ ...f, name: v }))} />
             <Input label="Description" value={productForm.description} onChangeText={v => setProductForm(f => ({ ...f, description: v }))} multiline numberOfLines={3} />
@@ -1698,11 +1713,11 @@ export default function AdminScreen() {
               <GradientButton label="Cancel" onPress={() => { setShowProductForm(false); setProductImgFile(null); setProductImgPreview(''); setProductGalleryFiles([]); setProductGalleryPreviews([]); }} variant="outline" style={{ flex: 1 } as any} />
             </View>
           </View>
-        )}
+        </AdminModal>
 
         {/* Edit product form */}
-        {editingProduct && (
-          <View style={styles.formCard}>
+        <AdminModal visible={!!editingProduct} onClose={() => setEditingProduct(null)}>
+          <View style={[styles.formCard, styles.modalFormCard]}>
             <Text style={styles.formTitle}>Edit Product</Text>
             <Input label="Name *" value={productEditForm.name || ''} onChangeText={v => setProductEditForm((f: any) => ({ ...f, name: v }))} />
             <Input label="Description" value={productEditForm.description || ''} onChangeText={v => setProductEditForm((f: any) => ({ ...f, description: v }))} multiline numberOfLines={2} />
@@ -1746,7 +1761,7 @@ export default function AdminScreen() {
               <GradientButton label="Cancel" onPress={() => setEditingProduct(null)} variant="outline" style={{ flex: 1 }} />
             </View>
           </View>
-        )}
+        </AdminModal>
 
         {filtered.map(p => (
           <View key={p.id} style={[styles.listItem, !p.is_active && { opacity: 0.55, borderColor: '#ef444422' }]}>
@@ -1869,15 +1884,15 @@ export default function AdminScreen() {
           <Text style={styles.listItemMeta}>Cart coupon and gift fields now use these admin-managed codes at checkout.</Text>
         </View>
         <GradientButton
-          label={showDiscountForm ? 'Close' : '+ New'}
-          onPress={() => { if (showDiscountForm) resetDiscountForm(); setShowDiscountForm(v => !v); }}
+          label="+ New"
+          onPress={() => { resetDiscountForm(); setShowDiscountForm(true); }}
           variant="primary"
           size="sm"
         />
       </View>
 
-      {showDiscountForm && (
-        <View style={styles.formCard}>
+      <AdminModal visible={showDiscountForm} onClose={() => { resetDiscountForm(); setShowDiscountForm(false); }}>
+        <View style={[styles.formCard, styles.modalFormCard]}>
           <Text style={styles.formTitle}>{editingDiscount ? 'Edit Code' : 'New Code'}</Text>
           <Input label="Code *" value={discountForm.code} onChangeText={v => setDiscountForm(f => ({ ...f, code: v.toUpperCase() }))} placeholder="SUMMER20" />
 
@@ -1914,7 +1929,7 @@ export default function AdminScreen() {
             <GradientButton label="Cancel" onPress={() => { resetDiscountForm(); setShowDiscountForm(false); }} variant="outline" style={{ flex: 1 }} />
           </View>
         </View>
-      )}
+      </AdminModal>
 
       {discountCodes.map(code => {
         const active = code.is_active === 1 || code.is_active === true;
@@ -2690,6 +2705,26 @@ const styles = StyleSheet.create({
     backgroundColor: C.CARD_BG, borderRadius: borderRadius.lg,
     padding: 16, marginBottom: 16, borderWidth: 1, borderColor: C.CARD_BORDER,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.68)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  modalPanel: {
+    width: '100%',
+    maxWidth: 760,
+    maxHeight: '88%',
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    backgroundColor: C.CARD_BG,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  modalScroll: { width: '100%' },
+  modalContent: { padding: 0 },
+  modalFormCard: { marginBottom: 0, borderWidth: 0, borderRadius: 0 },
   formTitle: { color: C.TEXT, fontWeight: '800', fontSize: 22, marginBottom: 14 },
   formBtns: { flexDirection: 'row', marginTop: 8 },
   switchRow: {
