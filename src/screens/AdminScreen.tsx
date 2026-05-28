@@ -31,6 +31,11 @@ export default function AdminScreen() {
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [seenTabBadges, setSeenTabBadges] = useState<Record<string, number>>(() => {
+    if (typeof window === 'undefined') return {};
+    try { return JSON.parse(window.localStorage.getItem('ph_admin_seen_badges') || '{}'); }
+    catch { return {}; }
+  });
 
   // Data states
   const [stats, setStats] = useState<any>({});
@@ -104,6 +109,28 @@ export default function AdminScreen() {
   const [challengeImgFile, setChallengeImgFile] = useState<File | null>(null);
   const [challengeImgPreview, setChallengeImgPreview] = useState('');
   const [uploadingImg, setUploadingImg] = useState(false);
+
+  const getAdminBadgeCounts = () => {
+    const loadedOrderQueue = orders.filter(o => ['pending', 'paid', 'processed', 'processing'].includes(o.status)).length;
+    const orderCount = loadedOrderQueue || Number(stats.orders?.active || stats.orders?.pending || 0);
+    return {
+      Orders: orderCount,
+      Feed: Number(stats.today?.submissions || 0),
+    } as Record<string, number>;
+  };
+
+  const markAdminTabSeen = (tab: string) => {
+    const count = getAdminBadgeCounts()[tab] || 0;
+    if (count <= 0) return;
+    setSeenTabBadges(prev => {
+      if ((prev[tab] || 0) >= count) return prev;
+      const next = { ...prev, [tab]: count };
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('ph_admin_seen_badges', JSON.stringify(next));
+      }
+      return next;
+    });
+  };
 
   // Product form state
   const [showProductForm, setShowProductForm] = useState(false);
@@ -235,6 +262,11 @@ export default function AdminScreen() {
   useEffect(() => {
     if (isAdmin && activeTab === 'Orders') loadTab('Orders');
   }, [orderSort, isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    markAdminTabSeen(activeTab);
+  }, [activeTab, isAdmin, stats.today?.submissions, stats.orders?.active, orders.length]);
 
   // Load user detail data when selectedUser changes
   useEffect(() => {
@@ -2371,21 +2403,18 @@ export default function AdminScreen() {
         contentContainerStyle={styles.tabBarContent}
       >
         {(() => {
-          const loadedOrderQueue = orders.filter(o => ['pending', 'paid', 'processed', 'processing'].includes(o.status)).length;
-          const pendingOrders = loadedOrderQueue || Number(stats.orders?.active || stats.orders?.pending || 0);
-          const todaySubmissions = stats.today?.submissions ?? 0;
-          const newUsers = stats.today?.logins ?? 0;
-          const tabBadges: Record<string,number> = {
-            Orders: pendingOrders,
-            Feed: todaySubmissions,
-          };
+          const tabBadges = getAdminBadgeCounts();
           return TABS.map(tab => {
-            const badge = tabBadges[tab] || 0;
+            const rawBadge = tabBadges[tab] || 0;
+            const badge = rawBadge > (seenTabBadges[tab] || 0) ? rawBadge : 0;
             return (
               <TouchableOpacity
                 key={tab}
                 style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]}
-                onPress={() => setActiveTab(tab)}
+                onPress={() => {
+                  markAdminTabSeen(tab);
+                  setActiveTab(tab);
+                }}
               >
                 <View style={{ position: 'relative' }}>
                   <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
