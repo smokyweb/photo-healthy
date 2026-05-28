@@ -161,7 +161,7 @@ export default function SubmissionDetailScreen() {
       <ScrollView style={styles.screen} contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
         <Text style={{ color: C.TEXT_MUTED, fontSize: 16, marginBottom: 16 }}>{error || 'Submission not found'}</Text>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={{ color: C.ORANGE }}>â† Go Back</Text>
+          <Text style={{ color: C.ORANGE }}>Back</Text>
         </TouchableOpacity>
       </ScrollView>
     );
@@ -233,7 +233,7 @@ export default function SubmissionDetailScreen() {
     >
       {/* Back button */}
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-        <Text style={styles.backText}>â† Back</Text>
+        <Text style={styles.backText}>Back</Text>
       </TouchableOpacity>
 
       <View style={[styles.layout, isDesktop && styles.layoutDesktop]}>
