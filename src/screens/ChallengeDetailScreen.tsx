@@ -86,15 +86,7 @@ export default function ChallengeDetailScreen() {
   const handleEnterChallenge = async () => {
     if (enrolling) return;
     if (!user) {
-      Alert.alert(
-        'Join Free to Enter',
-        'Create a free account to enter challenges, track your progress, and connect with the community!',
-        [
-          { text: 'Sign Up Free', onPress: () => navigation.navigate('Register') },
-          { text: 'Log In', onPress: () => navigation.navigate('Login') },
-          { text: 'Cancel', style: 'cancel' },
-        ]
-      );
+      navigation.navigate('Register' as never);
       return;
     }
     if (challenge?.is_pro_only && !isPro) {
