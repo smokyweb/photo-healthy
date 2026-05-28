@@ -11,7 +11,7 @@ import {
   adminGetDiscountCodes, createDiscountCode, updateDiscountCode, deleteDiscountCode,
   getChallenges, createChallenge, updateChallenge, deleteChallenge,
   deleteSubmission, deleteComment, updateComment, getComments, getSubmissions,
-  adminGetOrders, adminMarkOrderPaid, adminProcessOrder, adminFulfillOrder, adminUpdateTracking, deleteUser, updateUser, adminSuspendUser,
+  adminGetOrders, adminMarkOrderPaid, adminProcessOrder, adminFulfillOrder, adminUpdateTracking, deleteUser, restoreUser, updateUser, adminSuspendUser,
   adminGetTaxonomy, adminUpdateTaxonomy,
   adminGetActivity, adminGetUserSubmissions, adminGetUserComments, adminGetUserOrders, adminCreateUser, adminResetPassword,
   uploadPhoto,
@@ -38,6 +38,7 @@ export default function AdminScreen() {
   const [userSearch, setUserSearch] = useState('');
   const [userSort, setUserSort] = useState<'name'|'email'|'joined'|'plan'>('joined');
   const [userSortAsc, setUserSortAsc] = useState(false);
+  const [userListMode, setUserListMode] = useState<'active'|'deleted'>('active');
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [editingUserForm, setEditingUserForm] = useState<any>(null);
   const [savingUser, setSavingUser] = useState(false);
@@ -598,13 +599,28 @@ export default function AdminScreen() {
 
 
   const handleDeleteUser = (id: number, name: string) => {
-    if (typeof window !== 'undefined' && !window.confirm('Delete ' + name + '? This cannot be undone.')) return;
+    if (typeof window !== 'undefined' && !window.confirm('Move ' + name + ' to Deleted Users? You can restore them later.')) return;
     (async () => {
       try {
         await deleteUser(id);
-        setUsers(us => us.filter(u => u.id !== id));
+        const deletedAt = new Date().toISOString();
+        setUsers(us => us.map(u => u.id === id ? { ...u, is_deleted: true, deleted_at: deletedAt, is_suspended: true, suspended_reason: 'Deleted by admin' } : u));
         if (selectedUser?.id === id) setSelectedUser(null);
-        Alert.alert('Deleted', name + ' has been deleted.');
+        Alert.alert('Deleted', name + ' was moved to Deleted Users.');
+      } catch (e: any) { Alert.alert('Error', e.message); }
+    })();
+  };
+
+  const handleRestoreUser = (u: any) => {
+    if (typeof window !== 'undefined' && !window.confirm('Restore ' + u.name + '?')) return;
+    (async () => {
+      try {
+        const result = await restoreUser(u.id);
+        const restored = result?.user || { ...u, is_deleted: false, deleted_at: null, is_suspended: false, suspended_reason: null };
+        setUsers(us => us.map(usr => usr.id === u.id ? restored : usr));
+        setSelectedUser(restored);
+        setUserListMode('active');
+        Alert.alert('Restored', u.name + ' is active again.');
       } catch (e: any) { Alert.alert('Error', e.message); }
     })();
   };
@@ -656,7 +672,7 @@ export default function AdminScreen() {
             <View style={styles.detailChip}><Text style={styles.detailChipLabel}>ID</Text><Text style={styles.detailChipValue}>#{u.id}</Text></View>
             <View style={styles.detailChip}><Text style={styles.detailChipLabel}>Plan</Text><Text style={[styles.detailChipValue, { color: u.subscription_status === 'active' ? C.TEAL : C.TEXT }]}>{u.subscription_status || 'free'}</Text></View>
             <View style={styles.detailChip}><Text style={styles.detailChipLabel}>Role</Text><Text style={[styles.detailChipValue, { color: u.is_admin ? C.ORANGE : C.TEXT }]}>{u.is_admin ? 'Admin' : u.role || 'user'}</Text></View>
-            <View style={styles.detailChip}><Text style={styles.detailChipLabel}>Status</Text><Text style={[styles.detailChipValue, { color: u.is_suspended ? C.DANGER : C.TEAL }]}>{u.is_suspended ? 'Blocked' : 'Active'}</Text></View>
+            <View style={styles.detailChip}><Text style={styles.detailChipLabel}>Status</Text><Text style={[styles.detailChipValue, { color: u.is_deleted || u.is_suspended ? C.DANGER : C.TEAL }]}>{u.is_deleted ? 'Deleted' : u.is_suspended ? 'Blocked' : 'Active'}</Text></View>
             <View style={styles.detailChip}><Text style={styles.detailChipLabel}>Joined</Text><Text style={styles.detailChipValue}>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}</Text></View>
           </View>
           <Text style={styles.detailRow}><Text style={styles.detailLabel}>Name: </Text>{u.name}</Text>
@@ -665,10 +681,15 @@ export default function AdminScreen() {
           {u.location ? <Text style={styles.detailRow}><Text style={styles.detailLabel}>Location: </Text>{u.location}</Text> : null}
           {u.stripe_customer_id ? <Text style={styles.detailRow}><Text style={styles.detailLabel}>Stripe ID: </Text>{u.stripe_customer_id}</Text> : null}
           {u.subscription_ends_at ? <Text style={styles.detailRow}><Text style={styles.detailLabel}>Sub ends: </Text>{new Date(u.subscription_ends_at).toLocaleDateString()}</Text> : null}
+          {u.deleted_at ? <Text style={styles.detailRow}><Text style={styles.detailLabel}>Deleted: </Text>{new Date(u.deleted_at).toLocaleDateString()}</Text> : null}
         </View>
 
         {/* Edit user form or action buttons */}
-        {editingUserForm ? (
+        {u.is_deleted ? (
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 16, marginTop: 12 }}>
+            <GradientButton label="Restore User" variant="teal" size="sm" onPress={() => handleRestoreUser(u)} />
+          </View>
+        ) : editingUserForm ? (
           <View style={[styles.formCard, { marginTop: 12 }]}>
             <Text style={styles.formTitle}>✏ Edit User</Text>
             <Input label="Display Name" value={editingUserForm.name || ''} onChangeText={v => setEditingUserForm((f) => ({ ...f, name: v }))} />
@@ -880,7 +901,8 @@ export default function AdminScreen() {
   const renderUsers = () => {
     if (selectedUser) return renderUserDetail();
 
-    const filtered = users.filter(u => {
+    const visibleUsers = users.filter(u => userListMode === 'deleted' ? !!u.is_deleted : !u.is_deleted);
+    const filtered = visibleUsers.filter(u => {
       if (!userSearch.trim()) return true;
       const q = userSearch.toLowerCase();
       return (u.name || '').toLowerCase().includes(q) ||
@@ -903,9 +925,25 @@ export default function AdminScreen() {
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Users ({filtered.length} / {users.length})</Text>
+        <Text style={styles.sectionTitle}>Users ({filtered.length} / {visibleUsers.length})</Text>
+        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+          {[
+            { key: 'active' as const, label: 'Active Users', count: users.filter(u => !u.is_deleted).length },
+            { key: 'deleted' as const, label: 'Deleted Users', count: users.filter(u => u.is_deleted).length },
+          ].map(mode => (
+            <TouchableOpacity
+              key={mode.key}
+              style={[styles.chipOption, userListMode === mode.key && styles.chipOptionActive]}
+              onPress={() => { setUserListMode(mode.key); setSelectedUser(null); }}
+            >
+              <Text style={[styles.chipOptionText, userListMode === mode.key && styles.chipOptionTextActive]}>
+                {mode.label} ({mode.count})
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
         {/* Create User form */}
-        <View style={{ marginBottom: 14 }}>
+        {userListMode === 'active' && <View style={{ marginBottom: 14 }}>
           <GradientButton label={showCreateUserForm ? '✕ Cancel' : '+ Add User'} variant={showCreateUserForm ? 'outline' : 'teal'} size="sm"
             onPress={() => { setShowCreateUserForm(v => !v); setCreateUserMsg(''); setNewUserForm({ name: '', email: '', password: '' }); }} style={{ alignSelf: 'flex-start' } as any} />
           {showCreateUserForm && (
@@ -953,7 +991,7 @@ export default function AdminScreen() {
                 }} />
             </View>
           )}
-        </View>
+        </View>}
         <View style={styles.searchBar}>
           <TextInput
             style={styles.searchInput}
@@ -984,9 +1022,9 @@ export default function AdminScreen() {
         <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
           {[
             { label: 'Total', value: users.length, color: C.TEXT },
-            { label: 'Pro', value: users.filter(u => u.subscription_status === 'active').length, color: C.TEAL },
-            { label: 'Admin', value: users.filter(u => u.is_admin).length, color: C.ORANGE },
-            { label: 'Free', value: users.filter(u => u.subscription_status !== 'active').length, color: C.TEXT_MUTED },
+            { label: 'Pro', value: visibleUsers.filter(u => u.subscription_status === 'active').length, color: C.TEAL },
+            { label: 'Admin', value: visibleUsers.filter(u => u.is_admin).length, color: C.ORANGE },
+            { label: 'Free', value: visibleUsers.filter(u => u.subscription_status !== 'active').length, color: C.TEXT_MUTED },
           ].map(stat => (
             <View key={stat.label} style={styles.miniStatCard}>
               <Text style={[styles.miniStatValue, { color: stat.color }]}>{stat.value}</Text>
@@ -1004,10 +1042,12 @@ export default function AdminScreen() {
                 <Text style={styles.listItemTitle}>{u.name}</Text>
                 {u.is_admin && <Text style={{ color: C.ORANGE, fontSize: 10, fontWeight: '700' }}>ADMIN</Text>}
                 {u.subscription_status === 'active' && <Text style={{ color: C.TEAL, fontSize: 10, fontWeight: '700' }}>PRO</Text>}
+                {u.is_deleted && <Text style={{ color: C.DANGER, fontSize: 10, fontWeight: '700' }}>DELETED</Text>}
               </View>
               <Text style={styles.listItemSub}>{u.email}</Text>
               <Text style={styles.listItemMeta}>
                 Joined {u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}
+                {u.deleted_at ? ' - deleted ' + new Date(u.deleted_at).toLocaleDateString() : ''}
                 {u.submission_count ? ' - ' + u.submission_count + ' submissions' : ''}
               </Text>
             </View>
@@ -1017,7 +1057,7 @@ export default function AdminScreen() {
         {filtered.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>&#x1F50D;</Text>
-            <Text style={styles.emptyTitle}>No users match "{userSearch}"</Text>
+            <Text style={styles.emptyTitle}>{userListMode === 'deleted' ? 'No deleted users found.' : 'No users match "' + userSearch + '"'}</Text>
           </View>
         )}
       </View>

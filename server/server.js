@@ -308,6 +308,8 @@ async function safeAddColumn(table, column, definition) {
     await safeAddColumn('users', 'location', 'VARCHAR(200) NULL');
     await safeAddColumn('users', 'website', 'VARCHAR(300) NULL');
     await safeAddColumn('users', 'phone', 'VARCHAR(50) NULL');
+    await safeAddColumn('users', 'is_deleted', 'TINYINT(1) DEFAULT 0');
+    await safeAddColumn('users', 'deleted_at', 'DATETIME NULL');
     await safeAddColumn('users', 'stripe_customer_id', 'VARCHAR(255) NULL');
     await safeAddColumn('users', 'stripe_subscription_id', 'VARCHAR(255) NULL');
     await safeAddColumn('users', 'subscription_ends_at', 'DATETIME NULL');
@@ -537,7 +539,7 @@ app.post('/api/auth/register', async (req, res) => {
     if (!name || !email || !password) return res.status(400).json({ error: 'All fields required' });
     if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
 
-    const [existing] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
+    const [existing] = await pool.query('SELECT id FROM users WHERE email = ? AND COALESCE(is_deleted, 0) = 0', [email]);
     if (existing.length > 0) return res.status(400).json({ error: 'Email already registered' });
 
     const password_hash = await bcrypt.hash(password, 10);
@@ -558,7 +560,7 @@ app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
-    const [users] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+    const [users] = await pool.query('SELECT * FROM users WHERE email = ? AND COALESCE(is_deleted, 0) = 0', [email]);
     if (users.length === 0) return res.status(401).json({ error: 'Invalid id/password' });
 
     const user = users[0];
@@ -1615,12 +1617,12 @@ app.get('/api/users', adminAuth, async (req, res) => {
       `SELECT u.id, u.name, u.email, u.avatar_url, u.is_admin,
         u.subscription_status, u.subscription_type, u.subscription_note,
         u.stripe_customer_id, u.stripe_subscription_id, u.subscription_ends_at,
-        u.is_suspended, u.suspended_reason, u.bio, u.location, u.created_at,
+        u.is_suspended, u.suspended_reason, u.is_deleted, u.deleted_at, u.bio, u.location, u.created_at,
         (SELECT COUNT(*) FROM submissions s WHERE s.user_id = u.id) as submission_count,
         (SELECT COUNT(*) FROM comments c WHERE c.user_id = u.id) as comment_count
        FROM users u ORDER BY u.created_at DESC`
     );
-    res.json({ users: users.map(u => ({ ...u, is_admin: !!u.is_admin })) });
+    res.json({ users: users.map(u => ({ ...u, is_admin: !!u.is_admin, is_deleted: !!u.is_deleted })) });
   } catch {
     res.status(500).json({ error: 'Failed to fetch users' });
   }
@@ -1653,7 +1655,7 @@ app.post('/api/admin/users', adminAuth, async (req, res) => {
   try {
     const { name, email, is_admin } = req.body;
     if (!name || !email) return res.status(400).json({ error: 'name and email required' });
-    const [existing] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
+    const [existing] = await pool.query('SELECT id, is_deleted FROM users WHERE email = ?', [email]);
     if (existing.length) return res.status(409).json({ error: 'Email already registered' });
 
     const bcrypt = require('bcryptjs');
@@ -1758,7 +1760,7 @@ app.put('/api/users/:id', adminAuth, async (req, res) => {
 async function handleDeleteUser(req, res) {
   try {
     if (parseInt(req.params.id) === req.user.id) return res.status(400).json({ error: 'Cannot delete yourself' });
-    await pool.query('DELETE FROM users WHERE id = ?', [req.params.id]);
+    await pool.query('UPDATE users SET is_deleted = 1, deleted_at = NOW(), is_suspended = 1, suspended_reason = ? WHERE id = ?', ['Deleted by admin', req.params.id]);
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Failed to delete user' });
@@ -1767,6 +1769,24 @@ async function handleDeleteUser(req, res) {
 app.delete('/api/users/:id', adminAuth, handleDeleteUser);
 // POST alias â€” LiteSpeed blocks DELETE through proxy
 app.post('/api/users/:id/delete', adminAuth, handleDeleteUser);
+
+app.post('/api/users/:id/restore', adminAuth, async (req, res) => {
+  try {
+    await pool.query('UPDATE users SET is_deleted = 0, deleted_at = NULL, is_suspended = 0, suspended_reason = NULL WHERE id = ?', [req.params.id]);
+    const [[user]] = await pool.query(
+      `SELECT id, name, email, avatar_url, is_admin, subscription_status, subscription_type, subscription_note,
+        stripe_customer_id, stripe_subscription_id, subscription_ends_at, is_suspended, suspended_reason,
+        is_deleted, deleted_at, bio, location, created_at,
+        (SELECT COUNT(*) FROM submissions s WHERE s.user_id = users.id) as submission_count,
+        (SELECT COUNT(*) FROM comments c WHERE c.user_id = users.id) as comment_count
+       FROM users WHERE id = ?`,
+      [req.params.id]
+    );
+    res.json({ success: true, user: user ? { ...user, is_admin: !!user.is_admin, is_deleted: !!user.is_deleted } : null });
+  } catch {
+    res.status(500).json({ error: 'Failed to restore user' });
+  }
+});
 
 // ==================== FILE UPLOAD ====================
 

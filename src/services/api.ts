@@ -116,6 +116,9 @@ export const adminResetPassword = (id: number) =>
 export const deleteUser = (id: number) =>
   request('POST', `/admin-api-proxy.php?path=/api/users/${id}/delete&method=POST`);
 
+export const restoreUser = (id: number) =>
+  request('POST', `/admin-api-proxy.php?path=/api/users/${id}/restore&method=POST`);
+
 export const adminCreateUser = (data: any) =>
   request('POST', '/admin-api-proxy.php?path=/api/admin/users&method=POST', data);
 
