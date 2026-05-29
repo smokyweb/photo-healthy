@@ -42,6 +42,7 @@ const matchesCommunityFilter = (submission: any, filter: CommunityFilter) => {
   if (!filter) return true;
   const itemValue = clean(getSubmissionTag(submission, filter.type));
   const filterValue = clean(filter.value);
+  if (!itemValue || !filterValue) return false;
   return itemValue === filterValue || itemValue.includes(filterValue) || filterValue.includes(itemValue);
 };
 
@@ -63,26 +64,37 @@ export default function CommunityScreen() {
   const [sort, setSort] = useState('recent');
   const [communityFilter, setCommunityFilter] = useState<CommunityFilter>(null);
 
-  const load = async (s = sort) => {
+  const load = async (s = sort, filter = communityFilter) => {
     try {
-      const data = await getSubmissions({ sort: s, limit: '40' });
+      const params: Record<string, string> = { sort: s, limit: filter ? '200' : '40' };
+      if (filter?.value) params[filter.type] = filter.value;
+      const data = await getSubmissions(params);
       setSubmissions(data?.submissions || data || []);
     } catch {}
     setLoading(false);
     setRefreshing(false);
   };
 
-  useFocusEffect(useCallback(() => { load(); }, [sort]));
-  useEffect(() => { setLoading(true); load(sort); }, [sort]);
+  useFocusEffect(useCallback(() => { load(sort, communityFilter); }, [sort, communityFilter]));
+  useEffect(() => { setLoading(true); load(sort, communityFilter); }, [sort, communityFilter]);
   useEffect(() => {
-    const nextFilter = route.params?.communityFilter;
+    const nextFilter = route.params?.communityFilter || (
+      route.params?.communityFilterType && route.params?.communityFilterValue
+        ? { type: route.params.communityFilterType, value: route.params.communityFilterValue }
+        : null
+    );
     if (
       nextFilter?.value &&
       ['category', 'feeling', 'movement'].includes(nextFilter.type)
     ) {
       setCommunityFilter({ type: nextFilter.type, value: nextFilter.value });
     }
-  }, [route.params?.communityFilter?.type, route.params?.communityFilter?.value]);
+  }, [
+    route.params?.communityFilter?.type,
+    route.params?.communityFilter?.value,
+    route.params?.communityFilterType,
+    route.params?.communityFilterValue,
+  ]);
 
   if (loading) return <LoadingSpinner fullScreen />;
 

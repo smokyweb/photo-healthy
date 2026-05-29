@@ -219,7 +219,7 @@ export default function SubmissionDetailScreen() {
     } else {
       navigation.navigate('Main' as never, {
         screen: 'CommunityTab',
-        params: { communityFilter: { type: tag.type, value: tag.value } },
+        params: { communityFilterType: tag.type, communityFilterValue: tag.value },
       } as never);
     }
   };

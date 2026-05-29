@@ -1449,6 +1449,21 @@ app.get('/api/submissions', async (req, res) => {
       conditions.push('s.user_id = ?');
       params.push(userFilter);
     }
+    const categoryFilter = req.query.category;
+    if (categoryFilter) {
+      conditions.push('LOWER(TRIM(c.category)) = LOWER(TRIM(?))');
+      params.push(String(categoryFilter));
+    }
+    const feelingFilter = req.query.feeling;
+    if (feelingFilter) {
+      conditions.push('LOWER(TRIM(c.feeling_category)) = LOWER(TRIM(?))');
+      params.push(String(feelingFilter));
+    }
+    const movementFilter = req.query.movement;
+    if (movementFilter) {
+      conditions.push('LOWER(TRIM(c.movement_category)) = LOWER(TRIM(?))');
+      params.push(String(movementFilter));
+    }
     if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
     query += ' ORDER BY s.created_at DESC';
     const [submissions] = await pool.query(query, params);
