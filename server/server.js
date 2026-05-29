@@ -888,10 +888,15 @@ app.get('/api/users/me/challenges', auth, async (req, res) => {
          c.movement_category,
          c.duration_days,
          c.end_date,
-         c.is_active,
-         EXISTS(
-           SELECT 1 FROM submissions s
-           WHERE s.user_id = uc.user_id AND s.challenge_id = uc.challenge_id
+        c.is_active,
+        (SELECT COUNT(*)
+         FROM submissions s
+         WHERE s.challenge_id = uc.challenge_id
+           AND s.user_id != uc.user_id
+           AND s.created_at > uc.created_at) AS new_submission_count,
+        EXISTS(
+          SELECT 1 FROM submissions s
+          WHERE s.user_id = uc.user_id AND s.challenge_id = uc.challenge_id
          ) AS has_submitted
        FROM user_challenges uc
        JOIN challenges c ON c.id = uc.challenge_id
@@ -906,6 +911,7 @@ app.get('/api/users/me/challenges', auth, async (req, res) => {
         ...row,
         days_remaining: row.days_remaining == null ? null : Number(row.days_remaining),
         has_submitted: !!row.has_submitted,
+        new_submission_count: Number(row.new_submission_count || 0),
         status: row.has_submitted ? 'completed' : row.status,
       },
     ]));
@@ -945,11 +951,15 @@ app.get('/api/users/me/challenges', auth, async (req, res) => {
     const active = all.filter(item =>
       item.status === 'active' &&
       !item.has_submitted &&
+      Number(item.is_active) !== 0 &&
+      !(item.end_date && new Date(item.end_date).getTime() < Date.now()) &&
       (item.days_remaining == null || Number(item.days_remaining) >= 0)
     );
     const past = all.filter(item =>
       item.has_submitted ||
       item.status === 'completed' ||
+      Number(item.is_active) === 0 ||
+      (item.end_date && new Date(item.end_date).getTime() < Date.now()) ||
       (item.days_remaining != null && Number(item.days_remaining) < 0)
     );
 
@@ -967,6 +977,7 @@ app.get('/api/challenges', async (req, res) => {
     const [challenges] = await pool.query(`
       SELECT c.*,
         (SELECT COUNT(*) FROM submissions s WHERE s.challenge_id = c.id) AS submission_count,
+        (SELECT MAX(s.created_at) FROM submissions s WHERE s.challenge_id = c.id) AS latest_submission_at,
         (
           (SELECT COUNT(DISTINCT uc.user_id) FROM user_challenges uc WHERE uc.challenge_id = c.id)
           +
@@ -988,6 +999,11 @@ app.get('/api/challenges', async (req, res) => {
       const [enrollments] = await pool.query(
         `SELECT uc.challenge_id, uc.status, uc.personal_end_date,
           DATEDIFF(uc.personal_end_date, CURDATE()) AS days_remaining,
+          (SELECT COUNT(*)
+           FROM submissions s
+           WHERE s.challenge_id = uc.challenge_id
+             AND s.user_id != uc.user_id
+             AND s.created_at > uc.created_at) AS new_submission_count,
           EXISTS(SELECT 1 FROM submissions s WHERE s.user_id = ? AND s.challenge_id = uc.challenge_id) AS has_submission
          FROM user_challenges uc
          WHERE uc.user_id = ? AND uc.challenge_id IN (?)`,
@@ -999,6 +1015,7 @@ app.get('/api/challenges', async (req, res) => {
           ...e,
           status: e.has_submission ? 'completed' : 'active',
           days_remaining: e.days_remaining == null ? null : Number(e.days_remaining),
+          new_submission_count: Number(e.new_submission_count || 0),
           has_submission: !!e.has_submission,
         },
       ]));

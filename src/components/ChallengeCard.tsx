@@ -31,6 +31,7 @@ interface Challenge {
     days_remaining?: number;
     status?: string;
     has_submission?: boolean;
+    new_submission_count?: number;
   } | null;
 }
 
@@ -61,8 +62,14 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
   const personalDaysLeft = Number(challenge.user_challenge?.days_remaining ?? 0);
   const hasMissedDeadline = userStatus === 'active' && personalDaysLeft < 0;
   const isCompleted = userStatus === 'completed' || !!challenge.user_challenge?.has_submission;
-  const isArchived = !isCompleted && (challenge.status === 'archived' || challenge.is_active === false || hardStopExpired || hasMissedDeadline);
+  const isArchived = !isCompleted && (challenge.status === 'archived' || Number(challenge.is_active) === 0 || hardStopExpired || hasMissedDeadline);
   const isActive = userStatus === 'active' && !isArchived && isOpen;
+  const newSubmissionCount = Number(challenge.user_challenge?.new_submission_count || 0);
+  const expiringSoon = !isCompleted && !isArchived && (
+    isActive
+      ? personalDaysLeft >= 0 && personalDaysLeft <= 3
+      : daysLeft !== null && daysLeft <= 3
+  );
   const statusLabel = isCompleted ? 'Completed' : isActive ? 'Active' : isArchived ? 'Archived' : isUpcoming ? 'Upcoming' : 'New';
   const statusColor = isCompleted
     ? C.TEAL + 'dd'
@@ -123,6 +130,23 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
 
       <View style={styles.body}>
         <Text style={styles.title} numberOfLines={2}>{challenge.title}</Text>
+
+        {(expiringSoon || newSubmissionCount > 0) && (
+          <View style={styles.noticeRow}>
+            {expiringSoon && (
+              <View style={[styles.noticeBadge, styles.expiringBadge]}>
+                <Text style={styles.noticeText}>Expiring soon</Text>
+              </View>
+            )}
+            {newSubmissionCount > 0 && (
+              <View style={[styles.noticeBadge, styles.newSubmissionBadge]}>
+                <Text style={styles.noticeText}>
+                  {newSubmissionCount} new photo{newSubmissionCount === 1 ? '' : 's'}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         <View style={styles.challengeInfoList}>
           <View style={styles.infoLine}>
@@ -208,6 +232,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     lineHeight: 24,
   },
+  noticeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: -4, marginBottom: 10 },
+  noticeBadge: {
+    borderRadius: borderRadius.pill,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderWidth: 1,
+  },
+  expiringBadge: { backgroundColor: C.ORANGE + '22', borderColor: C.ORANGE + '88' },
+  newSubmissionBadge: { backgroundColor: C.TEAL + '22', borderColor: C.TEAL + '88' },
+  noticeText: { color: C.TEXT, fontSize: 11, fontWeight: '900' },
   challengeInfoList: { gap: 8, flex: 1 },
   infoLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   infoLabel: { color: C.TEXT_MUTED, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', minWidth: 70 },

@@ -55,7 +55,10 @@ const hasMissedCommitmentWindow = (challenge: any) =>
 const isAvailableChallenge = (challenge: any) =>
   isOpenChallenge(challenge) && !challenge.user_challenge;
 const isActiveUserChallenge = (challenge: any) =>
-  userChallengeStatus(challenge) === 'active' && !hasMissedCommitmentWindow(challenge) && !isCompletedUserChallenge(challenge);
+  userChallengeStatus(challenge) === 'active' &&
+  isOpenChallenge(challenge) &&
+  !hasMissedCommitmentWindow(challenge) &&
+  !isCompletedUserChallenge(challenge);
 const isCompletedUserChallenge = (challenge: any) =>
   userChallengeStatus(challenge) === 'completed' || !!challenge.user_challenge?.has_submission;
 const isArchivedUserChallenge = (challenge: any) =>
