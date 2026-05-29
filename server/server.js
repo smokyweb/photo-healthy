@@ -871,6 +871,94 @@ app.get('/api/users/me/stats', auth, async (req, res) => {
   }
 });
 
+// GET /api/users/me/challenges - challenges grouped by this user's own progress
+app.get('/api/users/me/challenges', auth, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT
+         uc.id,
+         uc.challenge_id,
+         uc.status,
+         uc.personal_end_date,
+         DATEDIFF(uc.personal_end_date, CURDATE()) AS days_remaining,
+         c.title,
+         c.cover_image_url,
+         c.category,
+         c.feeling_category,
+         c.movement_category,
+         c.duration_days,
+         c.end_date,
+         c.is_active,
+         EXISTS(
+           SELECT 1 FROM submissions s
+           WHERE s.user_id = uc.user_id AND s.challenge_id = uc.challenge_id
+         ) AS has_submitted
+       FROM user_challenges uc
+       JOIN challenges c ON c.id = uc.challenge_id
+       WHERE uc.user_id = ?
+       ORDER BY uc.updated_at DESC, uc.created_at DESC`,
+      [req.user.id]
+    );
+
+    const byChallenge = new Map(rows.map(row => [
+      Number(row.challenge_id),
+      {
+        ...row,
+        days_remaining: row.days_remaining == null ? null : Number(row.days_remaining),
+        has_submitted: !!row.has_submitted,
+        status: row.has_submitted ? 'completed' : row.status,
+      },
+    ]));
+
+    const [submissionOnlyRows] = await pool.query(
+      `SELECT
+         s.challenge_id,
+         MAX(s.created_at) AS submitted_at,
+         c.title,
+         c.cover_image_url,
+         c.category,
+         c.feeling_category,
+         c.movement_category,
+         c.duration_days,
+         c.end_date,
+         c.is_active
+       FROM submissions s
+       JOIN challenges c ON c.id = s.challenge_id
+       LEFT JOIN user_challenges uc
+         ON uc.user_id = s.user_id AND uc.challenge_id = s.challenge_id
+       WHERE s.user_id = ? AND uc.id IS NULL
+       GROUP BY s.challenge_id, c.title, c.cover_image_url, c.category, c.feeling_category, c.movement_category, c.duration_days, c.end_date, c.is_active`,
+      [req.user.id]
+    );
+
+    submissionOnlyRows.forEach(row => {
+      byChallenge.set(Number(row.challenge_id), {
+        ...row,
+        id: `submission-${row.challenge_id}`,
+        status: 'completed',
+        days_remaining: null,
+        has_submitted: true,
+      });
+    });
+
+    const all = Array.from(byChallenge.values());
+    const active = all.filter(item =>
+      item.status === 'active' &&
+      !item.has_submitted &&
+      (item.days_remaining == null || Number(item.days_remaining) >= 0)
+    );
+    const past = all.filter(item =>
+      item.has_submitted ||
+      item.status === 'completed' ||
+      (item.days_remaining != null && Number(item.days_remaining) < 0)
+    );
+
+    res.json({ active, past, completed: past.filter(item => item.has_submitted || item.status === 'completed') });
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Failed to fetch user challenges' });
+  }
+});
+
 // ==================== CHALLENGES ROUTES ====================
 
 app.get('/api/challenges', async (req, res) => {

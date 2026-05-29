@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TextInput, Modal,
   TouchableOpacity, ScrollView, RefreshControl, useWindowDimensions,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { getChallenges } from '../services/api';
 import ChallengeCard from '../components/ChallengeCard';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -55,7 +55,7 @@ const hasMissedCommitmentWindow = (challenge: any) =>
 const isAvailableChallenge = (challenge: any) =>
   isOpenChallenge(challenge) && !challenge.user_challenge;
 const isActiveUserChallenge = (challenge: any) =>
-  userChallengeStatus(challenge) === 'active' && !hasMissedCommitmentWindow(challenge) && isOpenChallenge(challenge);
+  userChallengeStatus(challenge) === 'active' && !hasMissedCommitmentWindow(challenge) && !isCompletedUserChallenge(challenge);
 const isCompletedUserChallenge = (challenge: any) =>
   userChallengeStatus(challenge) === 'completed' || !!challenge.user_challenge?.has_submission;
 const isArchivedUserChallenge = (challenge: any) =>
@@ -136,10 +136,7 @@ export default function ChallengesScreen() {
   const applyFilters = useCallback(
 (list: any[], q: string, s: string, cat: string, feeling: string, movement: string) => {
       let result = [...list];
-      const hasContentFilter = !!q.trim() || cat !== 'All' || feeling !== 'All' || movement !== 'All';
-      result = s === 'all' && hasContentFilter
-        ? result
-        : statusFilteredChallenges(result, s);
+      result = statusFilteredChallenges(result, s);
       if (cat !== 'All') result = result.filter(c => filterMatches(challengeCategoryValue(c), cat));
       if (feeling !== 'All') result = result.filter(c =>
         filterMatches(challengeFeelingValue(c), feeling)
@@ -163,7 +160,7 @@ export default function ChallengesScreen() {
     []
   );
 
-  useEffect(() => { load(); }, []);
+  useFocusEffect(useCallback(() => { load(); }, []));
   useEffect(() => { applyFilters(challenges, search, status, category, feelingFilter, movementFilter); }, [search, status, category, feelingFilter, movementFilter, challenges]);
   useEffect(() => {
     const statusList = optionBaseChallenges(challenges, status);
