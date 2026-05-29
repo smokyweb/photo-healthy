@@ -11,7 +11,7 @@ import {
   adminGetProducts, createProduct, updateProduct, deleteProduct,
   adminGetDiscountCodes, createDiscountCode, updateDiscountCode, deleteDiscountCode,
   getChallenges, createChallenge, updateChallenge, deleteChallenge,
-  deleteSubmission, deleteComment, updateComment, getComments, getSubmissions,
+  deleteSubmission, updateSubmission, deleteComment, updateComment, getComments, getSubmissions,
   adminGetOrders, adminMarkOrderPaid, adminProcessOrder, adminFulfillOrder, adminUpdateTracking, adminArchiveOrder, deleteUser, restoreUser, updateUser, adminSuspendUser,
   adminGetTaxonomy, adminUpdateTaxonomy,
   adminGetActivity, adminGetUserSubmissions, adminGetUserComments, adminGetUserOrders, adminCreateUser, adminResetPassword,
@@ -63,6 +63,8 @@ export default function AdminScreen() {
   const [submissionComments, setSubmissionComments] = useState<any[]>([]);
   const [loadingSubmComments, setLoadingSubmComments] = useState(false);
   const [editingComment, setEditingComment] = useState<{id: number, text: string} | null>(null);
+  const [editingSubmissionForm, setEditingSubmissionForm] = useState<any>(null);
+  const [savingSubmission, setSavingSubmission] = useState(false);
   const [submissionSearch, setSubmissionSearch] = useState('');
   const [submissionFilter, setSubmissionFilter] = useState<'All'|'Photos'|'Comments'>('All');
   const [feedLoadError, setFeedLoadError] = useState('');
@@ -1143,6 +1145,53 @@ export default function AdminScreen() {
     }
   };
 
+  const openSubmissionEdit = (sub: any) => {
+    setEditingSubmissionForm({
+      id: sub.id,
+      title: sub.title || '',
+      description: sub.description || '',
+      photo1_url: sub.photo1_url || sub.image_url || sub.photo_url || '',
+      photo2_url: sub.photo2_url || '',
+      photo3_url: sub.photo3_url || '',
+      photo4_url: sub.photo4_url || '',
+      miles_walked: sub.miles_walked != null ? String(sub.miles_walked) : '',
+    });
+  };
+
+  const handleSaveSubmissionEdit = async () => {
+    if (!editingSubmissionForm?.id) return;
+    if (!String(editingSubmissionForm.title || '').trim()) {
+      Alert.alert('Missing title', 'Submission title is required.');
+      return;
+    }
+    setSavingSubmission(true);
+    try {
+      const payload = {
+        title: editingSubmissionForm.title,
+        description: editingSubmissionForm.description,
+        photo1_url: editingSubmissionForm.photo1_url,
+        photo2_url: editingSubmissionForm.photo2_url,
+        photo3_url: editingSubmissionForm.photo3_url,
+        photo4_url: editingSubmissionForm.photo4_url,
+        image_url: editingSubmissionForm.photo1_url,
+        miles_walked: editingSubmissionForm.miles_walked,
+      };
+      await updateSubmission(editingSubmissionForm.id, payload);
+      const updated = { ...selectedSubmission, ...payload };
+      setSelectedSubmission(updated);
+      setActivityItems(items => items.map(item => item.type === 'submission' && item.id === editingSubmissionForm.id ? { ...item, ...updated } : item));
+      setUserActivity(prev => ({
+        ...prev,
+        submissions: prev.submissions.map(item => item.id === editingSubmissionForm.id ? { ...item, ...updated } : item),
+      }));
+      setEditingSubmissionForm(null);
+      Alert.alert('Saved', 'Submission updated.');
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Could not update submission.');
+    }
+    setSavingSubmission(false);
+  };
+
   const handleDeleteActivityItem = async (item: any) => {
     const label = item.type === 'comment' ? 'comment' : 'submission';
     if (!window.confirm('Delete this ' + label + '? This cannot be undone.')) return;
@@ -1305,6 +1354,13 @@ export default function AdminScreen() {
               <Text style={styles.listItemMeta}>{sub.created_at ? new Date(sub.created_at).toLocaleDateString() : ''}</Text>
             </View>
             <GradientButton
+              label="Edit Submission"
+              variant="primary"
+              size="sm"
+              style={{ marginTop: 12 } as any}
+              onPress={() => openSubmissionEdit(sub)}
+            />
+            <GradientButton
               label="🗑 Delete Submission"
               variant="danger"
               size="sm"
@@ -1317,6 +1373,65 @@ export default function AdminScreen() {
               }}
             />
           </View>
+
+          <AdminModal visible={!!editingSubmissionForm} onClose={() => setEditingSubmissionForm(null)}>
+            <View style={[styles.formCard, styles.modalFormCard]}>
+              <Text style={styles.formTitle}>Edit Submission</Text>
+              <Input
+                label="Title *"
+                value={editingSubmissionForm?.title || ''}
+                onChangeText={v => setEditingSubmissionForm((f: any) => ({ ...f, title: v }))}
+              />
+              <Input
+                label="Description"
+                value={editingSubmissionForm?.description || ''}
+                onChangeText={v => setEditingSubmissionForm((f: any) => ({ ...f, description: v }))}
+                multiline
+                numberOfLines={4}
+              />
+              <Input
+                label="Miles"
+                value={editingSubmissionForm?.miles_walked || ''}
+                onChangeText={v => setEditingSubmissionForm((f: any) => ({ ...f, miles_walked: v }))}
+                keyboardType="numeric"
+              />
+              <Input
+                label="Photo 1 URL"
+                value={editingSubmissionForm?.photo1_url || ''}
+                onChangeText={v => setEditingSubmissionForm((f: any) => ({ ...f, photo1_url: v }))}
+              />
+              <Input
+                label="Photo 2 URL"
+                value={editingSubmissionForm?.photo2_url || ''}
+                onChangeText={v => setEditingSubmissionForm((f: any) => ({ ...f, photo2_url: v }))}
+              />
+              <Input
+                label="Photo 3 URL"
+                value={editingSubmissionForm?.photo3_url || ''}
+                onChangeText={v => setEditingSubmissionForm((f: any) => ({ ...f, photo3_url: v }))}
+              />
+              <Input
+                label="Photo 4 URL"
+                value={editingSubmissionForm?.photo4_url || ''}
+                onChangeText={v => setEditingSubmissionForm((f: any) => ({ ...f, photo4_url: v }))}
+              />
+              <View style={styles.formBtns}>
+                <GradientButton
+                  label={savingSubmission ? 'Saving...' : 'Save'}
+                  variant="primary"
+                  loading={savingSubmission}
+                  style={{ flex: 1, marginRight: 8 } as any}
+                  onPress={handleSaveSubmissionEdit}
+                />
+                <GradientButton
+                  label="Cancel"
+                  variant="outline"
+                  style={{ flex: 1 } as any}
+                  onPress={() => setEditingSubmissionForm(null)}
+                />
+              </View>
+            </View>
+          </AdminModal>
 
           {/* Comments section */}
           <Text style={[styles.sectionTitle, { marginTop: 20, marginBottom: 12 }]}>

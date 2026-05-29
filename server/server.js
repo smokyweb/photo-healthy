@@ -1615,6 +1615,39 @@ app.post('/api/submissions', auth, async (req, res) => {
   }
 });
 
+app.patch('/api/submissions/:id', adminAuth, async (req, res) => {
+  try {
+    const allowed = ['title', 'description', 'photo1_url', 'photo2_url', 'photo3_url', 'photo4_url', 'miles_walked'];
+    const fields = [];
+    const values = [];
+    for (const key of allowed) {
+      if (Object.prototype.hasOwnProperty.call(req.body, key)) {
+        let value = req.body[key];
+        if (key === 'title') {
+          value = String(value || '').trim();
+          if (!value) return res.status(400).json({ error: 'Submission title is required' });
+        }
+        if (key.startsWith('photo')) {
+          value = String(value || '').trim() || null;
+        }
+        if (key === 'miles_walked') {
+          value = value === '' || value == null ? null : parseFloat(value);
+          if (value != null && Number.isNaN(value)) return res.status(400).json({ error: 'Miles must be a number' });
+        }
+        fields.push(`${key} = ?`);
+        values.push(value);
+      }
+    }
+    if (!fields.length) return res.status(400).json({ error: 'No submission changes provided' });
+    values.push(req.params.id);
+    const [result] = await pool.query(`UPDATE submissions SET ${fields.join(', ')} WHERE id = ?`, values);
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'Submission not found' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Failed to update submission' });
+  }
+});
+
 async function handleDeleteSubmission(req, res) {
   try {
     await pool.query('DELETE FROM submissions WHERE id = ?', [req.params.id]);
