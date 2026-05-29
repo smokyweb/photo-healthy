@@ -176,8 +176,23 @@ export default function AdminScreen() {
           break;
         }
         case 'Users': {
-          const data = await adminGetUsers();
-          setUsers(data?.users || data || []);
+          const [userData, orderData] = await Promise.all([
+            adminGetUsers(),
+            adminGetOrders({ archived: 'all' }).catch(() => ({ orders: [] })),
+          ]);
+          const loadedUsers = userData?.users || userData || [];
+          const loadedOrders = orderData?.orders || orderData || [];
+          const emailKey = (value?: string) => String(value || '').trim().toLowerCase();
+          const usersWithOrderCounts = loadedUsers.map((u: any) => {
+            const userEmail = emailKey(u.email);
+            const countedOrders = loadedOrders.filter((order: any) => {
+              const orderEmail = emailKey(order.customer_email || order.user_email || order.email);
+              return Number(order.user_id) === Number(u.id) || (!!userEmail && orderEmail === userEmail);
+            }).length;
+            return { ...u, order_count: Math.max(Number(u.order_count || 0), countedOrders) };
+          });
+          setUsers(usersWithOrderCounts);
+          setOrders(loadedOrders);
           break;
         }
         case 'Feed': {
