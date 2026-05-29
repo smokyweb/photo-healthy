@@ -3,11 +3,12 @@ import {
   View, Text, StyleSheet, Image,
   TouchableOpacity, ScrollView, RefreshControl, useWindowDimensions,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { getSubmissions } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
 import { C, borderRadius } from '../theme';
+import { normalizeChallengeCategory, normalizeFeelingCategory, normalizeMovementCategory } from '../constants/taxonomy';
 
 const BASE_URL = 'https://photoai.betaplanets.com';
 const fullUrl = (u?: string) => u ? (u.startsWith('http') ? u : BASE_URL + u) : undefined;
@@ -18,6 +19,32 @@ const SORTS = [
   { key: 'top', label: 'Top Rated' },
 ];
 
+type CommunityFilter = { type: 'category' | 'feeling' | 'movement'; value: string } | null;
+
+const clean = (value: string) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const cleanTagValue = (normalized: string, fallback?: string) => {
+  const value = normalized && normalized !== '-' ? normalized : fallback;
+  return String(value || '').trim();
+};
+const getSubmissionTag = (submission: any, type: 'category' | 'feeling' | 'movement') => {
+  if (type === 'category') {
+    const raw = submission.category || submission.challenge_category || submission.challengeCategory;
+    return cleanTagValue(normalizeChallengeCategory(raw), raw);
+  }
+  if (type === 'feeling') {
+    const raw = submission.feeling_category || submission.feeling_tag || submission.challenge_feeling_category || submission.challengeFeelingCategory;
+    return cleanTagValue(normalizeFeelingCategory(raw), raw);
+  }
+  const raw = submission.movement_category || submission.movement_tag || submission.challenge_movement_category || submission.challengeMovementCategory;
+  return cleanTagValue(normalizeMovementCategory(raw), raw);
+};
+const matchesCommunityFilter = (submission: any, filter: CommunityFilter) => {
+  if (!filter) return true;
+  const itemValue = clean(getSubmissionTag(submission, filter.type));
+  const filterValue = clean(filter.value);
+  return itemValue === filterValue || itemValue.includes(filterValue) || filterValue.includes(itemValue);
+};
+
 function chunkArray<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
@@ -26,6 +53,7 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 
 export default function CommunityScreen() {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const { width } = useWindowDimensions();
   const numCols = width >= 900 ? 4 : width >= 600 ? 3 : 2;
 
@@ -33,6 +61,7 @@ export default function CommunityScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sort, setSort] = useState('recent');
+  const [communityFilter, setCommunityFilter] = useState<CommunityFilter>(null);
 
   const load = async (s = sort) => {
     try {
@@ -45,10 +74,20 @@ export default function CommunityScreen() {
 
   useFocusEffect(useCallback(() => { load(); }, [sort]));
   useEffect(() => { setLoading(true); load(sort); }, [sort]);
+  useEffect(() => {
+    const nextFilter = route.params?.communityFilter;
+    if (
+      nextFilter?.value &&
+      ['category', 'feeling', 'movement'].includes(nextFilter.type)
+    ) {
+      setCommunityFilter({ type: nextFilter.type, value: nextFilter.value });
+    }
+  }, [route.params?.communityFilter?.type, route.params?.communityFilter?.value]);
 
   if (loading) return <LoadingSpinner fullScreen />;
 
-  const rows = chunkArray(submissions, numCols);
+  const visibleSubmissions = submissions.filter(item => matchesCommunityFilter(item, communityFilter));
+  const rows = chunkArray(visibleSubmissions, numCols);
 
   return (
     <ScrollView
@@ -60,6 +99,16 @@ export default function CommunityScreen() {
       <View style={styles.header}>
         <Text style={styles.heading}>Community Gallery</Text>
         <Text style={styles.subheading}>Real photos from our wellness community</Text>
+        {communityFilter && (
+          <View style={styles.activeFilterRow}>
+            <Text style={styles.activeFilterText}>
+              Showing {communityFilter.type}: {communityFilter.value}
+            </Text>
+            <TouchableOpacity onPress={() => setCommunityFilter(null)} style={styles.clearFilterBtn} activeOpacity={0.8}>
+              <Text style={styles.clearFilterText}>Clear</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* Sort Tabs */}
@@ -80,11 +129,11 @@ export default function CommunityScreen() {
 
       {/* Photo Grid */}
       <View style={styles.grid}>
-        {submissions.length === 0 ? (
+        {visibleSubmissions.length === 0 ? (
           <View style={styles.empty}>
             <Text style={{ fontSize: 48, marginBottom: 12 }}>📷</Text>
-            <Text style={styles.emptyTitle}>No photos yet</Text>
-            <Text style={styles.emptyBody}>Be the first to submit a photo!</Text>
+            <Text style={styles.emptyTitle}>{communityFilter ? 'No matching photos yet' : 'No photos yet'}</Text>
+            <Text style={styles.emptyBody}>{communityFilter ? 'Try clearing this filter to see more community photos.' : 'Be the first to submit a photo!'}</Text>
           </View>
         ) : (
           rows.map((row, rowIdx) => (
@@ -147,6 +196,29 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   subheading: { color: C.TEXT_MUTED, fontSize: 14 },
+  activeFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 10,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: borderRadius.pill,
+    backgroundColor: C.CARD_BG,
+    borderWidth: 1,
+    borderColor: C.TEAL + '66',
+  },
+  activeFilterText: { color: C.TEAL, fontSize: 13, fontWeight: '800', textTransform: 'capitalize' },
+  clearFilterBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: borderRadius.pill,
+    backgroundColor: C.ORANGE + '22',
+    borderWidth: 1,
+    borderColor: C.ORANGE + '77',
+  },
+  clearFilterText: { color: C.ORANGE, fontSize: 12, fontWeight: '800' },
   tabs: {
     flexDirection: 'row',
     paddingHorizontal: 16,

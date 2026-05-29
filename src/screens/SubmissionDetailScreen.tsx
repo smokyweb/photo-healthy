@@ -209,18 +209,17 @@ export default function SubmissionDetailScreen() {
     },
   ].filter(tag => tag.value && tag.value !== '-');
 
-  const openChallengeForTag = (tag: SubmissionTag) => {
-    if (!submission.challenge_id) return;
+  const openTag = (tag: SubmissionTag) => {
     if (tag.type === 'name') {
+      if (!submission.challenge_id) return;
       navigation.navigate('ChallengeDetail' as never, {
         challengeId: submission.challenge_id,
         id: submission.challenge_id,
       } as never);
     } else {
-      navigation.navigate('ChallengeDetail' as never, {
-        challengeId: submission.challenge_id,
-        id: submission.challenge_id,
-        tagFilter: { type: tag.type, value: tag.value },
+      navigation.navigate('Main' as never, {
+        screen: 'CommunityTab',
+        params: { communityFilter: { type: tag.type, value: tag.value } },
       } as never);
     }
   };
@@ -296,7 +295,7 @@ export default function SubmissionDetailScreen() {
                 <TouchableOpacity
                   key={tag.type}
                   style={styles.tagChip}
-                  onPress={() => openChallengeForTag(tag)}
+                  onPress={() => openTag(tag)}
                   activeOpacity={0.75}
                   accessibilityLabel={tag.type === 'name' ? `Back to ${tag.value}` : `View submissions with ${tag.label} ${tag.value}`}
                 >
