@@ -1097,7 +1097,9 @@ export default function AdminScreen() {
               <Text style={styles.listItemMeta}>
                 Joined {u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}
                 {u.deleted_at ? ' - deleted ' + new Date(u.deleted_at).toLocaleDateString() : ''}
-                {u.submission_count ? ' - ' + u.submission_count + ' submissions' : ''}
+              </Text>
+              <Text style={styles.listItemMeta}>
+                {Number(u.submission_count || 0)} submissions / {Number(u.comment_count || 0)} comments / {Number(u.order_count || 0)} orders
               </Text>
             </View>
             <Text style={{ color: C.TEXT_MUTED, fontSize: 18 }}>›</Text>

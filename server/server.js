@@ -1771,8 +1771,9 @@ app.get('/api/users', adminAuth, async (req, res) => {
         u.subscription_status, u.subscription_type, u.subscription_note,
         u.stripe_customer_id, u.stripe_subscription_id, u.subscription_ends_at,
         u.is_suspended, u.suspended_reason, u.is_deleted, u.deleted_at, u.bio, u.location, u.created_at,
-        (SELECT COUNT(*) FROM submissions s WHERE s.user_id = u.id) as submission_count,
-        (SELECT COUNT(*) FROM comments c WHERE c.user_id = u.id) as comment_count
+        COALESCE((SELECT COUNT(*) FROM submissions s WHERE s.user_id = u.id), 0) as submission_count,
+        COALESCE((SELECT COUNT(*) FROM comments c WHERE c.user_id = u.id), 0) as comment_count,
+        COALESCE((SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id OR o.customer_email = u.email), 0) as order_count
        FROM users u ORDER BY u.created_at DESC`
     );
     res.json({ users: users.map(u => ({ ...u, is_admin: !!u.is_admin, is_deleted: !!u.is_deleted })) });
