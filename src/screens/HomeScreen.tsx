@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { getAssetByID } from 'react-native-web/dist/modules/AssetRegistry';
 import { useAuth } from '../context/AuthContext';
 import * as api from '../services/api';
@@ -137,6 +137,61 @@ const formatDate = (date: Date) => {
   const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+};
+
+const numberOrNull = (value: any) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+};
+
+const sameChallengeId = (submission: any, challenge: any) =>
+  challenge?.id != null && String(submission?.challenge_id ?? submission?.challengeId ?? '') === String(challenge.id);
+
+const submissionsForChallenge = (challenge: any, submissions: any[] = []) =>
+  challenge?.id == null ? [] : submissions.filter((submission) => sameChallengeId(submission, challenge));
+
+const displayTag = (normalized: string, fallback?: string | null) => {
+  const value = (normalized && normalized !== '-') ? normalized : fallback;
+  return String(value || '').trim() || 'Not set';
+};
+
+const getChallengeStats = (challenge: any, submissions: any[] = [], fallbackDays?: any) => {
+  const matchingSubmissions = submissionsForChallenge(challenge, submissions);
+  const backendSubmissions = numberOrNull(challenge?.submission_count) ?? 0;
+  const submissionCount = Math.max(backendSubmissions, matchingSubmissions.length);
+  const localComments = matchingSubmissions.reduce((sum: number, submission: any) => {
+    const comments = numberOrNull(submission?.comment_count ?? submission?.comments_count);
+    return sum + (comments ?? 0);
+  }, 0);
+  const commentCount = Math.max(numberOrNull(challenge?.comment_count) ?? 0, localComments);
+  const uniqueSubmitters = new Set(
+    matchingSubmissions
+      .map((submission: any) => submission?.user_id ?? submission?.user_email ?? submission?.user_name)
+      .filter(Boolean)
+      .map(String)
+  ).size;
+  const participantCount = Math.max(
+    numberOrNull(challenge?.participant_count) ?? 0,
+    uniqueSubmitters,
+    submissionCount
+  );
+
+  const userDays = numberOrNull(challenge?.user_challenge?.days_remaining);
+  let days = userDays;
+  if (days == null && challenge?.end_date) {
+    const end = new Date(challenge.end_date).getTime();
+    if (Number.isFinite(end)) {
+      days = Math.ceil((end - Date.now()) / 86400000);
+    }
+  }
+  if (days == null) days = numberOrNull(challenge?.duration_days ?? fallbackDays);
+
+  return {
+    submissionCount,
+    commentCount,
+    participantCount,
+    daysLeft: days == null ? '-' : Math.max(0, days),
+  };
 };
 
 /* ========== LOGGED-IN HOME ========== */
@@ -297,7 +352,7 @@ const HomeBottomSections = ({ isMobile, showHow = true, onHowItWorksLayout, onHo
         </View>
 
         <View style={bottom.footerRule} />
-        <Text style={bottom.copyright}>© 2026 Photo Healthy. All rights reserved.</Text>
+        <Text style={bottom.copyright}>� 2026 Photo Healthy. All rights reserved.</Text>
       </View>
     </View>
   );
@@ -319,7 +374,10 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userStats, days
   const photosSubmitted = userStats?.submissions ?? userStats?.submission_count ?? submissions.filter((s: any) => s.user_id === user?.id).length;
   const displayStreak = userStats?.streak ?? streak;
   const milesTracked = Number(userStats?.totalMiles ?? userStats?.total_miles ?? fallbackMilesTracked) || 0;
-  const participantCount = featured?.participant_count ?? featured?.submission_count ?? submissions.filter((s: any) => s.challenge_id === featured?.id).length;
+  const activeStats = getChallengeStats(featured, submissions, daysLeft);
+  const challengeCategory = displayTag(normalizeChallengeCategory(featured?.category), featured?.category);
+  const challengeFeeling = displayTag(normalizeFeelingCategory(featured?.feeling_category || featured?.feeling_tag), featured?.feeling_category || featured?.feeling_tag);
+  const challengeMovement = displayTag(normalizeMovementCategory(featured?.movement_category || featured?.movement_tag), featured?.movement_category || featured?.movement_tag);
 
   return (
   <>
@@ -358,27 +416,28 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userStats, days
               {featured.description || 'Capture the breathtaking beauty of golden hour. Show us how the warm, soft light transforms ordinary scenes.'}
             </Text>
             <Text style={li.challengeCategoryLabel}>Challenge Category</Text>
+            <Text style={li.challengeCategoryValue}>{challengeCategory}</Text>
 
             {/* 2x2 Stats Mini-Grid */}
             <View style={li.miniGrid}>
               <View style={li.miniRow}>
                 <View style={li.miniCard}>
-                  <Text style={li.miniIcon}>❤️</Text>
                   <Text style={li.miniLabel}>Feeling</Text>
+                  <Text style={li.miniTagValue} numberOfLines={2}>{challengeFeeling}</Text>
                 </View>
                 <View style={li.miniCard}>
-                  <Text style={li.miniIcon}>🏃</Text>
                   <Text style={li.miniLabel}>Movement</Text>
+                  <Text style={li.miniTagValue} numberOfLines={2}>{challengeMovement}</Text>
                 </View>
               </View>
               <View style={li.miniRow}>
                 <View style={li.miniCard}>
                   <Text style={li.miniLabel}>Days Left</Text>
-                  <Text style={li.miniValue}>{daysLeft}</Text>
+                  <Text style={li.miniValue}>{activeStats.daysLeft}</Text>
                 </View>
                 <View style={li.miniCard}>
                   <Text style={li.miniLabel}>Participants</Text>
-                  <Text style={li.miniValue}>{participantCount}</Text>
+                  <Text style={li.miniValue}>{activeStats.participantCount}</Text>
                 </View>
               </View>
             </View>
@@ -409,7 +468,7 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userStats, days
       <Text style={li.quoteText}>
         {motivationalQuote}
       </Text>
-      {quoteAuthor ? <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 8, fontStyle: 'normal' }}>— {quoteAuthor}</Text> : null}
+      {quoteAuthor ? <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 8, fontStyle: 'normal' }}>� {quoteAuthor}</Text> : null}
     </View>
 
     {/* Stats Row (3 cards) */}
@@ -452,8 +511,8 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userStats, days
               <Text style={li.communityUser}>@{sub.user_name || 'unknown'}</Text>
               <Text style={li.communityTitle}>{sub.title || 'Untitled'}</Text>
               <View style={li.communityStats}>
-                <Text style={li.communityStat}>❤️ {sub.like_count || 0}</Text>
-                <Text style={li.communityStat}>💬 {sub.comment_count || 0}</Text>
+                <Text style={li.communityStat}>?? {sub.like_count || 0}</Text>
+                <Text style={li.communityStat}>?? {sub.comment_count || 0}</Text>
               </View>
             </View>
           </TouchableOpacity>
@@ -512,10 +571,10 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, userStats
     submission_count: 144,
   };
   const challengeImage = challenge.cover_image_url ? { uri: fullUrl(challenge.cover_image_url) } : (challenge._localCover || PHOTO3_FIELD);
-  const challengeCategory = normalizeChallengeCategory(challenge.category);
-  const challengeFeeling = normalizeFeelingCategory(challenge.feeling_category || challenge.feeling_tag);
-  const challengeMovement = normalizeMovementCategory(challenge.movement_category || challenge.movement_tag);
-  const challengeParticipants = challenge.participant_count ?? challenge.submission_count ?? submissions.filter((s: any) => s.challenge_id === challenge.id).length;
+  const challengeCategory = displayTag(normalizeChallengeCategory(challenge.category), challenge.category);
+  const challengeFeeling = displayTag(normalizeFeelingCategory(challenge.feeling_category || challenge.feeling_tag), challenge.feeling_category || challenge.feeling_tag);
+  const challengeMovement = displayTag(normalizeMovementCategory(challenge.movement_category || challenge.movement_tag), challenge.movement_category || challenge.movement_tag);
+  const challengeStats = getChallengeStats(challenge, submissions, daysLeft);
   const cards = recent.length > 0 ? recent : [
     { id: 1, user_name: 'hannah_jane', title: 'Golden hour reflections', photo1_url: null, _localPhoto: PHOTO7_OCEAN, like_count: 234, comment_count: 18 },
     { id: 2, user_name: 'mike_photo', title: 'City lights at dusk', photo1_url: null, _localPhoto: PHOTO1_CITY, like_count: 189, comment_count: 24 },
@@ -567,11 +626,11 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, userStats
             </View>
             <View style={pm.metaBox}>
               <Text style={pm.metaLabel}>Days Left</Text>
-              <Text style={pm.metaValue}>{daysLeft || 14}</Text>
+              <Text style={pm.metaValue}>{challengeStats.daysLeft}</Text>
             </View>
             <View style={pm.metaBox}>
               <Text style={pm.metaLabel}>Participants</Text>
-              <Text style={pm.metaValue}>{challengeParticipants}</Text>
+              <Text style={pm.metaValue}>{challengeStats.participantCount}</Text>
             </View>
           </View>
           <View style={pm.challengeActions}>
@@ -593,9 +652,9 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, userStats
 
       <View style={pm.statRow}>
         {[
-          { icon: '▾', value: String(photosSubmitted), label: 'Photos Submitted' },
-          { icon: '◉', value: String(displayStreak), label: `Day Streak - ${daysLeft} days remaining` },
-          { icon: '★', value: milesTracked.toFixed(1), label: 'Miles Tracked' },
+          { icon: '?', value: String(photosSubmitted), label: 'Photos Submitted' },
+          { icon: '?', value: String(displayStreak), label: `Day Streak - ${daysLeft} days remaining` },
+          { icon: '?', value: milesTracked.toFixed(1), label: 'Miles Tracked' },
         ].map((item) => (
           <View key={item.label} style={pm.statCard}>
             <View style={pm.statIcon}><Text style={pm.statIconText}>{item.icon}</Text></View>
@@ -617,8 +676,8 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, userStats
             <Text style={pm.userName}>@{sub.user_name}</Text>
             <Text style={pm.subTitle}>{sub.title}</Text>
             <View style={pm.subStats}>
-              <Text style={pm.subStat}>♥ {sub.like_count || 0}</Text>
-              <Text style={pm.subStat}>💬 {sub.comment_count || 0}</Text>
+              <Text style={pm.subStat}>? {sub.like_count || 0}</Text>
+              <Text style={pm.subStat}>?? {sub.comment_count || 0}</Text>
             </View>
           </View>
         </TouchableOpacity>
@@ -692,6 +751,8 @@ const SkySection = ({ children, style, alt = false, bgPosition = 'center', bgSiz
 };
 
 const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation, isMobile }: any) => {
+  const featuredStats = getChallengeStats(featured, submissions, daysLeft);
+  const featuredCategory = displayTag(normalizeChallengeCategory(featured?.category), featured?.category || 'Photo Challenge');
   const fallbackShareItems = [
     { id: 'local-1', user_name: 'Skyline', challenge_title: 'Color after dusk', _localPhoto: PHOTO2_MOUNTAIN, like_count: 93 },
     { id: 'local-2', user_name: 'Renew', challenge_title: 'Morning portrait', _localPhoto: PHOTO7_OCEAN, like_count: 129 },
@@ -756,10 +817,10 @@ const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation
                 <View style={landing.challengeInfo}>
               <Text style={landing.challengeTitle}>{featured.title || 'Current Photo Challenge'}</Text>
               <View style={[landing.metaRow, isMobile && landing.metaRowMobile]}>
-              <Text style={landing.metaText}>Category: {featured.category || 'Photo Challenge'}</Text>
-              <Text style={landing.metaText}>Submissions: {featured.submission_count ?? submissions.filter((s: any) => s.challenge_id === featured.id).length}</Text>
-              <Text style={landing.metaText}>Participants: {featured.participant_count ?? submissions.filter((s: any) => s.challenge_id === featured.id).length}</Text>
-                <Text style={landing.metaText}>Ends: {daysLeft || 4}d</Text>
+              <Text style={landing.metaText}>Category: {featuredCategory}</Text>
+              <Text style={landing.metaText}>Submissions: {featuredStats.submissionCount}</Text>
+              <Text style={landing.metaText}>Participants: {featuredStats.participantCount}</Text>
+                <Text style={landing.metaText}>Ends: {featuredStats.daysLeft}d</Text>
                   </View>
                   <TouchableOpacity style={landing.submitBtn} onPress={() => navigation.navigate('Register')}>
                     <Text style={landing.submitBtnText}>Submit Your Photo</Text>
@@ -828,7 +889,7 @@ const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation
 const HomeScreen = () => {
   const navigation = useNavigation<any>();
 
-  const [motivationalQuote, setMotivationalQuote] = useState('The secret of getting ahead is getting started. — Mark Twain');
+  const [motivationalQuote, setMotivationalQuote] = useState('The secret of getting ahead is getting started. � Mark Twain');
   const [quoteAuthor, setQuoteAuthor] = useState('');
   React.useEffect(() => {
     fetch('https://motivational-spark-api.vercel.app/api/quotes/random')
@@ -853,23 +914,30 @@ const HomeScreen = () => {
   const scrollRef = useRef<ScrollView>(null);
   const howItWorksY = useRef(0);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [cData, sData, statsData] = await Promise.all([
-          api.getChallenges(),
-          api.getSubmissions(),
-          user ? api.getUserStats().catch(() => null) : Promise.resolve(null),
-        ]);
-        setChallenges(cData.challenges || []);
-        setSubmissions(sData.submissions || []);
-        setUserStats(statsData);
-      } catch {} finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [user?.id]);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      const load = async () => {
+        try {
+          const [cData, sData, statsData] = await Promise.all([
+            api.getChallenges(),
+            api.getSubmissions(),
+            user ? api.getUserStats().catch(() => null) : Promise.resolve(null),
+          ]);
+          if (!active) return;
+          setChallenges(cData.challenges || []);
+          setSubmissions(sData.submissions || []);
+          setUserStats(statsData);
+        } catch {} finally {
+          if (active) setLoading(false);
+        }
+      };
+      load();
+      return () => {
+        active = false;
+      };
+    }, [user?.id])
+  );
 
   const featured = challenges.find(isJoinableChallenge) ||
     challenges.find((c) => c.is_active || c.status === 'active') ||
@@ -878,9 +946,7 @@ const HomeScreen = () => {
     .sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
     .slice(0, 8);
 
-  const daysLeft = featured
-    ? Math.max(0, Math.ceil((new Date(featured.end_date).getTime() - Date.now()) / 86400000))
-    : 0;
+  const daysLeft = getChallengeStats(featured, submissions).daysLeft;
 
   const publicHeroContent = (
     <>
@@ -2422,6 +2488,12 @@ const li = StyleSheet.create({
     color: C.TEXT_SECONDARY,
     fontSize: 11,
     textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  challengeCategoryValue: {
+    ...type.heading,
+    color: C.TEAL,
+    fontSize: 18,
     marginBottom: 12,
   },
 
@@ -2440,6 +2512,7 @@ const li = StyleSheet.create({
   miniIcon: { fontSize: 24, marginBottom: 4 },
   miniLabel: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 12 },
   miniValue: { ...type.heading, color: C.TEXT, fontSize: 20, marginTop: 4 },
+  miniTagValue: { ...type.heading, color: C.TEAL, fontSize: 16, marginTop: 6, textAlign: 'center' },
 
   challengeActions: {
     flexDirection: 'row',
