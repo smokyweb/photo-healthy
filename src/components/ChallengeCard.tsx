@@ -116,7 +116,7 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
               {statusLabel}
             </Text>
           </View>
-          {challenge.is_pro_only && (
+          {!!challenge.is_pro_only && (
             <View style={styles.proBadge}>
               <Text style={styles.proBadgeText}>PRO</Text>
             </View>

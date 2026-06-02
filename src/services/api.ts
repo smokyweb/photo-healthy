@@ -136,6 +136,13 @@ export const getChallenges = (params?: Record<string, string>) => {
   return request('GET', `/api/challenges${qs}`);
 };
 
+export const getPublicChallenges = async (params?: Record<string, string>) => {
+  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  const res = await fetch(`${BASE_URL}/api/challenges${qs}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+};
+
 export const getChallenge = (id: number) =>
   request('GET', `/api/challenges/${id}`);
 

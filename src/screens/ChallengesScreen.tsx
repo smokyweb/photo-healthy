@@ -4,7 +4,7 @@ import {
   TouchableOpacity, ScrollView, RefreshControl, useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { getChallenges } from '../services/api';
+import { getChallengeEnrollment, getChallenges, getMyChallenges, getPublicChallenges } from '../services/api';
 import ChallengeCard from '../components/ChallengeCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import GradientButton from '../components/GradientButton';
@@ -87,10 +87,70 @@ const challengeFeelingValue = (challenge: any) =>
   tagDisplayValue(normalizeFeelingCategory(challenge.feeling_category || challenge.feeling_tag || challenge.challenge_feeling_category), challenge.feeling_category || challenge.feeling_tag || challenge.challenge_feeling_category);
 const challengeMovementValue = (challenge: any) =>
   tagDisplayValue(normalizeMovementCategory(challenge.movement_category || challenge.movement_tag || challenge.challenge_movement_category), challenge.movement_category || challenge.movement_tag || challenge.challenge_movement_category);
+const normalizeChallengeList = (data: any) => data?.challenges || data || [];
+const userChallengeId = (item: any) => Number(item?.challenge_id ?? item?.id);
+const userChallengeRows = (data: any) => {
+  const rows = [...(data?.active || []), ...(data?.past || []), ...(data?.completed || [])];
+  const byId = new Map<number, any>();
+  rows.forEach(item => {
+    const id = userChallengeId(item);
+    if (id) byId.set(id, item);
+  });
+  return Array.from(byId.values());
+};
+const userChallengeState = (item: any) => {
+  const hasSubmission = !!item.has_submission || !!item.has_submitted || item.status === 'completed';
+  return {
+    challenge_id: userChallengeId(item),
+    status: hasSubmission ? 'completed' : 'active',
+    days_remaining: item.days_remaining == null ? null : Number(item.days_remaining),
+    has_submission: hasSubmission,
+    new_submission_count: Number(item.new_submission_count || 0),
+  };
+};
+const mergeUserChallenges = (list: any[], myData: any) => {
+  const byId = new Map<number, any>();
+  list.forEach(challenge => {
+    const id = Number(challenge?.id);
+    if (id) byId.set(id, challenge);
+  });
+
+  userChallengeRows(myData).forEach(item => {
+    const id = userChallengeId(item);
+    if (!id) return;
+    const existing = byId.get(id);
+    const user_challenge = userChallengeState(item);
+    if (existing) {
+      byId.set(id, { ...existing, user_challenge });
+    } else {
+      byId.set(id, { ...item, id, user_challenge });
+    }
+  });
+
+  return Array.from(byId.values());
+};
+const mergeChallengeEnrollments = async (list: any[]) => {
+  const enrollments = await Promise.all(
+    list.map(async challenge => {
+      const id = Number(challenge?.id);
+      if (!id) return null;
+      const enrollment = await getChallengeEnrollment(id).catch(() => null);
+      return enrollment?.enrolled && enrollment.user_challenge
+        ? { id, user_challenge: userChallengeState(enrollment.user_challenge) }
+        : null;
+    })
+  );
+  const byId = new Map(enrollments.filter(Boolean).map((item: any) => [item.id, item.user_challenge]));
+  return list.map(challenge => {
+    const id = Number(challenge?.id);
+    const user_challenge = byId.get(id);
+    return user_challenge ? { ...challenge, user_challenge } : challenge;
+  });
+};
 
 export default function ChallengesScreen() {
   const navigation = useNavigation<any>();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [motivationalQuote, setMotivationalQuote] = useState('The secret of getting ahead is getting started. — Mark Twain');
   const [quoteAuthor, setQuoteAuthor] = useState('');
   const [dismissSignupBanner, setDismissSignupBanner] = useState(false);
@@ -131,12 +191,31 @@ export default function ChallengesScreen() {
   const load = async () => {
     try {
       const data = await getChallenges();
-      const list = data?.challenges || data || [];
+      let list = normalizeChallengeList(data);
+      const myChallenges = await getMyChallenges().catch(() => null);
+      if (!Array.isArray(list) || list.length === 0) {
+        const publicData = await getPublicChallenges().catch(() => null);
+        const publicList = normalizeChallengeList(publicData);
+        if (Array.isArray(publicList) && publicList.length > 0) list = publicList;
+      }
+      if (myChallenges) list = mergeUserChallenges(list, myChallenges);
+      list = await mergeChallengeEnrollments(list);
       setChallenges(list);
 
       applyFilters(list, search, status, category, feelingFilter, movementFilter);
     } catch (e) {
       console.error(e);
+      try {
+        const publicData = await getPublicChallenges();
+        let list = normalizeChallengeList(publicData);
+        const myChallenges = await getMyChallenges().catch(() => null);
+        if (myChallenges) list = mergeUserChallenges(list, myChallenges);
+        list = await mergeChallengeEnrollments(list);
+        setChallenges(list);
+        applyFilters(list, search, status, category, feelingFilter, movementFilter);
+      } catch (fallbackError) {
+        console.error(fallbackError);
+      }
     }
     setLoading(false);
     setRefreshing(false);
@@ -164,12 +243,25 @@ export default function ChallengesScreen() {
             challengeMovementValue(c).toLowerCase().includes(lq)
         );
       }
+      if (
+        result.length === 0 &&
+        s === 'all' &&
+        cat === 'All' &&
+        feeling === 'All' &&
+        movement === 'All' &&
+        !q.trim()
+      ) {
+        result = list.filter(isAvailableChallenge);
+        if (result.length === 0) result = [...list];
+      }
       setFiltered(result);
     },
     []
   );
 
-  useFocusEffect(useCallback(() => { load(); }, []));
+  useFocusEffect(useCallback(() => {
+    if (!authLoading) load();
+  }, [authLoading, user?.id]));
   useEffect(() => { applyFilters(challenges, search, status, category, feelingFilter, movementFilter); }, [search, status, category, feelingFilter, movementFilter, challenges]);
   useEffect(() => {
     const statusList = optionBaseChallenges(challenges, status);
