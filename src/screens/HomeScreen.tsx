@@ -1121,16 +1121,16 @@ const landing = StyleSheet.create({
   heroTitle: {
     ...type.heading,
     color: '#FFFFFF',
-    fontSize: 38,
-    lineHeight: 43,
+    fontSize: 54,
+    lineHeight: 60,
     marginBottom: 12,
     textShadowColor: 'rgba(0,0,0,0.38)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 10,
   },
   heroTitleMobile: {
-    fontSize: 30,
-    lineHeight: 36,
+    fontSize: 42,
+    lineHeight: 48,
     textAlign: 'center',
   },
   heroWelcome: {
@@ -1145,9 +1145,9 @@ const landing = StyleSheet.create({
   heroText: {
     ...type.subtext,
     color: '#E5EAF5',
-    fontSize: 14,
-    lineHeight: 22,
-    maxWidth: 410,
+    fontSize: 20,
+    lineHeight: 30,
+    maxWidth: 560,
     marginBottom: 24,
   },
   heroActions: {
@@ -1159,10 +1159,10 @@ const landing = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryBtn: {
-    minWidth: 144,
-    borderRadius: 7,
-    paddingVertical: 12,
-    paddingHorizontal: 22,
+    minWidth: 170,
+    borderRadius: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 30,
     alignItems: 'center',
     backgroundColor: C.ORANGE,
     backgroundImage: ORANGE_GRADIENT,
@@ -1174,13 +1174,13 @@ const landing = StyleSheet.create({
   primaryBtnText: {
     ...type.button,
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 17,
   },
   secondaryBtn: {
-    minWidth: 118,
-    borderRadius: 7,
-    paddingVertical: 11,
-    paddingHorizontal: 18,
+    minWidth: 145,
+    borderRadius: 8,
+    paddingVertical: 15,
+    paddingHorizontal: 26,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.38)',
@@ -1189,7 +1189,7 @@ const landing = StyleSheet.create({
   secondaryBtnText: {
     ...type.button,
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 17,
   },
   heroArt: {
     flex: 1,
@@ -1216,7 +1216,7 @@ const landing = StyleSheet.create({
     backgroundColor: 'transparent',
     borderRadius: 0,
     borderWidth: 0,
-    padding: 20,
+    padding: 28,
     marginTop: 0,
     marginBottom: 0,
     shadowOpacity: 0,
@@ -1228,13 +1228,13 @@ const landing = StyleSheet.create({
     marginBottom: 14,
   },
   challengeIcon: {
-    width: 28,
-    height: 28,
+    width: 42,
+    height: 42,
   },
   challengeKicker: {
     ...type.heading,
     color: '#FFFFFF',
-    fontSize: 17,
+    fontSize: 24,
   },
   challengeBody: {
     flexDirection: 'row',
@@ -1252,15 +1252,15 @@ const landing = StyleSheet.create({
   challengeTitle: {
     ...type.heading,
     color: '#FFFFFF',
-    fontSize: 24,
-    lineHeight: 31,
+    fontSize: 36,
+    lineHeight: 43,
     marginBottom: 10,
   },
   metaRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
-    marginBottom: 17,
+    gap: 22,
+    marginBottom: 24,
   },
   metaRowMobile: {
     gap: 8,
@@ -1268,15 +1268,15 @@ const landing = StyleSheet.create({
   metaText: {
     ...type.subtext,
     color: '#D5DEEF',
-    fontSize: 11,
-    lineHeight: 17,
+    fontSize: 17,
+    lineHeight: 25,
   },
   submitBtn: {
-    width: 300,
+    width: 360,
     maxWidth: '100%' as any,
-    borderRadius: 5,
-    paddingVertical: 15,
-    minHeight: 48,
+    borderRadius: 8,
+    paddingVertical: 18,
+    minHeight: 58,
     alignItems: 'center',
     backgroundColor: C.ORANGE,
     backgroundImage: 'linear-gradient(90deg, #FF6A00 0%, #FFD000 54%, #29B6E0 100%)',
@@ -1284,11 +1284,11 @@ const landing = StyleSheet.create({
   submitBtnText: {
     ...type.button,
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 19,
   },
   challengeImage: {
-    width: 330,
-    minHeight: 164,
+    width: 430,
+    minHeight: 230,
     borderRadius: 6,
     backgroundColor: 'rgba(5, 9, 20, 0.26)',
   },
@@ -1302,47 +1302,47 @@ const landing = StyleSheet.create({
   sectionTitle: {
     ...type.heading,
     color: '#FFFFFF',
-    fontSize: 23,
-    lineHeight: 30,
+    fontSize: 32,
+    lineHeight: 40,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 28,
   },
   shareGrid: {
     width: '100%' as any,
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 18,
+    gap: 24,
   },
   shareGridMobile: {
     flexWrap: 'wrap',
     gap: 12,
   },
   shareCard: {
-    width: 170,
+    width: 240,
     backgroundColor: '#F8FAFC',
-    borderRadius: 6,
+    borderRadius: 8,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
   },
   shareImage: {
     width: '100%' as any,
-    height: 112,
+    height: 164,
     backgroundColor: '#111827',
   },
   shareInfo: {
-    padding: 8,
+    padding: 14,
   },
   shareUserRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
+    gap: 9,
+    marginBottom: 8,
   },
   shareAvatar: {
-    width: 17,
-    height: 17,
-    borderRadius: 9,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: C.ORANGE,
@@ -1350,31 +1350,31 @@ const landing = StyleSheet.create({
   shareAvatarText: {
     ...type.label,
     color: '#FFFFFF',
-    fontSize: 9,
+    fontSize: 13,
   },
   shareUser: {
     ...type.label,
     color: '#111827',
-    fontSize: 10,
+    fontSize: 14,
     flex: 1,
   },
   shareCaption: {
     ...type.subtext,
     color: '#334155',
-    fontSize: 9,
-    marginBottom: 5,
+    fontSize: 13,
+    marginBottom: 8,
   },
   shareMeta: {
     ...type.label,
     color: '#F55B09',
-    fontSize: 9,
+    fontSize: 13,
   },
   browseBtn: {
-    marginTop: 20,
-    minWidth: 150,
-    borderRadius: 6,
-    paddingVertical: 11,
-    paddingHorizontal: 24,
+    marginTop: 28,
+    minWidth: 190,
+    borderRadius: 8,
+    paddingVertical: 15,
+    paddingHorizontal: 32,
     alignItems: 'center',
     backgroundColor: C.ORANGE,
     backgroundImage: 'linear-gradient(90deg, #FF6A00 0%, #FFD000 54%, #29B6E0 100%)',
@@ -1382,7 +1382,7 @@ const landing = StyleSheet.create({
   browseBtnText: {
     ...type.button,
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 16,
   },
   benefits: {
     width: '100%' as any,
@@ -1400,7 +1400,7 @@ const landing = StyleSheet.create({
     width: '100%' as any,
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 46,
+    gap: 64,
   },
   benefitGridMobile: {
     flexDirection: 'column',
@@ -1410,7 +1410,7 @@ const landing = StyleSheet.create({
   },
   benefitItem: {
     flex: 1,
-    maxWidth: 250,
+    maxWidth: 320,
     alignItems: 'center',
   },
   benefitItemMobile: {
@@ -1423,31 +1423,31 @@ const landing = StyleSheet.create({
     marginBottom: 18,
   },
   benefitIcon: {
-    width: 112,
-    height: 72,
+    width: 160,
+    height: 108,
     marginBottom: 10,
     alignSelf: 'center',
   },
   benefitTitle: {
     ...type.heading,
     color: '#FFFFFF',
-    fontSize: 17,
-    lineHeight: 22,
+    fontSize: 28,
+    lineHeight: 34,
     textAlign: 'center',
     marginBottom: 6,
   },
   benefitBody: {
     ...type.subtext,
     color: '#D5DEEF',
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 18,
+    lineHeight: 27,
     textAlign: 'center',
     maxWidth: 300,
   },
   copyright: {
     ...type.subtext,
     color: 'rgba(255,255,255,0.72)',
-    fontSize: 10,
+    fontSize: 13,
     textAlign: 'center',
     marginTop: 8,
   },
@@ -1770,7 +1770,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
   },
-  statNum: { ...type.heading, color: C.TEXT, fontSize: 22 },
+  statNum: { ...type.heading, color: C.TEXT, fontSize: 25 },
   statLabel: { ...type.subtext, color: '#FFFFFF', fontSize: 12, marginTop: 4 },
 
   // ===== CHALLENGE CARD =====
@@ -2246,12 +2246,12 @@ const bottom = StyleSheet.create({
 const pm = StyleSheet.create({
   wrap: {
     backgroundColor: '#343747',
-    paddingHorizontal: 14,
-    paddingTop: 10,
+    paddingHorizontal: 16,
+    paddingTop: 12,
     paddingBottom: 0,
   },
   welcome: {
-    height: 56,
+    height: 64,
     borderRadius: 8,
     overflow: 'hidden',
     marginBottom: 18,
@@ -2269,8 +2269,8 @@ const pm = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: 'rgba(6,10,22,0.5)',
   },
-  welcomeTitle: { ...type.heading, color: '#FFFFFF', fontSize: 12 },
-  welcomeDate: { ...type.subtext, color: '#B8C0D0', fontSize: 8, marginTop: 3 },
+  welcomeTitle: { ...type.heading, color: '#FFFFFF', fontSize: 14 },
+  welcomeDate: { ...type.subtext, color: '#B8C0D0', fontSize: 9, marginTop: 3 },
   alertPill: {
     backgroundColor: '#0A2235',
     borderWidth: 1,
@@ -2279,7 +2279,7 @@ const pm = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  alertText: { ...type.button, color: C.TEAL, fontSize: 8 },
+  alertText: { ...type.button, color: C.TEAL, fontSize: 9 },
 
   challengeCard: {
     backgroundColor: '#272B3B',
@@ -2289,19 +2289,19 @@ const pm = StyleSheet.create({
     borderColor: '#3A4056',
     marginBottom: 14,
   },
-  challengeImg: { width: '100%', height: 162, backgroundColor: '#1A1E30' },
-  challengeBody: { padding: 12 },
+  challengeImg: { width: '100%', height: 178, backgroundColor: '#1A1E30' },
+  challengeBody: { padding: 14 },
   challengeHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  challengeTitle: { ...type.heading, color: '#FFFFFF', fontSize: 13, flex: 1 },
+  challengeTitle: { ...type.heading, color: '#FFFFFF', fontSize: 15, flex: 1 },
   activePill: {
     backgroundColor: C.TEAL,
     borderRadius: 10,
     paddingHorizontal: 9,
     paddingVertical: 4,
   },
-  activeText: { ...type.button, color: '#15202C', fontSize: 7 },
-  challengeDesc: { ...type.subtext, color: '#D5DAE6', fontSize: 9, lineHeight: 14, marginBottom: 11 },
-  kicker: { ...type.label, color: '#FFFFFF', fontSize: 8, marginBottom: 8 },
+  activeText: { ...type.button, color: '#15202C', fontSize: 8 },
+  challengeDesc: { ...type.subtext, color: '#D5DAE6', fontSize: 10, lineHeight: 16, marginBottom: 12 },
+  kicker: { ...type.label, color: '#FFFFFF', fontSize: 9, marginBottom: 8 },
   metaGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -2309,8 +2309,8 @@ const pm = StyleSheet.create({
     marginBottom: 12,
   },
   metaBox: { width: '47%' as any },
-  metaLabel: { ...type.subtext, color: '#B7BDCB', fontSize: 8, marginBottom: 3 },
-  metaValue: { ...type.label, color: '#FFFFFF', fontSize: 8 },
+  metaLabel: { ...type.subtext, color: '#B7BDCB', fontSize: 9, marginBottom: 3 },
+  metaValue: { ...type.label, color: '#FFFFFF', fontSize: 9 },
   submitBtn: {
     flex: 1,
     minHeight: 50,
@@ -2348,7 +2348,7 @@ const pm = StyleSheet.create({
     borderColor: 'rgba(255, 208, 0, 0.18)',
   } as any,
   quoteImage: { opacity: 0.45 },
-  quoteText: { ...type.heading, color: '#FFFFFF', fontSize: 12, fontStyle: 'italic', lineHeight: 17, textAlign: 'center' },
+  quoteText: { ...type.heading, color: '#FFFFFF', fontSize: 13, fontStyle: 'italic', lineHeight: 19, textAlign: 'center' },
 
   statRow: { flexDirection: 'row', gap: 10, marginBottom: 18 },
   statCard: {
@@ -2356,7 +2356,7 @@ const pm = StyleSheet.create({
     backgroundColor: '#272B40',
     borderRadius: 4,
     padding: 10,
-    minHeight: 82,
+    minHeight: 92,
     borderWidth: 1,
     borderColor: '#363B55',
   },
@@ -2370,13 +2370,13 @@ const pm = StyleSheet.create({
     marginBottom: 8,
   },
   statIconText: { ...type.button, color: C.TEAL, fontSize: 10 },
-  statValue: { ...type.heading, color: '#FFFFFF', fontSize: 13 },
-  statLabel: { ...type.subtext, color: '#B7BDCB', fontSize: 8, lineHeight: 11, marginTop: 2 },
+  statValue: { ...type.heading, color: '#FFFFFF', fontSize: 15 },
+  statLabel: { ...type.subtext, color: '#B7BDCB', fontSize: 9, lineHeight: 12, marginTop: 2 },
 
-  sectionTitle: { ...type.heading, color: '#FFFFFF', fontSize: 12, marginBottom: 10, marginTop: 2 },
+  sectionTitle: { ...type.heading, color: '#FFFFFF', fontSize: 14, marginBottom: 12, marginTop: 4 },
   submission: {
     backgroundColor: '#272B40',
-    borderRadius: 6,
+    borderRadius: 8,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#363B55',
@@ -2422,7 +2422,7 @@ const li = StyleSheet.create({
     paddingHorizontal: 28,
     marginBottom: 28,
   },
-  sectionTitle: { ...type.heading, color: C.TEXT, fontSize: 21, marginBottom: 16 },
+  sectionTitle: { ...type.heading, color: C.TEXT, fontSize: 23, marginBottom: 18 },
 
   // Welcome Banner
   welcomeBanner: {
@@ -2433,7 +2433,7 @@ const li = StyleSheet.create({
     alignSelf: 'center',
     marginHorizontal: 28,
     marginTop: 12,
-    height: 120,
+    height: 136,
     marginBottom: 24,
   },
   welcomeOverlay: {
@@ -2444,8 +2444,8 @@ const li = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.35)',
     borderRadius: 16,
   },
-  welcomeTitle: { ...type.heading, color: '#FFFFFF', fontSize: 22 },
-  welcomeDate: { ...type.subtext, color: '#94A3B8', fontSize: 13, marginTop: 4 },
+  welcomeTitle: { ...type.heading, color: '#FFFFFF', fontSize: 25 },
+  welcomeDate: { ...type.subtext, color: '#94A3B8', fontSize: 14, marginTop: 5 },
   noAlertsBadge: {
     backgroundColor: '#0A2235',
     borderWidth: 1,
@@ -2454,7 +2454,7 @@ const li = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
   },
-  noAlertsText: { ...type.button, color: C.TEAL, fontSize: 12 },
+  noAlertsText: { ...type.button, color: C.TEAL, fontSize: 13 },
 
   // Active Challenge Card
   challengeCard: {
@@ -2465,15 +2465,15 @@ const li = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#363B55',
   },
-  challengeCover: { width: '42%' as any, minHeight: 360, backgroundColor: '#1A1E30' },
-  challengeInfo: { flex: 1, padding: 26, justifyContent: 'center' },
+  challengeCover: { width: '42%' as any, minHeight: 400, backgroundColor: '#1A1E30' },
+  challengeInfo: { flex: 1, padding: 30, justifyContent: 'center' },
   challengeTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
   },
-  challengeTitle: { ...type.heading, color: C.TEXT, fontSize: 24, flex: 1 },
+  challengeTitle: { ...type.heading, color: C.TEXT, fontSize: 27, flex: 1 },
   activeBadge: {
     backgroundColor: C.TEAL,
     borderRadius: 12,
@@ -2481,8 +2481,8 @@ const li = StyleSheet.create({
     paddingVertical: 4,
     marginLeft: 8,
   },
-  activeBadgeText: { ...type.button, color: '#FFFFFF', fontSize: 11 },
-  challengeDesc: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 15, lineHeight: 23, marginBottom: 14 },
+  activeBadgeText: { ...type.button, color: '#FFFFFF', fontSize: 12 },
+  challengeDesc: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 16, lineHeight: 25, marginBottom: 16 },
   challengeCategoryLabel: {
     ...type.label,
     color: C.TEXT_SECONDARY,
@@ -2510,9 +2510,9 @@ const li = StyleSheet.create({
     borderColor: C.CARD_BORDER,
   },
   miniIcon: { fontSize: 24, marginBottom: 4 },
-  miniLabel: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 12 },
-  miniValue: { ...type.heading, color: C.TEXT, fontSize: 20, marginTop: 4 },
-  miniTagValue: { ...type.heading, color: C.TEAL, fontSize: 16, marginTop: 6, textAlign: 'center' },
+  miniLabel: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 13 },
+  miniValue: { ...type.heading, color: C.TEXT, fontSize: 23, marginTop: 5 },
+  miniTagValue: { ...type.heading, color: C.TEAL, fontSize: 18, marginTop: 7, textAlign: 'center' },
 
   challengeActions: {
     flexDirection: 'row',
@@ -2530,7 +2530,7 @@ const li = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
   } as any,
-  submitBtnText: { ...type.button, color: '#FFFFFF', fontSize: 16 },
+  submitBtnText: { ...type.button, color: '#FFFFFF', fontSize: 18 },
   browseBtn: {
     flex: 1,
     minWidth: 190,
@@ -2541,7 +2541,7 @@ const li = StyleSheet.create({
     borderColor: C.TEAL,
     backgroundColor: 'rgba(84,223,182,0.08)',
   },
-  browseBtnText: { ...type.button, color: C.TEAL, fontSize: 16 },
+  browseBtnText: { ...type.button, color: C.TEAL, fontSize: 18 },
 
   // Quote banner
   quoteBanner: {
@@ -2559,7 +2559,7 @@ const li = StyleSheet.create({
   quoteText: {
     ...type.subtext,
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 17,
     fontStyle: 'italic',
     textAlign: 'center',
     lineHeight: 22,
@@ -2577,9 +2577,9 @@ const li = StyleSheet.create({
     borderColor: C.CARD_BORDER,
   },
   statIcon: { fontSize: 24, marginBottom: 6 },
-  statNum: { ...type.heading, color: C.TEXT, fontSize: 22 },
-  statLabel: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 11, marginTop: 4, textAlign: 'center' },
-  statNote: { ...type.subtext, color: C.TEAL, fontSize: 10, marginTop: 4, textAlign: 'center' },
+  statNum: { ...type.heading, color: C.TEXT, fontSize: 25 },
+  statLabel: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 13, marginTop: 5, textAlign: 'center' },
+  statNote: { ...type.subtext, color: C.TEAL, fontSize: 12, marginTop: 5, textAlign: 'center' },
 
   // Community submissions (full-width)
   communityGrid: {
@@ -2596,12 +2596,12 @@ const li = StyleSheet.create({
     borderColor: C.CARD_BORDER,
     marginBottom: 16,
   },
-  communityImg: { width: '100%' as any, height: 190, backgroundColor: '#1A1E30' },
+  communityImg: { width: '100%' as any, height: 220, backgroundColor: '#1A1E30' },
   communityInfo: { padding: 14 },
-  communityUser: { ...type.label, color: C.TEAL, fontSize: 14, marginBottom: 2 },
-  communityTitle: { ...type.label, color: C.TEXT, fontSize: 15, marginBottom: 8 },
+  communityUser: { ...type.label, color: C.TEAL, fontSize: 15, marginBottom: 3 },
+  communityTitle: { ...type.label, color: C.TEXT, fontSize: 17, marginBottom: 9 },
   communityStats: { flexDirection: 'row', gap: 16 },
-  communityStat: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 13 },
+  communityStat: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 14 },
 
   // Quick actions (2x2)
   quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
@@ -2622,8 +2622,8 @@ const li = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 12,
   },
-  quickTitle: { ...type.heading, color: C.TEXT, fontSize: 14, marginTop: 0 },
-  quickDesc: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 12, marginTop: 4 },
+  quickTitle: { ...type.heading, color: C.TEXT, fontSize: 16, marginTop: 0 },
+  quickDesc: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 13, marginTop: 5, lineHeight: 18 },
 
   // Footer
   footer: {

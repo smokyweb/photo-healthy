@@ -175,15 +175,15 @@ const styles = StyleSheet.create({
   },
   brandTitle: {
     color: C.TEXT,
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 22,
+    lineHeight: 28,
     fontWeight: '800',
     marginBottom: 14,
   },
   brandCopy: {
     color: C.TEXT_SECONDARY,
-    fontSize: 12,
-    lineHeight: 20,
+    fontSize: 17,
+    lineHeight: 26,
   },
   col: {
     flex: 1,
@@ -206,19 +206,19 @@ const styles = StyleSheet.create({
   },
   colTitle: {
     color: C.TEXT,
-    fontSize: 12,
+    fontSize: 17,
     fontWeight: '700',
-    lineHeight: 18,
+    lineHeight: 24,
     marginBottom: 14,
   },
   link: {
     color: C.TEXT_SECONDARY,
-    fontSize: 11,
-    lineHeight: 18,
+    fontSize: 16,
+    lineHeight: 25,
   },
   linkMobile: {
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 17,
+    lineHeight: 26,
   },
   linkTouch: {
     alignSelf: 'flex-start',
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   },
   copy: {
     color: C.TEXT_MUTED,
-    fontSize: 11,
+    fontSize: 14,
     textAlign: 'center',
   },
 });
