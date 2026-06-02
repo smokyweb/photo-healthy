@@ -42,18 +42,24 @@ const filterMatches = (value: string, selected: string) => {
   const s = clean(selected);
   return v === s || v.includes(s) || s.includes(v);
 };
+const isInactiveFlag = (value: any) => value === false || value === 0 || value === '0';
 const userChallengeStatus = (challenge: any) => challenge.user_challenge?.status || null;
 const hasHardStopExpired = (challenge: any) => (
   !!challenge.end_date && new Date(challenge.end_date).getTime() < Date.now()
 );
+const isGloballyArchived = (challenge: any) =>
+  challenge.status === 'archived' || isInactiveFlag(challenge.is_active) || hasHardStopExpired(challenge);
 const isOpenChallenge = (challenge: any) => {
-  if (!(challenge.is_active || challenge.status === 'active')) return false;
-  return !hasHardStopExpired(challenge);
+  if (challenge.status === 'upcoming') return false;
+  return !isGloballyArchived(challenge);
 };
 const hasMissedCommitmentWindow = (challenge: any) =>
   userChallengeStatus(challenge) === 'active' && Number(challenge.user_challenge?.days_remaining ?? 0) < 0;
 const isAvailableChallenge = (challenge: any) =>
-  isOpenChallenge(challenge) && !challenge.user_challenge;
+  isOpenChallenge(challenge) &&
+  !isActiveUserChallenge(challenge) &&
+  !isCompletedUserChallenge(challenge) &&
+  !hasMissedCommitmentWindow(challenge);
 const isActiveUserChallenge = (challenge: any) =>
   userChallengeStatus(challenge) === 'active' &&
   isOpenChallenge(challenge) &&
@@ -63,7 +69,7 @@ const isCompletedUserChallenge = (challenge: any) =>
   userChallengeStatus(challenge) === 'completed' || !!challenge.user_challenge?.has_submission;
 const isArchivedUserChallenge = (challenge: any) =>
   !isCompletedUserChallenge(challenge) &&
-  (challenge.status === 'archived' || challenge.is_active === false || hasHardStopExpired(challenge) || hasMissedCommitmentWindow(challenge));
+  (isGloballyArchived(challenge) || hasMissedCommitmentWindow(challenge));
 const statusFilteredChallenges = (list: any[], status: string) => {
   if (status === 'active') return list.filter(isActiveUserChallenge);
   if (status === 'completed') return list.filter(isCompletedUserChallenge);

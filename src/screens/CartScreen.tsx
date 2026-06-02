@@ -17,12 +17,25 @@ export default function CartScreen() {
   const isDesktop = width >= 1100;
   const isMobile = width < 1100;
 
+  const handleBack = () => {
+    if (navigation.canGoBack?.()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate('Shop' as never);
+  };
+
   const handleCheckout = async () => {
     setLoading(true);
     try {
       const data = await createCheckoutSession(
         items.map(i => ({ id: i.id, quantity: i.quantity, size: i.size || null })),
-        { couponCode: couponCode.trim(), giftCode: giftCode.trim() },
+        {
+          couponCode: couponCode.trim(),
+          giftCode: giftCode.trim(),
+          successUrl: `${(window as any).location.origin}/checkout/success?ref={CHECKOUT_SESSION_ID}`,
+          cancelUrl: `${(window as any).location.origin}/cart`,
+        },
       );
       if (data?.url) { (window as any).location.href = data.url; }
       else { clearCart(); navigation.navigate('CheckoutSuccess' as never); }
@@ -33,7 +46,7 @@ export default function CartScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={{ flexGrow: 1 }}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={handleBack}>
           <Text style={styles.back}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>🛒 Cart ({itemCount})</Text>

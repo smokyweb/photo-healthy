@@ -51,10 +51,13 @@ function tagDisplayValue(normalized: string, fallback?: string) {
   return String(value || '').split(',')[0].replace(/^[^\w]+/u, '').trim() || 'Not set';
 }
 
+const isInactiveFlag = (value: any) => value === false || value === 0 || value === '0';
+
 export default function ChallengeCard({ challenge, onPress }: Props) {
   const daysLeft = getDaysLeft(challenge.end_date);
   const hardStopExpired = !!challenge.end_date && new Date(challenge.end_date).getTime() < Date.now();
-  const isOpen = (challenge.is_active || challenge.status === 'active') && !hardStopExpired;
+  const isGloballyArchived = challenge.status === 'archived' || isInactiveFlag(challenge.is_active) || hardStopExpired;
+  const isOpen = challenge.status !== 'upcoming' && !isGloballyArchived;
   const isUpcoming = challenge.status === 'upcoming';
   const imageUrl = fullUrl(challenge.cover_image_url || challenge.cover_image || '');
   const participantCount = challenge.participant_count ?? challenge.submission_count ?? 0;
@@ -62,7 +65,7 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
   const personalDaysLeft = Number(challenge.user_challenge?.days_remaining ?? 0);
   const hasMissedDeadline = userStatus === 'active' && personalDaysLeft < 0;
   const isCompleted = userStatus === 'completed' || !!challenge.user_challenge?.has_submission;
-  const isArchived = !isCompleted && (challenge.status === 'archived' || Number(challenge.is_active) === 0 || hardStopExpired || hasMissedDeadline);
+  const isArchived = !isCompleted && (isGloballyArchived || hasMissedDeadline);
   const isActive = userStatus === 'active' && !isArchived && isOpen;
   const newSubmissionCount = Number(challenge.user_challenge?.new_submission_count || 0);
   const expiringSoon = !isCompleted && !isArchived && (

@@ -2485,11 +2485,19 @@ app.post('/api/checkout/create-session', async (req, res) => {
       }
     }
 
+    const stripeImageUrl = (url) => {
+      if (!url) return null;
+      if (/^https?:\/\//i.test(url)) return url;
+      const base = process.env.APP_URL || 'https://photoai.betaplanets.com';
+      return `${base.replace(/\/$/, '')}/${String(url).replace(/^\//, '')}`;
+    };
+
     const line_items = items
       .filter(i => productMap[i.id])
       .map(i => {
         const p = productMap[i.id];
-        const imgArr = p.image_url ? [p.image_url] : [];
+        const imgUrl = stripeImageUrl(p.image_url);
+        const imgArr = imgUrl ? [imgUrl] : [];
         return {
           price_data: {
             currency: 'usd',
