@@ -54,7 +54,11 @@ function tagDisplayValue(normalized: string, fallback?: string) {
 }
 
 const isInactiveFlag = (value: any) => value === false || value === 0 || value === '0';
-const isEnabledFlag = (value: any) => value === true || value === 1 || value === '1';
+const isEnabledFlag = (value: any) => {
+  if (value === true || value === 1) return true;
+  const normalized = String(value ?? '').trim().toLowerCase();
+  return ['1', 'true', 'yes', 'y', 'pro', 'pro_only', 'pro-only'].includes(normalized);
+};
 
 export default function ChallengeCard({ challenge, onPress }: Props) {
   const daysLeft = getDaysLeft(challenge.end_date);
@@ -122,7 +126,7 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
           </View>
           {isProOnly && (
             <View style={styles.proBadge}>
-              <Text style={styles.proBadgeText}>PRO</Text>
+              <Text style={styles.proBadgeText}>Pro Only</Text>
             </View>
           )}
         </View>
@@ -215,11 +219,22 @@ const styles = StyleSheet.create({
   image: { width: '100%', height: '100%' },
   imagePlaceholder: { backgroundColor: C.CARD_BG2, alignItems: 'center', justifyContent: 'center' },
   placeholderText: { color: C.TEXT_MUTED, fontSize: 14, fontWeight: '700' },
-  overlayBadges: { position: 'absolute', top: 14, right: 14, flexDirection: 'row', gap: 6 },
+  overlayBadges: { position: 'absolute', top: 14, right: 14, left: 14, flexDirection: 'row', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 7 },
   statusBadge: { borderRadius: borderRadius.pill, paddingHorizontal: 10, paddingVertical: 5 },
   statusBadgeText: { fontSize: 12, fontWeight: '800' },
-  proBadge: { backgroundColor: C.ORANGE_MID, borderRadius: borderRadius.sm, paddingHorizontal: 8, paddingVertical: 5 },
-  proBadgeText: { color: '#000', fontSize: 12, fontWeight: '800' },
+  proBadge: {
+    backgroundColor: C.ORANGE,
+    borderRadius: borderRadius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#FFD000',
+    shadowColor: '#000000',
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  proBadgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
   enrolledBadge: {
     position: 'absolute',
     bottom: 10,

@@ -40,6 +40,14 @@ const isJoinableChallenge = (challenge: any) => {
   return new Date(challenge.end_date).getTime() >= Date.now();
 };
 
+const isProOnlyChallenge = (challenge: any) => {
+  if (!challenge) return false;
+  const value = challenge.is_pro_only ?? challenge.pro_only ?? challenge.requires_pro;
+  if (value === true || value === 1) return true;
+  const normalized = String(value ?? '').trim().toLowerCase();
+  return ['1', 'true', 'yes', 'y', 'pro', 'pro_only', 'pro-only'].includes(normalized);
+};
+
 const PAGE_MAX_WIDTH = 1120;
 const FONT_LEXEND = 'Lexend';
 const FONT_INTER = 'Inter';
@@ -414,6 +422,11 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userStats, days
               <View style={li.activeBadge}>
                 <Text style={li.activeBadgeText}>Active Challenge</Text>
               </View>
+              {isProOnlyChallenge(featured) && (
+                <View style={li.proOnlyBadge}>
+                  <Text style={li.proOnlyText}>Pro Only</Text>
+                </View>
+              )}
             </View>
             <Text style={li.challengeDesc} numberOfLines={2}>
               {featured.description || 'Capture the breathtaking beauty of golden hour. Show us how the warm, soft light transforms ordinary scenes.'}
@@ -644,6 +657,9 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, userStats
           <View style={pm.challengeHead}>
             <Text style={pm.challengeTitle}>{challenge.title}</Text>
             <View style={pm.activePill}><Text style={pm.activeText}>Active Challenge</Text></View>
+            {isProOnlyChallenge(challenge) && (
+              <View style={pm.proOnlyPill}><Text style={pm.proOnlyText}>Pro Only</Text></View>
+            )}
           </View>
           <Text style={pm.challengeDesc} numberOfLines={3}>{challenge.description}</Text>
           <Text style={pm.kicker}>Challenge Category</Text>
@@ -873,6 +889,9 @@ const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation
               <View style={landing.challengeHeaderRow}>
                 <AssetView source={LOGO_IMG} style={landing.challengeIcon} resizeMode="contain" />
                 <Text style={landing.challengeKicker}>Photo Challenge</Text>
+                {isProOnlyChallenge(featured) && (
+                  <View style={landing.proOnlyBadge}><Text style={landing.proOnlyText}>Pro Only</Text></View>
+                )}
               </View>
               <View style={[landing.challengeBody, isMobile && landing.challengeBodyMobile]}>
                 <View style={landing.challengeInfo}>
@@ -1292,6 +1311,15 @@ const landing = StyleSheet.create({
     width: 42,
     height: 42,
   },
+  proOnlyBadge: {
+    backgroundColor: C.ORANGE,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#FFD000',
+  },
+  proOnlyText: { ...type.button, color: '#FFFFFF', fontSize: 12 },
   challengeKicker: {
     ...type.heading,
     color: '#FFFFFF',
@@ -2361,6 +2389,15 @@ const pm = StyleSheet.create({
     paddingVertical: 4,
   },
   activeText: { ...type.button, color: '#15202C', fontSize: 8 },
+  proOnlyPill: {
+    backgroundColor: C.ORANGE,
+    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#FFD000',
+  },
+  proOnlyText: { ...type.button, color: '#FFFFFF', fontSize: 8 },
   challengeDesc: { ...type.subtext, color: '#D5DAE6', fontSize: 10, lineHeight: 16, marginBottom: 12 },
   kicker: { ...type.label, color: '#FFFFFF', fontSize: 9, marginBottom: 8 },
   metaGrid: {
@@ -2577,6 +2614,16 @@ const li = StyleSheet.create({
     marginLeft: 8,
   },
   activeBadgeText: { ...type.button, color: '#FFFFFF', fontSize: 12 },
+  proOnlyBadge: {
+    backgroundColor: C.ORANGE,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginLeft: 8,
+    borderWidth: 1,
+    borderColor: '#FFD000',
+  },
+  proOnlyText: { ...type.button, color: '#FFFFFF', fontSize: 12 },
   challengeDesc: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 16, lineHeight: 25, marginBottom: 16 },
   challengeCategoryLabel: {
     ...type.label,

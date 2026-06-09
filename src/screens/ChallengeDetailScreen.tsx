@@ -17,6 +17,12 @@ const BASE = 'https://photoai.betaplanets.com';
 const fullUrl = (url?: string | null) =>
   url ? (url.startsWith('http') ? url : BASE + url) : null;
 
+const isEnabledFlag = (value: any) => {
+  if (value === true || value === 1) return true;
+  const normalized = String(value ?? '').trim().toLowerCase();
+  return ['1', 'true', 'yes', 'y', 'pro', 'pro_only', 'pro-only'].includes(normalized);
+};
+
 function formatDate(dateStr?: string) {
   if (!dateStr) return '';
   return new Date(dateStr).toLocaleDateString('en-US', {
@@ -93,7 +99,7 @@ export default function ChallengeDetailScreen() {
       navigation.navigate('Register' as never);
       return;
     }
-    if (challenge?.is_pro_only && !isPro) {
+    if (isEnabledFlag(challenge?.is_pro_only) && !isPro) {
       Alert.alert(
         'Pro Members Only',
         'This challenge is exclusive to Pro members. Upgrade to access all Pro challenges.',
@@ -154,6 +160,7 @@ export default function ChallengeDetailScreen() {
       ? Math.max(0, Math.floor((new Date(challenge.end_date).getTime() - Date.now()) / 86400000))
       : null;
   const isPro = access?.isPro;
+  const isProOnly = isEnabledFlag(challenge?.is_pro_only) || isEnabledFlag(challenge?.pro_only) || isEnabledFlag(challenge?.requires_pro);
   const remainingSubmissions = access?.remainingSubmissions;
   const hasPartner = !!challenge.partner_url;
   const isEnrolled = !!enrollment?.enrolled;
@@ -240,7 +247,14 @@ export default function ChallengeDetailScreen() {
         {/* Info Panel */}
         <View style={[styles.infoPanel, isDesktop && styles.infoPanelDesktop]}>
           {/* Title */}
-          <Text style={styles.infoTitle}>{challenge.title}</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.infoTitle}>{challenge.title}</Text>
+            {isProOnly && (
+              <View style={styles.proOnlyBadge}>
+                <Text style={styles.proOnlyText}>Pro Only</Text>
+              </View>
+            )}
+          </View>
 
           {/* Date range */}
           {(challenge.start_date || challenge.end_date) && (
@@ -270,6 +284,7 @@ export default function ChallengeDetailScreen() {
               { label: 'Days Left', val: daysLeft !== null ? String(daysLeft) : '—' },
               { label: 'Submissions', val: countText(submissionDisplayCount) },
               { label: 'Comments', val: countText(commentDisplayCount) },
+              ...(isProOnly ? [{ label: 'Access', val: 'Pro Only' }] : []),
             ].map(({ label, val }) => (
               <View key={label} style={styles.statItem}>
                 <Text style={styles.statLabel}>{label}</Text>
@@ -288,8 +303,8 @@ export default function ChallengeDetailScreen() {
           {/* Enrollment / Submit flow */}
           {isActive && !isEnrolled && (
             <GradientButton
-              label={enrolling ? 'Joining...' : challenge?.is_pro_only && !isPro ? 'Pro Members Only' : 'Join Challenge'}
-              variant={challenge?.is_pro_only && !isPro ? 'outline' : 'primary'}
+              label={enrolling ? 'Joining...' : isProOnly && !isPro ? 'Pro Members Only' : 'Join Challenge'}
+              variant={isProOnly && !isPro ? 'outline' : 'primary'}
               onPress={handleEnterChallenge}
               loading={enrolling}
               disabled={enrolling}
@@ -546,13 +561,35 @@ const styles = StyleSheet.create({
   // Info panel
   infoPanel: {},
   infoPanelDesktop: { flex: 55 },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 8,
+  },
   infoTitle: {
     color: C.TEXT,
     fontSize: 26,
     fontWeight: '800',
     fontFamily: "'Lexend', sans-serif",
-    marginBottom: 8,
     lineHeight: 34,
+    flexShrink: 1,
+  } as any,
+  proOnlyBadge: {
+    backgroundColor: C.ORANGE,
+    borderRadius: borderRadius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: '#FFD000',
+    marginTop: 2,
+  },
+  proOnlyText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
   } as any,
   dateRange: {
     color: C.TEXT_MUTED,
