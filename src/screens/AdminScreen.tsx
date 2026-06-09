@@ -20,8 +20,10 @@ import {
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Input from '../components/Input';
+import PhotoLightbox from '../components/PhotoLightbox';
 import { C, borderRadius } from '../theme';
 import { DEFAULT_TAXONOMY } from '../constants/taxonomy';
+import { addWatermark } from '../utils/watermark';
 
 const TABS = ['Dashboard', 'Challenges', 'Users', 'Feed', 'Products', 'Discounts', 'Orders', 'Settings', 'Taxonomy'];
 
@@ -60,6 +62,7 @@ export default function AdminScreen() {
   const [activityItems, setActivityItems] = useState<any[]>([]);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
+  const [lightboxPhoto, setLightboxPhoto] = useState<{ uri: string; title?: string } | null>(null);
   const [submissionComments, setSubmissionComments] = useState<any[]>([]);
   const [loadingSubmComments, setLoadingSubmComments] = useState(false);
   const [editingComment, setEditingComment] = useState<{id: number, text: string} | null>(null);
@@ -1249,23 +1252,21 @@ export default function AdminScreen() {
       const response = await fetch(url, { mode: 'cors' });
       if (!response.ok) throw new Error('Download failed');
       const blob = await response.blob();
-      const objectUrl = window.URL.createObjectURL(blob);
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('Could not read photo'));
+        reader.readAsDataURL(blob);
+      });
+      const watermarked = await addWatermark(dataUrl);
       const anchor = document.createElement('a');
-      anchor.href = objectUrl;
+      anchor.href = watermarked;
       anchor.download = filename;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
-      window.URL.revokeObjectURL(objectUrl);
-    } catch {
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = filename;
-      anchor.target = '_blank';
-      anchor.rel = 'noopener noreferrer';
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
+    } catch (e: any) {
+      Alert.alert('Download failed', e?.message || 'Could not prepare a watermarked photo download.');
     }
   };
 
@@ -1321,7 +1322,13 @@ export default function AdminScreen() {
             return (
               <View style={{ marginBottom: 12 }}>
                 <View style={{ position: 'relative', marginBottom: 10 }}>
-                  <Image source={{ uri: activePhotoUrl }} style={{ width: '100%', height: 380, borderRadius: 12, backgroundColor: C.CARD_BG2, objectFit: 'contain' } as any} resizeMode="contain" />
+                  <TouchableOpacity
+                    onPress={() => setLightboxPhoto({ uri: activePhotoUrl, title: sub.title || 'Submission photo' })}
+                    activeOpacity={0.9}
+                    accessibilityLabel="Open photo larger"
+                  >
+                    <Image source={{ uri: activePhotoUrl }} style={{ width: '100%', height: 380, borderRadius: 12, backgroundColor: C.CARD_BG2, objectFit: 'contain' } as any} resizeMode="contain" />
+                  </TouchableOpacity>
                   {photoUrls.length > 1 ? (
                     <>
                       <TouchableOpacity
@@ -2586,72 +2593,80 @@ export default function AdminScreen() {
   );
 
   return (
-    <View style={styles.screen}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Admin Panel</Text>
-      </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={true} persistentScrollbar
-        style={styles.tabBar}
-        contentContainerStyle={styles.tabBarContent}
-      >
-        {(() => {
-          const tabBadges = getAdminBadgeCounts();
-          return TABS.map(tab => {
-            const rawBadge = tabBadges[tab] || 0;
-            const badge = rawBadge > (seenTabBadges[tab] || 0) ? rawBadge : 0;
-            return (
-              <TouchableOpacity
-                key={tab}
-                style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]}
-                onPress={() => {
-                  markAdminTabSeen(tab);
-                  setActiveTab(tab);
-                }}
-              >
-                <View style={{ position: 'relative' }}>
-                  <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
-                  {badge > 0 && (
-                    <View style={{ position: 'absolute', top: -6, right: -10, backgroundColor: '#ef4444', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}>
-                      <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{badge > 99 ? '99+' : badge}</Text>
-                    </View>
-                  )}
-                </View>
-              </TouchableOpacity>
-            );
-          });
-        })()}
-      </ScrollView>
-      {loading ? (
-        <LoadingSpinner />
-      ) : (
+    <>
+      <View style={styles.screen}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>Admin Panel</Text>
+        </View>
         <ScrollView
-          style={styles.content}
-          contentContainerStyle={activeTab === 'Orders' ? styles.ordersContentContainer : styles.contentContainer}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => { setRefreshing(true); loadTab(activeTab); }}
-              tintColor={C.ORANGE}
-            />
-          }
+          horizontal
+          showsHorizontalScrollIndicator={true} persistentScrollbar
+          style={styles.tabBar}
+          contentContainerStyle={styles.tabBarContent}
         >
-          {activeTab === 'Dashboard' && renderDashboard()}
-          {activeTab === 'Challenges' && renderChallenges()}
-          {activeTab === 'Users' && renderUsers()}
-          {activeTab === 'Feed' && renderSubmissions()}
-          {activeTab === 'Products' && renderProducts()}
-          {activeTab === 'Discounts' && renderDiscounts()}
-          {activeTab === 'Orders' && renderOrders()}
-          {activeTab === 'Settings' && renderSettings()}
-          {activeTab === 'Taxonomy' && renderTaxonomy()}
+          {(() => {
+            const tabBadges = getAdminBadgeCounts();
+            return TABS.map(tab => {
+              const rawBadge = tabBadges[tab] || 0;
+              const badge = rawBadge > (seenTabBadges[tab] || 0) ? rawBadge : 0;
+              return (
+                <TouchableOpacity
+                  key={tab}
+                  style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]}
+                  onPress={() => {
+                    markAdminTabSeen(tab);
+                    setActiveTab(tab);
+                  }}
+                >
+                  <View style={{ position: 'relative' }}>
+                    <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+                    {badge > 0 && (
+                      <View style={{ position: 'absolute', top: -6, right: -10, backgroundColor: '#ef4444', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}>
+                        <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{badge > 99 ? '99+' : badge}</Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            });
+          })()}
         </ScrollView>
-      )}
-    </View>
+        {loading ? (
+          <LoadingSpinner />
+        ) : (
+          <ScrollView
+            style={styles.content}
+            contentContainerStyle={activeTab === 'Orders' ? styles.ordersContentContainer : styles.contentContainer}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => { setRefreshing(true); loadTab(activeTab); }}
+                tintColor={C.ORANGE}
+              />
+            }
+          >
+            {activeTab === 'Dashboard' && renderDashboard()}
+            {activeTab === 'Challenges' && renderChallenges()}
+            {activeTab === 'Users' && renderUsers()}
+            {activeTab === 'Feed' && renderSubmissions()}
+            {activeTab === 'Products' && renderProducts()}
+            {activeTab === 'Discounts' && renderDiscounts()}
+            {activeTab === 'Orders' && renderOrders()}
+            {activeTab === 'Settings' && renderSettings()}
+            {activeTab === 'Taxonomy' && renderTaxonomy()}
+          </ScrollView>
+        )}
+      </View>
+      <PhotoLightbox
+        visible={!!lightboxPhoto}
+        uri={lightboxPhoto?.uri}
+        title={lightboxPhoto?.title}
+        onClose={() => setLightboxPhoto(null)}
+      />
+    </>
   );
 }
 

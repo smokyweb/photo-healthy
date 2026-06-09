@@ -10,6 +10,7 @@ import { getChallenge, getSubmissions, getUserAccess, getChallengeEnrollment, en
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
+import PhotoLightbox from '../components/PhotoLightbox';
 import { C, borderRadius } from '../theme';
 import { normalizeChallengeCategory, normalizeFeelingCategory, normalizeMovementCategory } from '../constants/taxonomy';
 
@@ -22,6 +23,10 @@ const isEnabledFlag = (value: any) => {
   const normalized = String(value ?? '').trim().toLowerCase();
   return ['1', 'true', 'yes', 'y', 'pro', 'pro_only', 'pro-only'].includes(normalized);
 };
+const isChallengeProOnly = (challenge: any) =>
+  isEnabledFlag(challenge?.is_pro_only) ||
+  isEnabledFlag(challenge?.pro_only) ||
+  isEnabledFlag(challenge?.requires_pro);
 
 function formatDate(dateStr?: string) {
   if (!dateStr) return '';
@@ -51,6 +56,7 @@ export default function ChallengeDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [subSearch, setSubSearch] = useState('');
   const [activeTagFilter, setActiveTagFilter] = useState<{ type: 'category' | 'feeling' | 'movement'; value: string } | null>(null);
+  const [lightboxPhoto, setLightboxPhoto] = useState<{ uri: string; title?: string } | null>(null);
 
   useEffect(() => {
     if (
@@ -99,7 +105,7 @@ export default function ChallengeDetailScreen() {
       navigation.navigate('Register' as never);
       return;
     }
-    if (isEnabledFlag(challenge?.is_pro_only) && !isPro) {
+    if (isChallengeProOnly(challenge) && !isPro) {
       Alert.alert(
         'Pro Members Only',
         'This challenge is exclusive to Pro members. Upgrade to access all Pro challenges.',
@@ -160,7 +166,7 @@ export default function ChallengeDetailScreen() {
       ? Math.max(0, Math.floor((new Date(challenge.end_date).getTime() - Date.now()) / 86400000))
       : null;
   const isPro = access?.isPro;
-  const isProOnly = isEnabledFlag(challenge?.is_pro_only) || isEnabledFlag(challenge?.pro_only) || isEnabledFlag(challenge?.requires_pro);
+  const isProOnly = isChallengeProOnly(challenge);
   const remainingSubmissions = access?.remainingSubmissions;
   const hasPartner = !!challenge.partner_url;
   const isEnrolled = !!enrollment?.enrolled;
@@ -236,7 +242,9 @@ export default function ChallengeDetailScreen() {
         {/* Cover image */}
         <View style={[styles.coverWrap, isDesktop && styles.coverWrapDesktop]}>
           {coverImg ? (
-            <Image source={{ uri: coverImg }} style={styles.cover} resizeMode="cover" />
+            <TouchableOpacity onPress={() => setLightboxPhoto({ uri: coverImg, title: challenge.title })} activeOpacity={0.9}>
+              <Image source={{ uri: coverImg }} style={styles.cover} resizeMode="cover" />
+            </TouchableOpacity>
           ) : (
             <View style={[styles.cover, styles.coverPlaceholder]}>
               <Text style={{ fontSize: 60 }}>🏆</Text>
@@ -331,13 +339,15 @@ export default function ChallengeDetailScreen() {
                 style={styles.actionBtn}
               />
               <View style={[styles.secondaryActionRow, isDesktop && styles.secondaryActionRowDesktop]}>
-                <GradientButton
-                  label="Become a PRO"
-                  variant="outline"
-                  pill={false}
-                  onPress={() => navigation.navigate('Subscription')}
-                  style={styles.secondaryActionBtn}
-                />
+                {isProOnly && !isPro && (
+                  <GradientButton
+                    label="Become a PRO"
+                    variant="outline"
+                    pill={false}
+                    onPress={() => navigation.navigate('Subscription')}
+                    style={styles.secondaryActionBtn}
+                  />
+                )}
                 {hasPartner && (
                   <GradientButton
                     label="Partner Link"
@@ -359,7 +369,7 @@ export default function ChallengeDetailScreen() {
             />
           )}
 
-          {!isEnrolled && (
+          {!isEnrolled && isProOnly && !isPro && (
             <GradientButton
               label="Become a PRO"
               variant="outline" pill={false}
@@ -437,36 +447,43 @@ export default function ChallengeDetailScreen() {
                   key={sub.id}
                   style={styles.subCard}
                 >
-                  <TouchableOpacity
-                    onPress={() =>
-                      navigation.navigate('SubmissionDetail' as never, {
-                        submissionId: sub.id,
-                        id: sub.id,
-                        challengeTags: {
-                          category: getSubmissionTag(sub, 'category'),
-                          feeling: getSubmissionTag(sub, 'feeling'),
-                          movement: getSubmissionTag(sub, 'movement'),
-                        },
-                      } as never)
-                    }
-                    activeOpacity={0.88}
-                  >
+                  <View>
                     {imgUrl ? (
-                      <Image source={{ uri: imgUrl }} style={styles.subImg} resizeMode="contain" />
+                      <TouchableOpacity
+                        onPress={() => setLightboxPhoto({ uri: imgUrl, title: sub.title || challenge.title })}
+                        activeOpacity={0.9}
+                        accessibilityLabel="Open photo larger"
+                      >
+                        <Image source={{ uri: imgUrl }} style={styles.subImg} resizeMode="contain" />
+                      </TouchableOpacity>
                     ) : (
                       <View style={[styles.subImg, styles.subImgPlaceholder]}>
                         <Text style={{ fontSize: 24 }}>📷</Text>
                       </View>
                     )}
-                    <View style={styles.subInfo}>
+                    <TouchableOpacity
+                      style={styles.subInfo}
+                      onPress={() =>
+                        navigation.navigate('SubmissionDetail' as never, {
+                          submissionId: sub.id,
+                          id: sub.id,
+                          challengeTags: {
+                            category: getSubmissionTag(sub, 'category'),
+                            feeling: getSubmissionTag(sub, 'feeling'),
+                            movement: getSubmissionTag(sub, 'movement'),
+                          },
+                        } as never)
+                      }
+                      activeOpacity={0.85}
+                    >
                       <Text style={styles.subUser} numberOfLines={1}>
                         @{sub.user_name || 'user'}
                       </Text>
                       <Text style={styles.subTitle} numberOfLines={1}>
                         {sub.title || 'Untitled'}
                       </Text>
-                    </View>
-                  </TouchableOpacity>
+                    </TouchableOpacity>
+                  </View>
                   <View style={styles.subInfoTags}>
                     <View style={styles.subTagRow}>
                       {subTags.map(tag => {
@@ -504,6 +521,12 @@ export default function ChallengeDetailScreen() {
       </View>
 
       <AppFooter />
+      <PhotoLightbox
+        visible={!!lightboxPhoto}
+        uri={lightboxPhoto?.uri}
+        title={lightboxPhoto?.title}
+        onClose={() => setLightboxPhoto(null)}
+      />
     </ScrollView>
   );
 }

@@ -18,7 +18,7 @@ import { C, borderRadius } from '../theme';
 const BENEFITS = [
   'Unlimited monthly challenge submissions',
   'Access to Pro-only exclusive challenges',
-  'Download your original unwatermarked photos',
+  'Download your photos with Photo Healthy watermark attribution',
   'Pro badge on your profile',
   'Access to Pro-only shop items',
   'Priority support',

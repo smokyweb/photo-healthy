@@ -9,6 +9,7 @@ import { getProducts } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
+import PhotoLightbox from '../components/PhotoLightbox';
 import { C, borderRadius } from '../theme';
 
 const BASE = 'https://photoai.betaplanets.com';
@@ -29,6 +30,7 @@ export default function ProductDetailScreen() {
   const [added, setAdded] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
+  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     getProducts()
@@ -88,7 +90,14 @@ export default function ProductDetailScreen() {
         {/* Image */}
         <View style={[styles.imageWrap, isDesktop && styles.imageWrapDesktop]}>
           {imgUrl ? (
-            <Image source={{ uri: imgUrl }} style={styles.image} resizeMode="cover" />
+            <TouchableOpacity
+              onPress={() => setLightboxPhoto(imgUrl)}
+              activeOpacity={0.9}
+              accessibilityLabel="Open product photo larger"
+              style={styles.imageTouch}
+            >
+              <Image source={{ uri: imgUrl }} style={styles.image} resizeMode="cover" />
+            </TouchableOpacity>
           ) : (
             <View style={styles.imagePlaceholder}>
               <Text style={{ fontSize: 72 }}>{product.emoji || '🛒'}</Text>
@@ -205,6 +214,12 @@ export default function ProductDetailScreen() {
       </View>
 
       <AppFooter />
+      <PhotoLightbox
+        visible={!!lightboxPhoto}
+        uri={lightboxPhoto}
+        title={name}
+        onClose={() => setLightboxPhoto(null)}
+      />
     </ScrollView>
   );
 }
@@ -223,6 +238,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden', backgroundColor: C.CARD_BG, aspectRatio: 1, marginBottom: 20,
   },
   imageWrapDesktop: { flex: 1, marginBottom: 0, maxWidth: 480 },
+  imageTouch: { width: '100%', height: '100%' },
   image: { width: '100%', height: '100%' },
   imagePlaceholder: {
     width: '100%', height: '100%', minHeight: 280,

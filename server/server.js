@@ -800,7 +800,8 @@ app.get('/api/admin/users/:id/subscription-history', adminAuth, async (req, res)
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// GET /api/submissions/:id/download â€” serve original (no watermark) to Pro subscribers who own the photo, or admins
+// GET /api/submissions/:id/download â€” serve the stored submission photo to Pro subscribers who own it, or admins.
+// Submitted photos are watermarked before upload by the web client.
 app.get('/api/submissions/:id/download', auth, async (req, res) => {
   try {
     const photo = req.query.photo === '2' ? 'photo2_url' : 'photo1_url';
@@ -814,7 +815,7 @@ app.get('/api/submissions/:id/download', auth, async (req, res) => {
     if (!req.user.is_admin) {
       const [[u]] = await pool.query('SELECT subscription_status FROM users WHERE id = ?', [req.user.id]);
       if (u?.subscription_status !== 'active') {
-        return res.status(403).json({ error: 'pro_required', message: 'Upgrade to Pro to download your original photos.' });
+        return res.status(403).json({ error: 'pro_required', message: 'Upgrade to Pro to download your photos.' });
       }
     }
     const url = sub[photo];
