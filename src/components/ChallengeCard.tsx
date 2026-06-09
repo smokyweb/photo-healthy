@@ -26,7 +26,9 @@ interface Challenge {
   end_date?: string;
   duration_days?: number;
   is_active?: boolean;
-  is_pro_only?: boolean;
+  is_pro_only?: boolean | number | string;
+  pro_only?: boolean | number | string;
+  requires_pro?: boolean | number | string;
   user_challenge?: {
     days_remaining?: number;
     status?: string;
@@ -52,6 +54,7 @@ function tagDisplayValue(normalized: string, fallback?: string) {
 }
 
 const isInactiveFlag = (value: any) => value === false || value === 0 || value === '0';
+const isEnabledFlag = (value: any) => value === true || value === 1 || value === '1';
 
 export default function ChallengeCard({ challenge, onPress }: Props) {
   const daysLeft = getDaysLeft(challenge.end_date);
@@ -83,6 +86,7 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
         : isUpcoming
           ? C.WARNING + 'dd'
           : C.SUCCESS + 'dd';
+  const isProOnly = isEnabledFlag(challenge.is_pro_only) || isEnabledFlag(challenge.pro_only) || isEnabledFlag(challenge.requires_pro);
   const rawCategory = challenge.category || challenge.challenge_category;
   const rawFeeling = challenge.feeling_category || challenge.feeling_tag || challenge.challenge_feeling_category || challenge.mood_tag;
   const rawMovement = challenge.movement_category || challenge.movement_tag || challenge.challenge_movement_category;
@@ -116,7 +120,7 @@ export default function ChallengeCard({ challenge, onPress }: Props) {
               {statusLabel}
             </Text>
           </View>
-          {!!challenge.is_pro_only && (
+          {isProOnly && (
             <View style={styles.proBadge}>
               <Text style={styles.proBadgeText}>PRO</Text>
             </View>
@@ -207,7 +211,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 4,
   },
-  imageWrap: { width: '100%', aspectRatio: 1.75, position: 'relative' },
+  imageWrap: { width: '100%', height: 220, position: 'relative' },
   image: { width: '100%', height: '100%' },
   imagePlaceholder: { backgroundColor: C.CARD_BG2, alignItems: 'center', justifyContent: 'center' },
   placeholderText: { color: C.TEXT_MUTED, fontSize: 14, fontWeight: '700' },
@@ -245,7 +249,7 @@ const styles = StyleSheet.create({
   expiringBadge: { backgroundColor: C.ORANGE + '22', borderColor: C.ORANGE + '88' },
   newSubmissionBadge: { backgroundColor: C.TEAL + '22', borderColor: C.TEAL + '88' },
   noticeText: { color: C.TEXT, fontSize: 11, fontWeight: '900' },
-  challengeInfoList: { gap: 8, flex: 1 },
+  challengeInfoList: { gap: 8 },
   infoLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   infoLabel: { color: C.TEXT_MUTED, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', minWidth: 70 },
   tag: {
@@ -265,7 +269,7 @@ const styles = StyleSheet.create({
   personHead: { width: 7, height: 7, borderRadius: 4, backgroundColor: C.TEXT_MUTED, marginTop: 1 },
   personBody: { width: 13, height: 7, borderTopLeftRadius: 7, borderTopRightRadius: 7, backgroundColor: C.TEXT_MUTED, marginTop: 1 },
   stat: { color: C.TEXT_SECONDARY, fontSize: 13, fontWeight: '700' },
-  viewBtnWrap: { marginTop: 14 },
+  viewBtnWrap: { marginTop: 16 },
   viewBtn: {
     backgroundColor: C.ORANGE,
     borderRadius: 8,

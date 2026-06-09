@@ -45,6 +45,30 @@ const matchesCommunityFilter = (submission: any, filter: CommunityFilter) => {
   if (!itemValue || !filterValue) return false;
   return itemValue === filterValue || itemValue.includes(filterValue) || filterValue.includes(itemValue);
 };
+const numberValue = (value: any) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+};
+const timeValue = (value: any) => {
+  const t = new Date(value || 0).getTime();
+  return Number.isFinite(t) ? t : 0;
+};
+const sortCommunitySubmissions = (items: any[], activeSort: string) => {
+  const sorted = [...items];
+  if (activeSort === 'popular') {
+    return sorted.sort((a, b) =>
+      numberValue(b.comment_count ?? b.comments_count ?? b.comments) - numberValue(a.comment_count ?? a.comments_count ?? a.comments) ||
+      timeValue(b.created_at) - timeValue(a.created_at)
+    );
+  }
+  if (activeSort === 'top') {
+    return sorted.sort((a, b) =>
+      numberValue(b.like_count ?? b.likes) - numberValue(a.like_count ?? a.likes) ||
+      timeValue(b.created_at) - timeValue(a.created_at)
+    );
+  }
+  return sorted.sort((a, b) => timeValue(b.created_at) - timeValue(a.created_at));
+};
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -98,7 +122,10 @@ export default function CommunityScreen() {
 
   if (loading) return <LoadingSpinner fullScreen />;
 
-  const visibleSubmissions = submissions.filter(item => matchesCommunityFilter(item, communityFilter));
+  const visibleSubmissions = sortCommunitySubmissions(
+    submissions.filter(item => matchesCommunityFilter(item, communityFilter)),
+    sort
+  );
   const rows = chunkArray(visibleSubmissions, numCols);
 
   return (

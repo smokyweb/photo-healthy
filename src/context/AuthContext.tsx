@@ -9,6 +9,8 @@ export interface User {
   avatar?: string;
   bio?: string;
   is_pro?: boolean;
+  is_admin?: boolean;
+  subscription_status?: string;
   submission_count?: number;
   created_at?: string;
 }

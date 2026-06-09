@@ -89,6 +89,7 @@ export default function AdminScreen() {
   const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
   const [trackingInput, setTrackingInput] = useState<Record<number, string>>({});
   const [trackingMsg, setTrackingMsg] = useState<Record<number, string>>({});
+  const [orderActionBusy, setOrderActionBusy] = useState<Record<number, string>>({});
 
   const [settings, setSettings] = useState<any>({});
 
@@ -135,11 +136,31 @@ export default function AdminScreen() {
     });
   };
 
+  const stopModalKeyboardBubble = (e: any) => {
+    e?.stopPropagation?.();
+  };
+
   const AdminModal = ({ visible, onClose, children }: { visible: boolean; onClose: () => void; children: React.ReactNode }) => (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={() => {}}>
       <View style={styles.modalOverlay}>
-        <View style={styles.modalPanel}>
-          <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalContent}>
+        <View
+          style={styles.modalPanel}
+          {...({
+            onKeyDown: stopModalKeyboardBubble,
+            onKeyUp: stopModalKeyboardBubble,
+            onKeyPress: stopModalKeyboardBubble,
+          } as any)}
+        >
+          <ScrollView
+            style={styles.modalScroll}
+            contentContainerStyle={styles.modalContent}
+            keyboardShouldPersistTaps="handled"
+            {...({
+              onKeyDown: stopModalKeyboardBubble,
+              onKeyUp: stopModalKeyboardBubble,
+              onKeyPress: stopModalKeyboardBubble,
+            } as any)}
+          >
             {children}
           </ScrollView>
         </View>
@@ -2106,6 +2127,18 @@ export default function AdminScreen() {
     });
   };
 
+  const updateOrderRow = (id: number, patch: any) => {
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, ...patch } : o));
+  };
+
+  const keepOrderOpen = (id: number) => {
+    setExpandedOrders(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  };
+
   const renderOrders = () => {
     const ORDER_STATUS_COLORS = {
       pending: '#F59E0B',
@@ -2339,8 +2372,25 @@ export default function AdminScreen() {
                       }} />
                     )}
                     {(o.status === 'paid' || o.status === 'pending') && (
-                      <GradientButton label="📦 Mark Packed" variant="outline" size="sm" onPress={async () => {
-                        try { await adminProcessOrder(o.id); const d = await adminGetOrders({ sort: orderSort, archived: 'all' }); setOrders(d?.orders || []); setOrderFilter('Packed'); Alert.alert('Updated', 'Order moved to Packed. Add tracking when ready.'); } catch (e: any) { Alert.alert('Error', e.message); }
+                      <GradientButton label="📦 Mark Packed" variant="outline" size="sm" loading={orderActionBusy[o.id] === 'packed'} onPress={async () => {
+                        const previousFilter = orderFilter;
+                        const previousOrder = o;
+                        setOrderActionBusy(b => ({ ...b, [o.id]: 'packed' }));
+                        keepOrderOpen(o.id);
+                        updateOrderRow(o.id, { status: 'processed', updated_at: new Date().toISOString() });
+                        setOrderFilter('Packed');
+                        setTrackingMsg(m => ({ ...m, [o.id]: 'Packed. Add tracking when ready.' }));
+                        try {
+                          const result = await adminProcessOrder(o.id);
+                          if (result?.order) updateOrderRow(o.id, result.order);
+                          setTimeout(() => setTrackingMsg(m => { const n={...m}; delete n[o.id]; return n; }), 5000);
+                        } catch (e: any) {
+                          updateOrderRow(o.id, previousOrder);
+                          setOrderFilter(previousFilter);
+                          setTrackingMsg(m => ({ ...m, [o.id]: 'Error: ' + (e.message || 'Failed to mark packed') }));
+                        } finally {
+                          setOrderActionBusy(b => { const n={...b}; delete n[o.id]; return n; });
+                        }
                       }} />
                     )}
                   </View>

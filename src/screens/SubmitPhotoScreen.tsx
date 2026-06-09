@@ -93,7 +93,7 @@ export default function SubmitPhotoScreen() {
       const uploadedUrls: string[] = [];
       for (let i = 0; i < photos.length; i += 1) {
         const p = photos[i];
-        const result = await uploadPhoto(p.file);
+        const result = await uploadPhoto(p.file, { watermark: true });
         const uploadedUrl = result.url || (result as any).photo_url || (result as any).image_url;
         if (!uploadedUrl) {
           throw new Error(`Photo ${i + 1} did not finish uploading. Please try again.`);
@@ -308,7 +308,11 @@ export default function SubmitPhotoScreen() {
             I agree to the{' '}
             <Text
               style={styles.checkLink}
-              onPress={() => navigation.navigate('Legal' as never, { section: 'guidelines' } as never)}
+              onPress={() => navigation.navigate('Legal' as never, {
+                section: 'guidelines',
+                returnTo: 'SubmitPhoto',
+                returnParams: { challengeId },
+              } as never)}
             >
               community guidelines
             </Text>

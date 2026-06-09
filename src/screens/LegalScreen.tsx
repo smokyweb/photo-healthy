@@ -19,14 +19,29 @@ export default function LegalScreen() {
 
   // Support deep-linking to a specific section via route.params.section
   const initialSection = route.params?.section as Tab | undefined;
+  const returnTo = route.params?.returnTo;
+  const returnParams = route.params?.returnParams || {};
   const [tab, setTab] = useState<Tab>(
     initialSection && TABS.find(t => t.id === initialSection) ? initialSection : 'terms'
   );
+  const handleBack = () => {
+    if (navigation.canGoBack?.()) {
+      navigation.goBack();
+      return;
+    }
+    if (returnTo) navigation.navigate(returnTo as never, returnParams as never);
+    else navigation.navigate('Main' as never, { screen: 'HomeTab' } as never);
+  };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       {/* Page Header */}
       <View style={styles.pageHeader}>
+        {(returnTo || navigation.canGoBack?.()) && (
+          <TouchableOpacity onPress={handleBack} style={styles.backBtn} activeOpacity={0.8}>
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
+        )}
         <Text style={styles.pageTitle}>Legal</Text>
       </View>
 
@@ -101,6 +116,17 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     paddingBottom: 20,
   },
+  backBtn: {
+    alignSelf: 'flex-start',
+    marginBottom: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: borderRadius.pill,
+    borderWidth: 1,
+    borderColor: C.ORANGE + '88',
+    backgroundColor: C.ORANGE + '18',
+  },
+  backText: { color: C.ORANGE, fontSize: 14, fontWeight: '900' },
   pageTitle: { color: C.TEXT, fontSize: 36, fontWeight: '900' },
 
   tabRow: {

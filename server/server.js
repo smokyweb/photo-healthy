@@ -301,6 +301,8 @@ async function safeAddColumn(table, column, definition) {
     await safeAddColumn('submissions', 'photo4_url', 'VARCHAR(500) NULL');
     await safeAddColumn('user_challenges', 'updated_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
     await safeAddColumn('comments', 'text', 'TEXT NULL');
+    await safeAddColumn('comments', 'created_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+    await safeAddColumn('likes', 'created_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
     await safeAddColumn('users', 'total_miles', 'DECIMAL(10,2) DEFAULT 0');
     await safeAddColumn('users', 'is_suspended', 'BOOLEAN DEFAULT FALSE');
     await safeAddColumn('users', 'suspended_reason', 'VARCHAR(500) NULL');
@@ -634,6 +636,24 @@ async function createUserNotification(userId, { type, title, message, relatedId 
     );
   } catch (e) {
     console.error('[notification]', e.message);
+  }
+}
+
+async function createOrderNotification(order, notification) {
+  if (!order) return;
+  let userId = order.user_id;
+  try {
+    if (!userId && order.customer_email) {
+      const [[userRow]] = await pool.query('SELECT id FROM users WHERE email = ? LIMIT 1', [order.customer_email]);
+      userId = userRow?.id;
+      if (userId && order.id) {
+        pool.query('UPDATE orders SET user_id = ? WHERE id = ? AND user_id IS NULL', [userId, order.id]).catch(() => {});
+      }
+    }
+    if (!userId) return;
+    await createUserNotification(userId, notification);
+  } catch (e) {
+    console.error('[order-notification]', e.message);
   }
 }
 
@@ -1273,6 +1293,177 @@ async function notifyOrderConfirmation(order) {
   });
 }
 
+async function notifyPhotoActivityDigest(digest) {
+  try {
+    const recipient = digest?.recipient || {};
+    if (!recipient.email) return false;
+    const [[fromSetting]] = await pool.query("SELECT setting_value FROM app_settings WHERE setting_key = 'notification_from_email'").catch(() => [[]]);
+    const fromEmail = fromSetting?.setting_value || 'noreply@photoai.betaplanets.com';
+    const payload = JSON.stringify({
+      ...digest,
+      from_email: fromEmail,
+      from_name: 'Photo Healthy',
+      app_url: 'https://photoai.betaplanets.com',
+    });
+
+    return await new Promise((resolve) => {
+      const http = require('http');
+      const phpReq = http.request({
+        hostname: '127.0.0.1',
+        port: 80,
+        path: '/notify-photo-digest.php',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+      }, (r) => {
+        let body = '';
+        r.on('data', d => body += d);
+        r.on('end', () => {
+          console.log('[notify-photo-digest]', recipient.email, r.statusCode, body.slice(0, 200));
+          resolve(r.statusCode >= 200 && r.statusCode < 300);
+        });
+      });
+      phpReq.on('error', (e) => {
+        console.error('[notify-photo-digest] error:', e.message);
+        resolve(false);
+      });
+      phpReq.write(payload);
+      phpReq.end();
+    });
+  } catch (e) {
+    console.error('[notify-photo-digest]', e.message);
+    return false;
+  }
+}
+
+async function sendDailyPhotoActivityDigests({ windowHours = 24 } = {}) {
+  const hours = Math.max(1, Math.min(168, Number(windowHours) || 24));
+  const [activities] = await pool.query(`
+    SELECT * FROM (
+      SELECT
+        owner.id AS owner_id,
+        owner.name AS owner_name,
+        owner.email AS owner_email,
+        s.id AS submission_id,
+        COALESCE(NULLIF(s.title, ''), ch.title, CONCAT('Submission #', s.id)) AS submission_title,
+        ch.title AS challenge_title,
+        actor.name AS actor_name,
+        'comment' AS activity_type,
+        cm.text AS activity_text,
+        cm.created_at AS created_at
+      FROM comments cm
+      JOIN submissions s ON s.id = cm.submission_id
+      JOIN users owner ON owner.id = s.user_id
+      LEFT JOIN users actor ON actor.id = cm.user_id
+      LEFT JOIN challenges ch ON ch.id = s.challenge_id
+      WHERE cm.created_at >= DATE_SUB(NOW(), INTERVAL ${hours} HOUR)
+        AND cm.user_id <> s.user_id
+        AND owner.email IS NOT NULL
+        AND owner.email != ''
+        AND COALESCE(owner.is_suspended, 0) = 0
+        AND COALESCE(owner.is_deleted, 0) = 0
+      UNION ALL
+      SELECT
+        owner.id AS owner_id,
+        owner.name AS owner_name,
+        owner.email AS owner_email,
+        s.id AS submission_id,
+        COALESCE(NULLIF(s.title, ''), ch.title, CONCAT('Submission #', s.id)) AS submission_title,
+        ch.title AS challenge_title,
+        actor.name AS actor_name,
+        'like' AS activity_type,
+        NULL AS activity_text,
+        l.created_at AS created_at
+      FROM likes l
+      JOIN submissions s ON s.id = l.submission_id
+      JOIN users owner ON owner.id = s.user_id
+      LEFT JOIN users actor ON actor.id = l.user_id
+      LEFT JOIN challenges ch ON ch.id = s.challenge_id
+      WHERE l.created_at >= DATE_SUB(NOW(), INTERVAL ${hours} HOUR)
+        AND l.user_id <> s.user_id
+        AND owner.email IS NOT NULL
+        AND owner.email != ''
+        AND COALESCE(owner.is_suspended, 0) = 0
+        AND COALESCE(owner.is_deleted, 0) = 0
+    ) activity
+    ORDER BY owner_id, created_at DESC
+  `);
+
+  const digestsByOwner = new Map();
+  for (const row of activities) {
+    if (!digestsByOwner.has(row.owner_id)) {
+      digestsByOwner.set(row.owner_id, {
+        recipient: { id: row.owner_id, name: row.owner_name || 'there', email: row.owner_email },
+        total_likes: 0,
+        total_comments: 0,
+        photos: new Map(),
+        comments: [],
+      });
+    }
+    const digest = digestsByOwner.get(row.owner_id);
+    if (!digest.photos.has(row.submission_id)) {
+      digest.photos.set(row.submission_id, {
+        id: row.submission_id,
+        title: row.submission_title || `Submission #${row.submission_id}`,
+        challenge_title: row.challenge_title || '',
+        url: `https://photoai.betaplanets.com/submission/${row.submission_id}`,
+        likes: 0,
+        comments: 0,
+      });
+    }
+    const photo = digest.photos.get(row.submission_id);
+    if (row.activity_type === 'like') {
+      digest.total_likes += 1;
+      photo.likes += 1;
+    } else {
+      digest.total_comments += 1;
+      photo.comments += 1;
+      if (digest.comments.length < 8) {
+        digest.comments.push({
+          photo_id: row.submission_id,
+          photo_title: photo.title,
+          actor_name: row.actor_name || 'Someone',
+          text: row.activity_text || '',
+          created_at: row.created_at,
+        });
+      }
+    }
+  }
+
+  let sent = 0;
+  let failed = 0;
+  for (const digest of digestsByOwner.values()) {
+    const payload = {
+      ...digest,
+      photos: Array.from(digest.photos.values()).slice(0, 10),
+    };
+    const ok = await notifyPhotoActivityDigest(payload);
+    if (ok) sent += 1;
+    else failed += 1;
+  }
+  return { recipients: digestsByOwner.size, activities: activities.length, sent, failed };
+}
+
+async function maybeSendDailyPhotoActivityDigests() {
+  try {
+    const digestHour = Math.max(0, Math.min(23, Number(process.env.PHOTO_ACTIVITY_DIGEST_HOUR) || 9));
+    if (new Date().getHours() < digestHour) return;
+
+    const settingKey = 'photo_activity_digest_last_sent_date';
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const [[lastRun]] = await pool.query('SELECT setting_value FROM app_settings WHERE setting_key = ?', [settingKey]).catch(() => [[]]);
+    if (lastRun?.setting_value === todayKey) return;
+
+    const result = await sendDailyPhotoActivityDigests();
+    await pool.query(
+      'INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?, updated_at = NOW()',
+      [settingKey, todayKey, todayKey]
+    );
+    console.log(`[notify-photo-digest] daily complete: recipients=${result.recipients} sent=${result.sent} failed=${result.failed}`);
+  } catch (e) {
+    console.error('[notify-photo-digest] daily error:', e.message);
+  }
+}
+
 async function notifyChallengeCreated(challenge) {
   try {
     const [users] = await pool.query("SELECT name, email FROM users WHERE email IS NOT NULL AND email != '' AND is_suspended = FALSE");
@@ -1482,7 +1673,14 @@ app.get('/api/submissions', async (req, res) => {
       params.push(String(movementFilter));
     }
     if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
-    query += ' ORDER BY s.created_at DESC';
+    const sort = String(req.query.sort || 'recent').toLowerCase();
+    if (sort === 'popular') {
+      query += ' ORDER BY comment_count DESC, s.created_at DESC';
+    } else if (sort === 'top' || sort === 'top_rated' || sort === 'top-rated') {
+      query += ' ORDER BY like_count DESC, s.created_at DESC';
+    } else {
+      query += ' ORDER BY s.created_at DESC';
+    }
     const [submissions] = await pool.query(query, params);
     res.json({ submissions });
   } catch (e) {
@@ -2359,6 +2557,8 @@ async function autoExpireChallenges() {
 // Run immediately on startup, then every hour
 autoExpireChallenges();
 setInterval(autoExpireChallenges, 60 * 60 * 1000);
+setTimeout(maybeSendDailyPhotoActivityDigests, 10 * 60 * 1000);
+setInterval(maybeSendDailyPhotoActivityDigests, 60 * 60 * 1000);
 // â”€â”€ Stripe Setup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const stripeKey = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeKey ? require('stripe')(stripeKey) : null;
@@ -2680,7 +2880,7 @@ app.post('/api/checkout/verify-session', async (req, res) => {
     const [[order]] = await pool.query('SELECT * FROM orders WHERE stripe_session_id = ?', [session_id]);
     if (order && !order.confirmation_sent) {
       notifyOrderConfirmation(order).catch(() => {});
-      createUserNotification(order.user_id, {
+      createOrderNotification(order, {
         type: 'order_paid',
         title: 'Order received',
         message: `Order #${order.id} is paid and being prepared.`,
@@ -2757,7 +2957,7 @@ app.post('/api/webhook/stripe', async (req, res) => {
         console.log('[Stripe] Order paid:', session.id);
         const [[order]] = await pool.query('SELECT * FROM orders WHERE stripe_session_id = ?', [session.id]).catch(() => [[]]);
         if (order) {
-          createUserNotification(order.user_id || metaUserId, {
+          createOrderNotification({ ...order, user_id: order.user_id || metaUserId }, {
             type: 'order_paid',
             title: 'Order received',
             message: `Order #${order.id} is paid and being prepared.`,
@@ -2956,7 +3156,7 @@ app.patch('/api/admin/orders/:id/mark-paid', adminAuth, async (req, res) => {
     if (!order.confirmation_sent) {
       const updated = { ...order, status: 'paid' };
       notifyOrderConfirmation(updated).catch(() => {});
-      createUserNotification(order.user_id, {
+      createOrderNotification(order, {
         type: 'order_paid',
         title: 'Order received',
         message: `Order #${order.id} is paid and being prepared.`,
@@ -2980,7 +3180,7 @@ async function handleOrderProcess(req, res) {
     );
     const [[order]] = await pool.query('SELECT * FROM orders WHERE id = ?', [req.params.id]);
     if (order) notifyOrderStatus({ order, type: 'processed' });
-    if (order) createUserNotification(order.user_id, {
+    if (order) createOrderNotification(order, {
       type: 'order_processed',
       title: 'Order packed',
       message: `Order #${order.id} has been packed and is ready to ship.`,
@@ -3003,7 +3203,7 @@ async function handleOrderFulfill(req, res) {
     );
     const [[order]] = await pool.query('SELECT * FROM orders WHERE id = ?', [req.params.id]);
     if (order) notifyOrderStatus({ order, type: 'shipped' });
-    if (order) createUserNotification(order.user_id, {
+    if (order) createOrderNotification(order, {
       type: 'order_shipped',
       title: 'Order shipped',
       message: `Order #${order.id} has shipped${tracking_number ? ` with tracking ${tracking_number}` : ''}.`,
@@ -3023,7 +3223,7 @@ app.patch('/api/admin/orders/:id/tracking', adminAuth, async (req, res) => {
     await pool.query('UPDATE orders SET tracking_number = ?, updated_at = NOW() WHERE id = ?', [tracking_number, req.params.id]);
     const [[order]] = await pool.query('SELECT * FROM orders WHERE id = ?', [req.params.id]);
     if (order) notifyOrderStatus({ order, type: 'tracking_updated' });
-    if (order) createUserNotification(order.user_id, {
+    if (order) createOrderNotification(order, {
       type: 'tracking_updated',
       title: 'Tracking updated',
       message: `Tracking was updated for order #${order.id}: ${tracking_number}.`,
@@ -3042,6 +3242,16 @@ app.patch('/api/admin/orders/:id/archive', adminAuth, async (req, res) => {
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/admin/notifications/photo-activity-digest/send - manually send the daily likes/comments digest
+app.post('/api/admin/notifications/photo-activity-digest/send', adminAuth, async (req, res) => {
+  try {
+    const result = await sendDailyPhotoActivityDigests({ windowHours: req.body?.window_hours || 24 });
+    res.json({ success: true, ...result });
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Failed to send photo activity digest' });
   }
 });
 
@@ -3429,7 +3639,14 @@ app.patch('/api/admin/orders/bundle/:bundleId/fulfill', adminAuth, async (req, r
     // Notify each customer
     for (const order of orders) {
       if (order.customer_email) {
-        notifyOrderFulfilled({ ...order, tracking_number }).catch(() => {});
+        const shippedOrder = { ...order, tracking_number };
+        notifyOrderStatus({ order: shippedOrder, type: 'shipped' }).catch(() => {});
+        createOrderNotification(shippedOrder, {
+          type: 'order_shipped',
+          title: 'Order shipped',
+          message: `Order #${order.id} has shipped${tracking_number ? ` with tracking ${tracking_number}` : ''}.`,
+          relatedId: order.id,
+        });
       }
     }
     res.json({ success: true, fulfilled: orders.length });

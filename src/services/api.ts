@@ -1,3 +1,5 @@
+import { addWatermark } from '../utils/watermark';
+
 const BASE_URL = 'https://photoai.betaplanets.com';
 
 const TOKEN_KEY = 'ph_token';
@@ -309,8 +311,9 @@ export const submitPartnerInquiry = (data: any) =>
   request('POST', '/api/partner-inquiries', data);
 
 // â”€â”€ Photo upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-export async function uploadPhoto(file: File): Promise<{ url: string }> {
-  const dataUrl = await resizeImage(file, 1200, 0.82);
+export async function uploadPhoto(file: File, options: { watermark?: boolean } = {}): Promise<{ url: string }> {
+  const resizedDataUrl = await resizeImage(file, 1200, 0.82);
+  const dataUrl = options.watermark ? await addWatermark(resizedDataUrl) : resizedDataUrl;
   const res = await fetch(`${BASE_URL}/upload.php`, {
     method: 'POST',
     headers: {

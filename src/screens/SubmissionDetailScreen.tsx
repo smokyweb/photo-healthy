@@ -2,6 +2,7 @@
 import {
   View, Text, StyleSheet, Image, ScrollView,
   TouchableOpacity, TextInput, Alert, RefreshControl, useWindowDimensions,
+  Modal,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -11,6 +12,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
 import { C, borderRadius } from '../theme';
 import { normalizeChallengeCategory, normalizeFeelingCategory, normalizeMovementCategory } from '../constants/taxonomy';
+import { addWatermark } from '../utils/watermark';
 
 const BASE = 'https://photoai.betaplanets.com';
 const fullUrl = (u?: string) => u ? (u.startsWith('http') ? u : BASE + u) : null;
@@ -24,6 +26,26 @@ type SubmissionTag = {
 function initials(name: string) {
   return (name || 'U').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
 }
+const safeFileName = (value: string) =>
+  String(value || 'photo-healthy-photo').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'photo-healthy-photo';
+const loadBlob = async (url: string): Promise<Blob> => {
+  if (typeof fetch === 'function') {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Could not load photo (${res.status})`);
+    return res.blob();
+  }
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url);
+    xhr.responseType = 'blob';
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.response);
+      else reject(new Error(`Could not load photo (${xhr.status})`));
+    };
+    xhr.onerror = () => reject(new Error('Could not load photo'));
+    xhr.send();
+  });
+};
 
 export default function SubmissionDetailScreen() {
   const navigation = useNavigation<any>();
@@ -32,8 +54,13 @@ export default function SubmissionDetailScreen() {
   // Guard against 'undefined' string from broken URL path params
   const submissionId = (_sid && _sid !== 'undefined' ? _sid : null) || (_id && _id !== 'undefined' ? _id : null);
   const { user } = useAuth();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const mainPhotoHeight = isDesktop
+    ? Math.min(620, Math.max(440, width * 0.36))
+    : Math.min(420, Math.max(280, width - 32));
+  const viewerWidth = Math.max(280, width - 48);
+  const viewerHeight = Math.max(280, height - 120);
 
   const [submission, setSubmission] = useState<any>(null);
   const [comments, setComments] = useState<any[]>([]);
@@ -45,6 +72,8 @@ export default function SubmissionDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const [photoViewerOpen, setPhotoViewerOpen] = useState(false);
+  const [downloadingPhoto, setDownloadingPhoto] = useState(false);
 
   const load = async () => {
     if (!submissionId) { setLoading(false); return; }
@@ -154,6 +183,35 @@ export default function SubmissionDetailScreen() {
     }
   };
 
+  const handleDownloadPhoto = async () => {
+    if (!activePhoto || downloadingPhoto) return;
+    if (!user) {
+      Alert.alert('Pro Members Only', 'Please sign in with a Pro account to download photos.');
+      return;
+    }
+    setDownloadingPhoto(true);
+    try {
+      const blob = await loadBlob(activePhoto);
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('Could not read photo'));
+        reader.readAsDataURL(blob);
+      });
+      const watermarked = await addWatermark(dataUrl);
+      const link = document.createElement('a');
+      link.href = watermarked;
+      link.download = `${safeFileName(submission.title || submission.challenge_title)}-${activePhotoIndex + 1}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (e: any) {
+      Alert.alert('Download failed', e.message || 'Could not download this photo.');
+    } finally {
+      setDownloadingPhoto(false);
+    }
+  };
+
   if (loading) return <LoadingSpinner fullScreen />;
 
   if (error || !submission) {
@@ -175,6 +233,11 @@ export default function SubmissionDetailScreen() {
     submission.photo4_url,
   ].map(u => fullUrl(u as string)).filter(Boolean) as string[];
   const activePhoto = allPhotos[Math.min(activePhotoIndex, Math.max(allPhotos.length - 1, 0))];
+  const canDownloadPhoto = !!user && (
+    user.subscription_status === 'active' ||
+    !!user.is_pro ||
+    user.role === 'pro'
+  );
   const dateStr = submission.created_at
     ? new Date(submission.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : '';
@@ -240,7 +303,36 @@ export default function SubmissionDetailScreen() {
         <View style={[styles.imageSection, isDesktop && styles.imageSectionDesktop]}>
           {allPhotos.length > 0 ? (
             <>
-              <Image source={{ uri: activePhoto }} style={styles.image} resizeMode="contain" />
+              <TouchableOpacity
+                onPress={() => setPhotoViewerOpen(true)}
+                activeOpacity={0.9}
+                accessibilityLabel="View photo larger"
+              >
+                <View style={[styles.imageFrame, { height: mainPhotoHeight }]}>
+                  <Image
+                    source={{ uri: activePhoto }}
+                    style={styles.image}
+                    resizeMode="contain"
+                  />
+                  <Text style={styles.displayWatermark}>Photo Healthy</Text>
+                </View>
+                <Text style={styles.expandHint}>Click photo to enlarge</Text>
+              </TouchableOpacity>
+              {canDownloadPhoto && (
+                <TouchableOpacity
+                  onPress={handleDownloadPhoto}
+                  style={styles.downloadBtn}
+                  activeOpacity={0.82}
+                  disabled={downloadingPhoto}
+                >
+                  <View style={styles.downloadIcon}>
+                    <View style={styles.downloadStem} />
+                    <View style={styles.downloadArrow} />
+                    <View style={styles.downloadBase} />
+                  </View>
+                  <Text style={styles.downloadText}>{downloadingPhoto ? 'Preparing...' : 'Download'}</Text>
+                </TouchableOpacity>
+              )}
               {allPhotos.length > 1 && (
                 <View style={styles.photoStrip}>
                   {allPhotos.map((photo, index) => (
@@ -395,6 +487,49 @@ export default function SubmissionDetailScreen() {
       </View>
 
       <AppFooter />
+      <Modal
+        visible={photoViewerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPhotoViewerOpen(false)}
+      >
+        <View style={styles.viewerOverlay}>
+          <TouchableOpacity
+            style={styles.viewerBackdrop}
+            activeOpacity={1}
+            onPress={() => setPhotoViewerOpen(false)}
+          />
+          <View style={styles.viewerContent}>
+            <TouchableOpacity
+              style={styles.viewerClose}
+              onPress={() => setPhotoViewerOpen(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.viewerCloseText}>Close</Text>
+            </TouchableOpacity>
+            {activePhoto ? (
+              <View style={[styles.viewerImageFrame, { width: viewerWidth, height: viewerHeight }]}>
+                <Image
+                  source={{ uri: activePhoto }}
+                  style={styles.viewerImage}
+                  resizeMode="contain"
+                />
+                <Text style={styles.viewerWatermark}>Photo Healthy</Text>
+                {canDownloadPhoto && (
+                  <TouchableOpacity
+                    onPress={handleDownloadPhoto}
+                    style={styles.viewerDownloadBtn}
+                    activeOpacity={0.82}
+                    disabled={downloadingPhoto}
+                  >
+                    <Text style={styles.viewerDownloadText}>{downloadingPhoto ? 'Preparing...' : 'Download'}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -408,8 +543,8 @@ const styles = StyleSheet.create({
   layout: { paddingBottom: 16 },
   layoutDesktop: {
     flexDirection: 'row',
-    gap: 40,
-    maxWidth: 1100,
+    gap: 48,
+    maxWidth: 1480,
     alignSelf: 'center',
     width: '100%',
     paddingHorizontal: 32,
@@ -417,13 +552,84 @@ const styles = StyleSheet.create({
   },
 
   imageSection: { marginBottom: 0 },
-  imageSectionDesktop: { flex: 1, maxWidth: 520 },
+  imageSectionDesktop: { flex: 1.15, maxWidth: 760 },
 
+  imageFrame: {
+    width: '100%',
+    position: 'relative',
+    borderRadius: borderRadius.xl,
+    backgroundColor: 'rgba(10,14,26,0.32)',
+    overflow: 'hidden',
+  },
   image: {
     width: '100%',
-    aspectRatio: 1,
-    borderRadius: borderRadius.xl,
+    height: '100%',
   },
+  displayWatermark: {
+    position: 'absolute',
+    right: 14,
+    bottom: 14,
+    color: 'rgba(255,255,255,0.52)',
+    backgroundColor: 'rgba(8,12,24,0.28)',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  expandHint: {
+    color: C.TEXT_MUTED,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  downloadBtn: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 10,
+    borderRadius: borderRadius.pill,
+    borderWidth: 1,
+    borderColor: C.TEAL + '88',
+    backgroundColor: C.TEAL + '18',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+  },
+  downloadIcon: {
+    width: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  downloadStem: {
+    position: 'absolute',
+    top: 2,
+    width: 2,
+    height: 8,
+    borderRadius: 2,
+    backgroundColor: C.TEAL,
+  },
+  downloadArrow: {
+    position: 'absolute',
+    top: 7,
+    width: 8,
+    height: 8,
+    borderRightWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: C.TEAL,
+    transform: [{ rotate: '45deg' }],
+  },
+  downloadBase: {
+    position: 'absolute',
+    bottom: 1,
+    width: 14,
+    height: 2,
+    borderRadius: 2,
+    backgroundColor: C.TEAL,
+  },
+  downloadText: { color: C.TEAL, fontSize: 13, fontWeight: '900' },
   photoStrip: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -456,7 +662,7 @@ const styles = StyleSheet.create({
   },
 
   infoSection: { padding: 16, paddingTop: 4 },
-  infoSectionDesktop: { flex: 1, padding: 0, paddingTop: 0 },
+  infoSectionDesktop: { flex: 1, padding: 0, paddingTop: 0, maxWidth: 660 },
 
   userRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   avatar: {
@@ -557,4 +763,66 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   signInPromptText: { color: C.ORANGE, fontSize: 14, fontWeight: '600' },
+  viewerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(5,8,16,0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  viewerBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  viewerContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    height: '100%',
+  },
+  viewerClose: {
+    position: 'absolute',
+    top: 18,
+    right: 18,
+    zIndex: 2,
+    borderRadius: borderRadius.pill,
+    borderWidth: 1,
+    borderColor: C.ORANGE + '88',
+    backgroundColor: 'rgba(10,14,26,0.88)',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+  },
+  viewerCloseText: { color: C.ORANGE, fontSize: 14, fontWeight: '900' },
+  viewerImageFrame: {
+    maxWidth: '100%' as any,
+    maxHeight: '100%' as any,
+    position: 'relative',
+  },
+  viewerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  viewerWatermark: {
+    position: 'absolute',
+    right: 12,
+    bottom: 12,
+    color: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(8,12,24,0.26)',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  viewerDownloadBtn: {
+    position: 'absolute',
+    left: 12,
+    bottom: 12,
+    borderRadius: borderRadius.pill,
+    borderWidth: 1,
+    borderColor: C.TEAL + '88',
+    backgroundColor: 'rgba(10,14,26,0.78)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  viewerDownloadText: { color: C.TEAL, fontSize: 13, fontWeight: '900' },
 });

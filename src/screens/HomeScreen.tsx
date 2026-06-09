@@ -368,6 +368,9 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userStats, days
       .catch(() => setNotifications([]));
   }, []);
   const latestNotification = notifications[0];
+  const orderNotifications = notifications
+    .filter((n: any) => ['order_paid', 'order_processed', 'order_shipped', 'tracking_updated'].includes(n.type))
+    .slice(0, 3);
   const fallbackMilesTracked = submissions
     .filter((s: any) => !s.user_id || s.user_id === user?.id)
     .reduce((sum: number, s: any) => sum + (parseFloat(s.miles ?? s.distance ?? s.miles_tracked ?? 0) || 0), 0);
@@ -493,6 +496,36 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userStats, days
       </View>
     </View>
 
+    {orderNotifications.length > 0 && (
+      <View style={li.section}>
+        <View style={li.orderUpdatesCard}>
+          <View style={li.orderUpdatesHeader}>
+            <Text style={li.sectionTitle}>Order Updates</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('OrderHistory')}>
+              <Text style={li.orderUpdatesLink}>My Orders</Text>
+            </TouchableOpacity>
+          </View>
+          {orderNotifications.map((note: any) => (
+            <TouchableOpacity
+              key={note.id}
+              style={li.orderUpdateItem}
+              onPress={() => navigation.navigate('OrderHistory')}
+              activeOpacity={0.82}
+            >
+              <View style={li.orderUpdateDot} />
+              <View style={{ flex: 1 }}>
+                <Text style={li.orderUpdateTitle}>{note.title}</Text>
+                {!!note.message && <Text style={li.orderUpdateMessage}>{note.message}</Text>}
+              </View>
+              <Text style={li.orderUpdateDate}>
+                {note.created_at ? new Date(note.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    )}
+
     {/* Recent Community Submissions (full-width cards) */}
     <View style={li.section}>
       <Text style={li.sectionTitle}>Recent Community Submissions</Text>
@@ -557,6 +590,9 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, userStats
       .catch(() => setNotifications([]));
   }, []);
   const latestNotification = notifications[0];
+  const orderNotifications = notifications
+    .filter((n: any) => ['order_paid', 'order_processed', 'order_shipped', 'tracking_updated'].includes(n.type))
+    .slice(0, 2);
   const fallbackMilesTracked = submissions
     .filter((s: any) => !s.user_id || s.user_id === user?.id)
     .reduce((sum: number, s: any) => sum + (parseFloat(s.miles ?? s.distance ?? s.miles_tracked ?? 0) || 0), 0);
@@ -663,6 +699,31 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, userStats
           </View>
         ))}
       </View>
+
+      {orderNotifications.length > 0 && (
+        <>
+          <Text style={pm.sectionTitle}>Order Updates</Text>
+          <View style={pm.orderUpdatesCard}>
+            {orderNotifications.map((note: any) => (
+              <TouchableOpacity
+                key={note.id}
+                style={pm.orderUpdateItem}
+                onPress={() => navigation.navigate('OrderHistory')}
+                activeOpacity={0.82}
+              >
+                <View style={pm.orderUpdateDot} />
+                <View style={{ flex: 1 }}>
+                  <Text style={pm.orderUpdateTitle}>{note.title}</Text>
+                  {!!note.message && <Text style={pm.orderUpdateMessage}>{note.message}</Text>}
+                </View>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={pm.orderUpdatesLinkBtn} onPress={() => navigation.navigate('OrderHistory')}>
+              <Text style={pm.orderUpdatesLinkText}>View My Orders</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
 
       <Text style={pm.sectionTitle}>Recent Community Submissions</Text>
       {cards.slice(0, 2).map((sub: any) => (
@@ -2373,6 +2434,40 @@ const pm = StyleSheet.create({
   statValue: { ...type.heading, color: '#FFFFFF', fontSize: 15 },
   statLabel: { ...type.subtext, color: '#B7BDCB', fontSize: 9, lineHeight: 12, marginTop: 2 },
 
+  orderUpdatesCard: {
+    backgroundColor: '#272B40',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#54DFB655',
+    padding: 12,
+    marginBottom: 16,
+  },
+  orderUpdateItem: {
+    flexDirection: 'row',
+    gap: 9,
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ffffff10',
+  },
+  orderUpdateDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: C.TEAL,
+    marginTop: 5,
+  },
+  orderUpdateTitle: { ...type.heading, color: '#FFFFFF', fontSize: 11, marginBottom: 3 },
+  orderUpdateMessage: { ...type.subtext, color: '#C8CEDA', fontSize: 9, lineHeight: 13 },
+  orderUpdatesLinkBtn: {
+    marginTop: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: C.TEAL,
+    paddingVertical: 9,
+    alignItems: 'center',
+  },
+  orderUpdatesLinkText: { ...type.button, color: C.TEAL, fontSize: 10 },
+
   sectionTitle: { ...type.heading, color: '#FFFFFF', fontSize: 14, marginBottom: 12, marginTop: 4 },
   submission: {
     backgroundColor: '#272B40',
@@ -2580,6 +2675,39 @@ const li = StyleSheet.create({
   statNum: { ...type.heading, color: C.TEXT, fontSize: 25 },
   statLabel: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 13, marginTop: 5, textAlign: 'center' },
   statNote: { ...type.subtext, color: C.TEAL, fontSize: 12, marginTop: 5, textAlign: 'center' },
+
+  orderUpdatesCard: {
+    backgroundColor: '#272B40',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#54DFB655',
+    padding: 18,
+  },
+  orderUpdatesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  orderUpdatesLink: { ...type.button, color: C.TEAL, fontSize: 14 },
+  orderUpdateItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#ffffff10',
+  },
+  orderUpdateDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: C.TEAL,
+    marginTop: 5,
+  },
+  orderUpdateTitle: { ...type.heading, color: C.TEXT, fontSize: 16, marginBottom: 4 },
+  orderUpdateMessage: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 14, lineHeight: 20 },
+  orderUpdateDate: { ...type.subtext, color: C.TEXT_MUTED, fontSize: 12, marginTop: 2 },
 
   // Community submissions (full-width)
   communityGrid: {

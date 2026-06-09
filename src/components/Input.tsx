@@ -35,6 +35,9 @@ export default function Input({
 }: Props) {
   const [focused, setFocused] = useState(false);
   const [showPw, setShowPw] = useState(false);
+  const stopShortcutBubble = (e: any) => {
+    e?.stopPropagation?.();
+  };
 
   return (
     <View style={[styles.container, style]}>
@@ -61,6 +64,11 @@ export default function Input({
           onBlur={() => setFocused(false)}
           editable={editable}
           maxLength={maxLength}
+          {...({
+            onKeyDown: stopShortcutBubble,
+            onKeyUp: stopShortcutBubble,
+            onKeyPress: stopShortcutBubble,
+          } as any)}
         />
         {secureTextEntry && (
           <TouchableOpacity onPress={() => setShowPw(v => !v)} style={styles.eyeBtn}>
