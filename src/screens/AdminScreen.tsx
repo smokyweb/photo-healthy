@@ -2208,8 +2208,8 @@ export default function AdminScreen() {
     orders.forEach(o => { counts[o.status] = (counts[o.status] || 0) + 1; });
 
     return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🚚 Orders ({sorted.length})</Text>
+      <View style={[styles.section, styles.ordersSection]}>
+        <Text style={styles.sectionTitle}>Orders ({sorted.length})</Text>
 
         {/* Paid and packed orders need action banners */}
         {filterCount('Paid') > 0 && (
@@ -2234,35 +2234,35 @@ export default function AdminScreen() {
           />
         </View>
 
-        {/* Status filter chips */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={true} persistentScrollbar style={{ marginBottom: 12 }}>
+        <Text style={styles.orderControlLabel}>Order status</Text>
+        <View style={styles.orderFilterWrap}>
           {filterDefinitions.map(def => (
             <TouchableOpacity
               key={def.key}
-              style={[styles.chipOption, orderFilter === def.key && styles.chipOptionActive, { marginRight: 6 }]}
+              style={[styles.orderFilterBtn, orderFilter === def.key && styles.orderFilterBtnActive]}
               onPress={() => setOrderFilter(def.key)}
             >
-              <Text style={[styles.chipOptionText, orderFilter === def.key && styles.chipOptionTextActive]}>
+              <Text style={[styles.orderFilterText, orderFilter === def.key && styles.orderFilterTextActive]}>
                 {def.key} ({filterCount(def.key)})
               </Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
 
-        <Text style={{ color: C.TEXT_MUTED, fontSize: 12, marginBottom: 8 }}>Sort orders</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={true} persistentScrollbar style={{ marginBottom: 12 }}>
+        <Text style={styles.orderControlLabel}>Sort orders</Text>
+        <View style={styles.orderFilterWrap}>
           {(Object.keys(SORT_LABELS) as Array<keyof typeof SORT_LABELS>).map(sortKey => (
             <TouchableOpacity
               key={sortKey}
-              style={[styles.chipOption, orderSort === sortKey && styles.chipOptionActive, { marginRight: 6 }]}
+              style={[styles.orderFilterBtn, orderSort === sortKey && styles.orderFilterBtnActive]}
               onPress={() => setOrderSort(sortKey)}
             >
-              <Text style={[styles.chipOptionText, orderSort === sortKey && styles.chipOptionTextActive]}>
+              <Text style={[styles.orderFilterText, orderSort === sortKey && styles.orderFilterTextActive]}>
                 {SORT_LABELS[sortKey]}
               </Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
 
         {/* Order list */}
         {sorted.map(o => {
@@ -2277,78 +2277,78 @@ export default function AdminScreen() {
           return (
             <View
               key={o.id}
-              style={[styles.listItem, { flexDirection: 'column', alignItems: 'stretch' }]}
+              style={styles.orderCard}
             >
               {/* Order header - tap to expand/collapse */}
-              <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }} onPress={() => toggleOrderExpand(o.id)} activeOpacity={0.8}>
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+              <TouchableOpacity style={styles.orderHeaderRow} onPress={() => toggleOrderExpand(o.id)} activeOpacity={0.8}>
+                <View style={styles.orderHeaderMain}>
+                  <View style={styles.orderTitleRow}>
                     <Text style={[styles.listItemTitle]}>Order #{o.id}</Text>
-                    <View style={{ backgroundColor: statusColor + '22', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1, borderColor: statusColor }}>
-                      <Text style={{ color: statusColor, fontSize: 11, fontWeight: '700' }}>{statusLabel}</Text>
+                    <View style={[styles.orderStatusBadge, { backgroundColor: statusColor + '22', borderColor: statusColor }]}>
+                      <Text style={[styles.orderStatusText, { color: statusColor }]}>{statusLabel}</Text>
                     </View>
                     {total > 0 && (
-                      <Text style={{ color: '#54DFB6', fontWeight: '800', fontSize: 13 }}>{'$' + total.toFixed(2)}</Text>
+                      <Text style={styles.orderTotalText}>{'$' + total.toFixed(2)}</Text>
                     )}
                   </View>
                   <Text style={styles.listItemSub}>{customerName}</Text>
                   {customerEmail && customerName !== customerEmail && (
                     <Text style={styles.listItemMeta}>{customerEmail}</Text>
                   )}
-                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 2 }}>
+                  <View style={styles.orderMetaRow}>
                     <Text style={styles.listItemMeta}>{items.length} item{items.length !== 1 ? 's' : ''}</Text>
                     <Text style={styles.listItemMeta}>{o.created_at ? new Date(o.created_at).toLocaleDateString() : ''}</Text>
                     {o.tracking_number && (
-                      <Text style={[styles.listItemMeta, { color: '#54DFB6' }]}>🚚 {o.tracking_number}</Text>
+                      <Text style={[styles.listItemMeta, { color: '#54DFB6' }]}>Tracking: {o.tracking_number}</Text>
                     )}
                   </View>
                 </View>
-                <Text style={{ color: isExpanded ? '#F55B09' : '#8B9AB0', fontSize: 20, marginLeft: 8 }}>
+                <Text style={[styles.orderExpandIcon, { color: isExpanded ? C.ORANGE : C.TEXT_MUTED }]}>
                   {isExpanded ? '▼' : '▶'}
                 </Text>
               </TouchableOpacity>
 
               {/* Expanded detail */}
               {isExpanded && (
-                <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: '#ffffff10', paddingTop: 12 }}>
+                <View style={styles.orderDetails}>
 
                   {/* Items */}
-                  <Text style={{ color: '#8B9AB0', fontSize: 12, marginBottom: 8 }}>📦 Items Ordered:</Text>
+                  <Text style={styles.orderDetailHeading}>Items Ordered</Text>
                   {items.length === 0 ? (
                     <Text style={{ color: '#8B9AB0', fontSize: 13, fontStyle: 'italic' }}>No item details</Text>
                   ) : items.map((item, i) => (
-                    <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4, borderBottomWidth: i < items.length - 1 ? 1 : 0, borderBottomColor: '#ffffff08' }}>
-                      <Text style={{ color: '#EAECEF', flex: 1, fontSize: 14 }}>
+                    <View key={i} style={[styles.orderItemRow, i < items.length - 1 && styles.orderItemRowBorder]}>
+                      <Text style={styles.orderItemTitle}>
                         {item.title || item.name || item.product_name || ('Item ' + (i + 1))}
                         {item.quantity > 1 ? ' x' + item.quantity : ''}
                       </Text>
-                      <Text style={{ color: '#54DFB6', fontWeight: '700', fontSize: 14 }}>
+                      <Text style={styles.orderItemPrice}>
                         {'$' + Number((item.price || 0) * (item.quantity || 1)).toFixed(2)}
                       </Text>
                     </View>
                   ))}
 
                   {/* Customer contact + shipping info */}
-                  <View style={{ marginTop: 12, backgroundColor: '#2C2F40', borderRadius: 8, padding: 12, gap: 6 }}>
-                    <Text style={{ color: '#8B9AB0', fontSize: 11, fontWeight: '700', marginBottom: 4 }}>CUSTOMER INFO</Text>
-                    {(o.customer_name || o.user_name) && <Text style={{ color: '#EAECEF', fontSize: 14, fontWeight: '700' }}>{o.customer_name || o.user_name}</Text>}
-                    {(o.customer_email || o.user_email) && <Text style={{ color: '#54DFB6', fontSize: 13 }}>{o.customer_email || o.user_email}</Text>}
-                    {o.shipping_method && <Text style={{ color: '#8B9AB0', fontSize: 12 }}>Shipping: {o.shipping_method}</Text>}
-                    {o.stripe_session_id && <Text style={{ color: '#8B9AB0', fontSize: 11, marginTop: 4 }}>Stripe Session: {o.stripe_session_id}</Text>}
-                    {o.stripe_payment_intent && <Text style={{ color: '#8B9AB0', fontSize: 11 }}>Payment ID: {o.stripe_payment_intent}</Text>}
+                  <View style={styles.orderInfoBox}>
+                    <Text style={styles.orderDetailHeading}>Customer Info</Text>
+                    {(o.customer_name || o.user_name) && <Text style={styles.orderInfoPrimary}>{o.customer_name || o.user_name}</Text>}
+                    {(o.customer_email || o.user_email) && <Text style={styles.orderInfoAccent}>{o.customer_email || o.user_email}</Text>}
+                    {o.shipping_method && <Text style={styles.orderInfoMuted}>Shipping: {o.shipping_method}</Text>}
+                    {o.stripe_session_id && <Text style={styles.orderInfoMuted}>Stripe Session: {o.stripe_session_id}</Text>}
+                    {o.stripe_payment_intent && <Text style={styles.orderInfoMuted}>Payment ID: {o.stripe_payment_intent}</Text>}
                     {o.shipping_address_json ? (() => {
                       try {
                         const addr = typeof o.shipping_address_json === 'string' ? JSON.parse(o.shipping_address_json) : o.shipping_address_json;
                         const lines = [addr.name, addr.line1, addr.line2, [addr.city, addr.state].filter(Boolean).join(', ') + (addr.postal_code ? ' ' + addr.postal_code : ''), addr.country].filter(Boolean);
                         return lines.length > 0 ? (
-                          <View style={{ marginTop: 4, borderTopWidth: 1, borderTopColor: '#ffffff10', paddingTop: 8 }}>
-                            <Text style={{ color: '#8B9AB0', fontSize: 11, marginBottom: 4 }}>SHIP TO:</Text>
-                            {lines.map((ln, i) => <Text key={i} style={{ color: '#EAECEF', fontSize: 13 }}>{ln}</Text>)}
+                          <View style={styles.orderShipToBox}>
+                            <Text style={styles.orderDetailHeading}>Ship To</Text>
+                            {lines.map((ln, i) => <Text key={i} style={styles.orderInfoPrimary}>{ln}</Text>)}
                           </View>
                         ) : null;
                       } catch { return null; }
                     })() : (
-                      <Text style={{ color: '#8B9AB0', fontSize: 12, fontStyle: 'italic', marginTop: 4 }}>Shipping address not captured — check Stripe for full details</Text>
+                      <Text style={styles.orderInfoMuted}>Shipping address not captured - check Stripe for full details</Text>
                     )}
                   </View>
 
@@ -2358,14 +2358,14 @@ export default function AdminScreen() {
                         const url = o.stripe_payment_url || ('https://dashboard.stripe.com/test/payments/' + (o.stripe_payment_intent || ('cs_' + o.stripe_session_id?.split('cs_')[1])));
                         (window as any).open(url, '_blank');
                       } }}>
-                      <Text style={{ color: '#54DFB6', fontSize: 13 }}>🔗 View in Stripe Dashboard</Text>
+                      <Text style={styles.orderInfoAccent}>View in Stripe Dashboard</Text>
                     </TouchableOpacity>
                   )}
 
                   {/* Order actions */}
-                  <Text style={{ color: '#EAECEF', fontWeight: '700', fontSize: 13, marginTop: 16, marginBottom: 8 }}>📋 Order Actions</Text>
+                  <Text style={[styles.orderDetailHeading, { marginTop: 16 }]}>Order Actions</Text>
 
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                  <View style={styles.orderActionRow}>
                     {o.status === 'pending' && (
                       <GradientButton label="✅ Mark Paid" variant="teal" size="sm" onPress={async () => {
                         try { await adminMarkOrderPaid(o.id); const d = await adminGetOrders({ sort: orderSort, archived: 'all' }); setOrders(d?.orders || []); setOrderFilter('Paid'); Alert.alert('Updated', 'Order moved to Paid.'); } catch (e: any) { Alert.alert('Error', e.message); }
@@ -2396,10 +2396,10 @@ export default function AdminScreen() {
                   </View>
 
                   {/* Tracking + ship */}
-                  <Text style={{ color: '#8B9AB0', fontSize: 12, marginBottom: 6 }}>
-                    📍 Tracking Number {o.tracking_number ? '(current: ' + o.tracking_number + ')' : '(enter to mark shipped)'}
+                  <Text style={styles.orderControlLabel}>
+                    Tracking Number {o.tracking_number ? '(current: ' + o.tracking_number + ')' : '(enter to mark shipped)'}
                   </Text>
-                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                  <View style={styles.orderTrackingRow}>
                     <TextInput
                       style={[styles.input, { flex: 1 }]}
                       placeholder={o.tracking_number || 'e.g. 1Z999AA10123456784'}
@@ -2408,7 +2408,7 @@ export default function AdminScreen() {
                       onChangeText={v => setTrackingInput(t => ({ ...t, [o.id]: v }))}
                     />
                   </View>
-                  <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                  <View style={styles.orderActionRow}>
                     {o.status !== 'fulfilled' && (
                       <GradientButton label="🚚 Mark Shipped" variant="primary" size="sm" onPress={async () => {
                         try {
@@ -2631,6 +2631,7 @@ export default function AdminScreen() {
       ) : (
         <ScrollView
           style={styles.content}
+          contentContainerStyle={activeTab === 'Orders' ? styles.ordersContentContainer : styles.contentContainer}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -2648,7 +2649,6 @@ export default function AdminScreen() {
           {activeTab === 'Orders' && renderOrders()}
           {activeTab === 'Settings' && renderSettings()}
           {activeTab === 'Taxonomy' && renderTaxonomy()}
-          <View style={{ height: 60 }} />
         </ScrollView>
       )}
     </View>
@@ -2677,7 +2677,10 @@ const styles = StyleSheet.create({
   tabText: { color: '#D6DEEA', fontSize: 15, fontWeight: '700' },
   tabTextActive: { color: '#FFFFFF', fontWeight: '800' },
   content: { flex: 1 },
+  contentContainer: { paddingBottom: 96 },
+  ordersContentContainer: { paddingBottom: 240 },
   section: { padding: 16 },
+  ordersSection: { paddingBottom: 24 },
   sectionTitle: { color: C.TEXT, fontSize: 24, fontWeight: '800', marginBottom: 16 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
@@ -2731,6 +2734,102 @@ const styles = StyleSheet.create({
   chipOptionActive: { backgroundColor: C.TEAL + '22' as any, borderColor: C.TEAL },
   chipOptionText: { color: '#D6DEEA', fontSize: 14, fontWeight: '700' },
   chipOptionTextActive: { color: C.TEAL, fontWeight: '900' as const },
+  orderControlLabel: { color: '#D6DEEA', fontSize: 13, fontWeight: '800', marginBottom: 8, marginTop: 4 },
+  orderFilterWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+    alignItems: 'flex-start',
+  },
+  orderFilterBtn: {
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    borderRadius: borderRadius.pill,
+    backgroundColor: (C as any).CARD_BG2 || C.CARD_BG,
+    borderWidth: 1.5,
+    borderColor: C.CARD_BORDER,
+  },
+  orderFilterBtnActive: { backgroundColor: C.ORANGE + '22', borderColor: C.ORANGE },
+  orderFilterText: { color: '#EAF0F8', fontSize: 14, fontWeight: '800' },
+  orderFilterTextActive: { color: '#FFFFFF' },
+  orderCard: {
+    backgroundColor: C.CARD_BG,
+    borderRadius: borderRadius.lg,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+    overflow: 'visible',
+  },
+  orderHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    width: '100%',
+  },
+  orderHeaderMain: { flex: 1, minWidth: 0 },
+  orderTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+    marginBottom: 6,
+  },
+  orderStatusBadge: {
+    borderRadius: 7,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderWidth: 1,
+  },
+  orderStatusText: { fontSize: 12, fontWeight: '900' },
+  orderTotalText: { color: C.TEAL, fontWeight: '900', fontSize: 15 },
+  orderMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
+  orderExpandIcon: { fontSize: 18, lineHeight: 22, marginLeft: 4, fontWeight: '900' },
+  orderDetails: {
+    marginTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.12)',
+    paddingTop: 14,
+    overflow: 'visible',
+  },
+  orderDetailHeading: {
+    color: '#EAF0F8',
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 8,
+    textTransform: 'uppercase' as any,
+  },
+  orderItemRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingVertical: 8,
+  },
+  orderItemRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
+  orderItemTitle: { color: '#FFFFFF', flex: 1, minWidth: 0, fontSize: 15, lineHeight: 20, fontWeight: '700' },
+  orderItemPrice: { color: C.TEAL, fontWeight: '900', fontSize: 15, flexShrink: 0 },
+  orderInfoBox: {
+    marginTop: 14,
+    backgroundColor: (C as any).CARD_BG2 || '#2C2F40',
+    borderRadius: 10,
+    padding: 14,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  orderInfoPrimary: { color: '#FFFFFF', fontSize: 14, lineHeight: 20, fontWeight: '700' },
+  orderInfoAccent: { color: C.TEAL, fontSize: 14, lineHeight: 20, fontWeight: '800' },
+  orderInfoMuted: { color: '#D6DEEA', fontSize: 12, lineHeight: 18, fontWeight: '600' },
+  orderShipToBox: {
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+    paddingTop: 10,
+  },
+  orderActionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 12, alignItems: 'center' },
+  orderTrackingRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10, width: '100%' },
   segmentRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
