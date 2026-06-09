@@ -41,7 +41,7 @@ export default function ProductDetailScreen() {
       .finally(() => setLoading(false));
   }, [resolvedId]);
 
-  const isPro = user?.subscription_status === 'active' || user?.role === 'pro';
+  const isPro = user?.subscription_status === 'active' || user?.role === 'pro' || !!user?.is_pro;
 
   const handleAddToCart = () => {
     if (product.is_pro_only && !isPro) {

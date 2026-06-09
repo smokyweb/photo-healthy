@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Alert, TextInput, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { createCheckoutSession } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import AppFooter from '../components/AppFooter';
@@ -11,11 +12,31 @@ export default function CartScreen() {
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
   const { items, removeItem, updateQuantity, clearCart, total, itemCount } = useCart();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [giftCode, setGiftCode] = useState('');
+  const [shippingAddress, setShippingAddress] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    line1: '',
+    line2: '',
+    city: '',
+    state: '',
+    postal_code: '',
+    country: 'US',
+  });
   const isDesktop = width >= 1100;
   const isMobile = width < 1100;
+
+  useEffect(() => {
+    if (!user) return;
+    setShippingAddress(s => ({
+      ...s,
+      name: s.name || user.name || '',
+      email: s.email || user.email || '',
+    }));
+  }, [user?.id]);
 
   const handleBack = () => {
     if (navigation.canGoBack?.()) {
@@ -35,10 +56,11 @@ export default function CartScreen() {
           giftCode: giftCode.trim(),
           successUrl: `${(window as any).location.origin}/checkout/success?ref={CHECKOUT_SESSION_ID}`,
           cancelUrl: `${(window as any).location.origin}/cart`,
+          shippingAddress,
         },
       );
       if (data?.url) { (window as any).location.href = data.url; }
-      else { clearCart(); navigation.navigate('CheckoutSuccess' as never); }
+      else { clearCart(); navigation.navigate('CheckoutSuccess' as never, { freeOrder: true } as never); }
     } catch (e: any) { Alert.alert('Checkout Failed', e.message || 'Something went wrong.'); }
     setLoading(false);
   };
@@ -84,6 +106,24 @@ export default function CartScreen() {
             <View style={[styles.checkoutInfo, isMobile && styles.cartPanelMobile]}>
               <Text style={styles.summaryTitle}>Checkout Details</Text>
               <Text style={styles.checkoutLine}>Shipping address and delivery options are collected during secure checkout.</Text>
+              <Text style={styles.checkoutLine}>If a coupon or gift code covers the full order, use these shipping fields so the order can still be mailed.</Text>
+              <View style={styles.shippingFields}>
+                <Text style={styles.codeLabel}>Name</Text>
+                <TextInput value={shippingAddress.name} onChangeText={v => setShippingAddress(s => ({ ...s, name: v }))} placeholder="Full name" placeholderTextColor={C.TEXT_MUTED} style={styles.codeInput} />
+                <Text style={styles.codeLabel}>Email</Text>
+                <TextInput value={shippingAddress.email} onChangeText={v => setShippingAddress(s => ({ ...s, email: v }))} placeholder="Email address" placeholderTextColor={C.TEXT_MUTED} keyboardType="email-address" autoCapitalize="none" style={styles.codeInput} />
+                <Text style={styles.codeLabel}>Address</Text>
+                <TextInput value={shippingAddress.line1} onChangeText={v => setShippingAddress(s => ({ ...s, line1: v }))} placeholder="Street address" placeholderTextColor={C.TEXT_MUTED} style={styles.codeInput} />
+                <TextInput value={shippingAddress.line2} onChangeText={v => setShippingAddress(s => ({ ...s, line2: v }))} placeholder="Apartment, suite, etc." placeholderTextColor={C.TEXT_MUTED} style={styles.codeInput} />
+                <View style={styles.shippingRow}>
+                  <TextInput value={shippingAddress.city} onChangeText={v => setShippingAddress(s => ({ ...s, city: v }))} placeholder="City" placeholderTextColor={C.TEXT_MUTED} style={[styles.codeInput, styles.shippingRowField]} />
+                  <TextInput value={shippingAddress.state} onChangeText={v => setShippingAddress(s => ({ ...s, state: v }))} placeholder="State" placeholderTextColor={C.TEXT_MUTED} autoCapitalize="characters" style={[styles.codeInput, styles.shippingRowField]} />
+                </View>
+                <View style={styles.shippingRow}>
+                  <TextInput value={shippingAddress.postal_code} onChangeText={v => setShippingAddress(s => ({ ...s, postal_code: v }))} placeholder="ZIP" placeholderTextColor={C.TEXT_MUTED} style={[styles.codeInput, styles.shippingRowField]} />
+                  <TextInput value={shippingAddress.country} onChangeText={v => setShippingAddress(s => ({ ...s, country: v.toUpperCase() }))} placeholder="Country" placeholderTextColor={C.TEXT_MUTED} autoCapitalize="characters" style={[styles.codeInput, styles.shippingRowField]} />
+                </View>
+              </View>
               <Text style={styles.checkoutLine}>Coupons and gift codes can be entered before checkout.</Text>
               <Text style={styles.checkoutLine}>Card details are entered on the payment screen, not saved on this cart page.</Text>
               <Text style={styles.returnNote}>Shipping and return options are determined by the customer address.</Text>
@@ -167,6 +207,9 @@ const styles = StyleSheet.create({
   cartPanelMobile: { padding: 14, borderRadius: borderRadius.lg },
   checkoutLine: { color: C.TEXT_SECONDARY, fontSize: 14, lineHeight: 22, marginBottom: 10 },
   returnNote: { color: C.TEAL, fontSize: 13, lineHeight: 20, marginTop: 4, fontWeight: '700' },
+  shippingFields: { gap: 8, marginTop: 4, marginBottom: 14 },
+  shippingRow: { flexDirection: 'row', gap: 8 },
+  shippingRowField: { flex: 1, minWidth: 0 },
   summary: { flex: 1, backgroundColor: C.CARD_BG, borderRadius: borderRadius.xl, padding: 20, borderWidth: 1, borderColor: C.CARD_BORDER, minWidth: 0 },
   summaryTitle: { color: C.TEXT, fontSize: 16, fontWeight: '700', marginBottom: 14 },
   codeGrid: { gap: 10, marginBottom: 16 },

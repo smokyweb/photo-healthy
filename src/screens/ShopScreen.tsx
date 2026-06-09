@@ -78,7 +78,7 @@ export default function ShopScreen() {
   const featuredProducts = filteredProducts.filter((p: any) => p.is_featured || p.featured);
   const allProducts = filteredProducts;
 
-  const isPro = user?.subscription_status === 'active' || user?.role === 'pro';
+  const isPro = user?.subscription_status === 'active' || user?.role === 'pro' || !!user?.is_pro;
   const handleAddToCart = (product: any) => {
     if (product.is_pro_only && !isPro) {
       Alert.alert(
@@ -222,7 +222,7 @@ export default function ShopScreen() {
             <View key={rowIdx} style={styles.productRow}>
               {row.map((item: any) => {
                 const imgUri = fullUrl(item.image_url);
-                const isPro = !!item.is_pro_only && user?.subscription_status !== 'active';
+                const requiresProUpgrade = !!item.is_pro_only && !isPro;
                 return (
                   <TouchableOpacity
                     key={item.id}
@@ -251,9 +251,8 @@ export default function ShopScreen() {
                       <Text style={styles.productName} numberOfLines={2}>{item.title}</Text>
                       <Text style={styles.price}>${Number(item.price).toFixed(2)}</Text>
                       <GradientButton
-                        label={item.is_pro_only && !isPro ? '⭐ Pro Only' : cartAdded === item.id ? '✓ Added!' : '🛒 Add to Cart'}
+                        label={requiresProUpgrade ? '⭐ Pro Only' : cartAdded === item.id ? '✓ Added!' : '🛒 Add to Cart'}
                         onPress={() => handleAddToCart(item)}
-                        disabled={isPro}
                         style={styles.addBtn}
                         size="sm"
                       />
@@ -282,7 +281,7 @@ export default function ShopScreen() {
             <View key={rowIdx} style={styles.productRow}>
               {row.map((item: any) => {
                 const imgUri = fullUrl(item.image_url);
-                const isPro = !!item.is_pro_only && user?.subscription_status !== 'active';
+                const requiresProUpgrade = !!item.is_pro_only && !isPro;
                 return (
                   <TouchableOpacity
                     key={item.id}
@@ -308,9 +307,8 @@ export default function ShopScreen() {
                       <Text style={styles.productName} numberOfLines={2}>{item.title}</Text>
                       <Text style={styles.price}>${Number(item.price).toFixed(2)}</Text>
                       <GradientButton
-                        label={item.is_pro_only && !isPro ? '⭐ Pro Only' : cartAdded === item.id ? '✓ Added!' : '🛒 Add to Cart'}
+                        label={requiresProUpgrade ? '⭐ Pro Only' : cartAdded === item.id ? '✓ Added!' : '🛒 Add to Cart'}
                         onPress={() => handleAddToCart(item)}
-                        disabled={isPro}
                         variant="outline"
                         style={styles.addBtn}
                         size="sm"

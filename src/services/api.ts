@@ -233,17 +233,22 @@ export const deleteDiscountCode = (id: number) =>
   request('POST', `/admin-api-proxy.php?path=/api/admin/discount-codes/${id}/delete&method=POST`);
 
 // â”€â”€ Cart / Orders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-export const createCheckoutSession = (items: any[], options?: { couponCode?: string; giftCode?: string; successUrl?: string; cancelUrl?: string }) =>
+export const createCheckoutSession = (items: any[], options?: { couponCode?: string; giftCode?: string; successUrl?: string; cancelUrl?: string; shippingAddress?: any }) =>
   request('POST', '/api/checkout/create-session', {
     items,
     coupon_code: options?.couponCode || null,
     gift_code: options?.giftCode || null,
     success_url: options?.successUrl || null,
     cancel_url: options?.cancelUrl || null,
+    shipping_address: options?.shippingAddress || null,
   });
+
+export const verifyCheckoutSession = (sessionId: string) =>
+  request('POST', '/api/checkout/verify-session', { session_id: sessionId });
 
 export const getMyOrders = () => request('GET', '/api/orders/my');
 export const getMyNotifications = () => request('GET', '/api/notifications/my');
+export const markMyNotificationsRead = () => request('POST', '/api/notifications/my/read');
 
 export const createBundleOrder = (data: any) =>
   request('POST', '/api/orders/bundle', data);

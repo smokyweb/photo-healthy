@@ -14,8 +14,16 @@ const JWT_SECRET = process.env.JWT_SECRET || 'photohealthy_jwt_secret_2026';
 
 // Middleware
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));  // Allow base64 image uploads
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Stripe webhook signatures require the exact raw body. Keep this before JSON parsing.
+app.use('/api/webhook/stripe', express.raw({ type: 'application/json' }));
+app.use((req, res, next) => {
+  if (req.originalUrl.startsWith('/api/webhook/stripe')) return next();
+  return express.json({ limit: '10mb' })(req, res, next); // Allow base64 image uploads
+});
+app.use((req, res, next) => {
+  if (req.originalUrl.startsWith('/api/webhook/stripe')) return next();
+  return express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+});
 
 // ── LiteSpeed method override middleware ───────────────────────────────────
 // LiteSpeed blocks PATCH/PUT/DELETE through its reverse proxy.
@@ -146,7 +154,7 @@ async function safeAddColumn(table, column, definition) {
         user_id INT NULL,
         stripe_session_id VARCHAR(255) UNIQUE,
         stripe_payment_intent VARCHAR(255),
-        status ENUM('pending','paid','failed','refunded') DEFAULT 'pending',
+        status ENUM('pending','paid','processed','fulfilled','failed','refunded') DEFAULT 'pending',
         total_amount DECIMAL(10,2),
         currency VARCHAR(10) DEFAULT 'usd',
         items_json TEXT,
@@ -390,6 +398,9 @@ async function safeAddColumn(table, column, definition) {
     await safeAddColumn('orders', 'fulfilled_at', 'TIMESTAMP NULL');
     await safeAddColumn('orders', 'archived', 'TINYINT(1) DEFAULT 0');
     await safeAddColumn('orders', 'customer_name', 'VARCHAR(255) NULL');
+    await pool.query(
+      "ALTER TABLE orders MODIFY COLUMN status ENUM('pending','paid','processed','fulfilled','failed','refunded') DEFAULT 'pending'"
+    ).catch(e => console.error('[DB] orders.status migration:', e.message));
     await safeAddColumn('user_notifications', 'related_id', 'INT NULL');
 
   } catch (e) {
@@ -804,8 +815,11 @@ app.get('/api/admin/users/:id/subscription-history', adminAuth, async (req, res)
 // Submitted photos are watermarked before upload by the web client.
 app.get('/api/submissions/:id/download', auth, async (req, res) => {
   try {
-    const photo = req.query.photo === '2' ? 'photo2_url' : 'photo1_url';
-    const [[sub]] = await pool.query('SELECT user_id, photo1_url, photo2_url, title FROM submissions WHERE id = ?', [req.params.id]);
+    const photoNumber = ['1', '2', '3', '4'].includes(String(req.query.photo || '1'))
+      ? String(req.query.photo || '1')
+      : '1';
+    const photo = `photo${photoNumber}_url`;
+    const [[sub]] = await pool.query('SELECT user_id, photo1_url, photo2_url, photo3_url, photo4_url, title FROM submissions WHERE id = ?', [req.params.id]);
     if (!sub) return res.status(404).json({ error: 'Submission not found' });
     // Must own the photo
     if (sub.user_id !== req.user.id && !req.user.is_admin) {
@@ -2006,13 +2020,14 @@ app.get('/api/admin/users/:id/activity', adminAuth, async (req, res) => {
 // POST /api/admin/users â€” create a new user and email them a reset link
 app.post('/api/admin/users', adminAuth, async (req, res) => {
   try {
-    const { name, email, is_admin } = req.body;
+    const { name, email, is_admin, password } = req.body;
     if (!name || !email) return res.status(400).json({ error: 'name and email required' });
+    if (password && String(password).length < 6) return res.status(400).json({ error: 'Temporary password must be at least 6 characters' });
     const [existing] = await pool.query('SELECT id, is_deleted FROM users WHERE email = ?', [email]);
     if (existing.length) return res.status(409).json({ error: 'Email already registered' });
 
     const bcrypt = require('bcryptjs');
-    const tempPass = Math.random().toString(36).slice(-10) + 'A1!';
+    const tempPass = password ? String(password) : Math.random().toString(36).slice(-10) + 'A1!';
     const hash = await bcrypt.hash(tempPass, 10);
     const token = require('crypto').randomBytes(32).toString('hex');
     const expires = new Date(Date.now() + 72 * 3600 * 1000); // 72h
@@ -2564,9 +2579,6 @@ setInterval(maybeSendDailyPhotoActivityDigests, 60 * 60 * 1000);
 const stripeKey = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeKey ? require('stripe')(stripeKey) : null;
 
-// Raw body parser for Stripe webhooks (must come before express.json globally)
-app.use('/api/webhook/stripe', express.raw({ type: 'application/json' }));
-
 function extractStripeShipping(session) {
   const address = session.shipping_details?.address || session.customer_details?.address || null;
   return {
@@ -2646,11 +2658,20 @@ app.get('/api/notifications/my', auth, async (req, res) => {
   }
 });
 
+app.post('/api/notifications/my/read', auth, async (req, res) => {
+  try {
+    await pool.query('UPDATE user_notifications SET is_read = 1 WHERE user_id = ?', [req.user.id]);
+    res.json({ success: true, unread: 0 });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // POST /api/checkout/create-session â€” create a Stripe Checkout session
 app.post('/api/checkout/create-session', async (req, res) => {
   if (!stripe) return res.status(503).json({ error: 'Stripe not configured. Add STRIPE_SECRET_KEY to .env' });
 
-  const { items, success_url, cancel_url, coupon_code, gift_code } = req.body;
+  const { items, success_url, cancel_url, coupon_code, gift_code, shipping_address } = req.body;
   if (!items || !items.length) return res.status(400).json({ error: 'No items provided' });
 
   try {
@@ -2753,10 +2774,29 @@ app.post('/api/checkout/create-session', async (req, res) => {
     }
 
     if (total <= 0) {
+      const shipping = shipping_address && typeof shipping_address === 'object' ? shipping_address : {};
+      const requiredShipping = ['name', 'line1', 'city', 'state', 'postal_code', 'country'];
+      const missingShipping = requiredShipping.filter(key => !String(shipping[key] || '').trim());
+      if (missingShipping.length > 0 || (!userEmail && !String(shipping.email || '').trim())) {
+        return res.status(400).json({
+          error: 'Shipping address required when a discount covers the full order.',
+        });
+      }
+      const freeOrderEmail = userEmail || String(shipping.email || '').trim();
+      const freeOrderName = String(shipping.name || '').trim();
+      const freeShippingAddress = {
+        name: freeOrderName,
+        line1: String(shipping.line1 || '').trim(),
+        line2: String(shipping.line2 || '').trim(),
+        city: String(shipping.city || '').trim(),
+        state: String(shipping.state || '').trim(),
+        postal_code: String(shipping.postal_code || '').trim(),
+        country: String(shipping.country || '').trim(),
+      };
       await pool.query(
-        `INSERT INTO orders (user_id, stripe_session_id, status, total_amount, items_json, customer_email)
-         VALUES (?, ?, 'paid', ?, ?, ?)`,
-        [userId, `free_${Date.now()}`, 0, JSON.stringify(enrichedItems), userEmail]
+        `INSERT INTO orders (user_id, stripe_session_id, status, total_amount, items_json, customer_email, customer_name, shipping_address_json, shipping_method)
+         VALUES (?, ?, 'paid', ?, ?, ?, ?, ?, ?)`,
+        [userId, `free_${Date.now()}`, 0, JSON.stringify(enrichedItems), freeOrderEmail, freeOrderName, JSON.stringify(freeShippingAddress), 'Discounted order']
       );
       await markDiscountCodesUsed(appliedDiscountCodes);
       return res.json({ success: true, free_order: true, discount_total: discountCents / 100 });

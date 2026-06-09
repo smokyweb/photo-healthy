@@ -6,7 +6,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { getMyNotifications } from '../services/api';
+import { getMyNotifications, markMyNotificationsRead } from '../services/api';
 import { C, borderRadius } from '../theme';
 
 const LOGO_IMG = require('../../assets/logo.png');
@@ -38,6 +38,15 @@ export default function TopNavBar() {
     navigation.navigate(screen as never, params as never);
   };
 
+  const openNotifications = () => {
+    setMenuOpen(false);
+    if (notificationCount > 0) {
+      setNotificationCount(0);
+      markMyNotificationsRead().catch(() => {});
+    }
+    navigation.navigate('OrderHistory' as never);
+  };
+
   const initials = user?.name
     ? user.name.split(' ').map((n: string) => n[0].toUpperCase()).slice(0, 2).join('')
     : 'U';
@@ -52,8 +61,7 @@ export default function TopNavBar() {
       .then((data: any) => {
         if (!active) return;
         const unread = Number(data?.unread || 0);
-        const total = Array.isArray(data?.notifications) ? data.notifications.length : 0;
-        setNotificationCount(unread || total);
+        setNotificationCount(unread);
       })
       .catch(() => active && setNotificationCount(0));
     return () => { active = false; };
@@ -102,7 +110,7 @@ export default function TopNavBar() {
           {user ? (
             <View style={[styles.rightSide, isMobile && styles.rightSideMobile]}>
               <TouchableOpacity
-                onPress={() => nav('OrderHistory')}
+                onPress={openNotifications}
                 style={styles.bellBtn}
                 accessibilityLabel="Notifications"
               >
@@ -173,7 +181,7 @@ export default function TopNavBar() {
           <View style={styles.drawerDivider} />
           {user ? (
             <>
-              <TouchableOpacity style={styles.drawerItem} onPress={() => nav('OrderHistory')}>
+              <TouchableOpacity style={styles.drawerItem} onPress={openNotifications}>
                 <View style={styles.drawerBellRow}>
                   <Text style={styles.drawerText}>Notifications</Text>
                   {notificationCount > 0 && <View style={styles.drawerNotificationDot} />}
