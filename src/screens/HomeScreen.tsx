@@ -19,6 +19,7 @@ import { getPublicSettings } from '../services/api';
 import AppFooter from '../components/AppFooter';
 import { C } from '../theme';
 import { normalizeChallengeCategory, normalizeFeelingCategory, normalizeMovementCategory } from '../constants/taxonomy';
+import { fullUrl as resolveUrl } from '../config/api';
 
 const LOGO_IMG = require('../../assets/29c8c384-1bd0-11f1-ad58-a2ad5845d919.png');
 const PHOTO5_URBAN = require('../../assets/photo5-urban-sunset.png');
@@ -29,9 +30,8 @@ const PHOTO7_OCEAN = require('../../assets/photo7-ocean-sunset.png');
 const PHOTO8_ALLEY = require('../../assets/photo8-dark-alley.png');
 const PHOTO9_CLOUDS = require('../../assets/photo9-mountain-clouds.png');
 
-const API_BASE_URL = 'https://photoai.betaplanets.com';
 const fullUrl = (url?: string | null) =>
-  url ? (url.startsWith('http') ? url : `${API_BASE_URL}${url}`) : '';
+  resolveUrl(url) || '';
 
 const isJoinableChallenge = (challenge: any) => {
   if (!challenge) return false;
@@ -46,6 +46,15 @@ const isProOnlyChallenge = (challenge: any) => {
   if (value === true || value === 1) return true;
   const normalized = String(value ?? '').trim().toLowerCase();
   return ['1', 'true', 'yes', 'y', 'pro', 'pro_only', 'pro-only'].includes(normalized);
+};
+
+const isUserActiveChallenge = (challenge: any) => {
+  const userChallenge = challenge?.user_challenge;
+  if (!userChallenge) return false;
+  if (userChallenge.status === 'completed' || userChallenge.has_submission) return false;
+  const daysRemaining = numberOrNull(userChallenge.days_remaining);
+  if (daysRemaining != null && daysRemaining < 0) return false;
+  return true;
 };
 
 const PAGE_MAX_WIDTH = 1120;
@@ -77,6 +86,10 @@ const ionIcon = (name: string, color: string) => {
         return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path ${stroke} fill="none" d="M350.54 148.68l-26.62-42.06C318.31 100.08 310.62 96 302.42 96h-92.84c-8.2 0-15.89 4.08-21.5 10.62l-26.62 42.06C155.85 155.23 148.16 160 140 160H80a32 32 0 00-32 32v192a32 32 0 0032 32h352a32 32 0 0032-32V192a32 32 0 00-32-32h-60c-8.16 0-15.85-4.77-21.46-11.32z"/><circle ${stroke} fill="none" cx="256" cy="288" r="80"/></svg>`;
       case 'analytics':
         return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path ${stroke} fill="none" d="M48 408h416M112 352V176M208 352V96M304 352V224M400 352V144"/></svg>`;
+      case 'heart':
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="${color}" d="M256 448l-35.2-32.3C96 301.4 32 242.6 32 161.6 32 95.5 83.7 44 149.7 44c37.3 0 73.2 17.4 96.3 44.8C269.1 61.4 305 44 342.3 44 408.3 44 460 95.5 460 161.6c0 81-64 139.8-188.8 254.1L256 448z"/></svg>`;
+      case 'chat':
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path ${stroke} fill="none" d="M80 112h352a48 48 0 0148 48v160a48 48 0 01-48 48H216l-96 72v-72H80a48 48 0 01-48-48V160a48 48 0 0148-48z"/></svg>`;
       case 'instagram':
         return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect ${stroke} x="80" y="80" width="352" height="352" rx="96" ry="96" fill="none"/><circle ${stroke} cx="256" cy="256" r="80" fill="none"/><circle cx="348" cy="164" r="20" fill="${color}"/></svg>`;
       case 'facebook':
@@ -360,7 +373,7 @@ const HomeBottomSections = ({ isMobile, showHow = true, onHowItWorksLayout, onHo
         </View>
 
         <View style={bottom.footerRule} />
-        <Text style={bottom.copyright}>© 2026 Photo Healthy. All rights reserved.</Text>
+        <Text style={bottom.copyright}>ï¿½ 2026 Photo Healthy. All rights reserved.</Text>
       </View>
     </View>
   );
@@ -484,7 +497,7 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userStats, days
       <Text style={li.quoteText}>
         {motivationalQuote}
       </Text>
-      {quoteAuthor ? <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 8, fontStyle: 'normal' }}>— {quoteAuthor}</Text> : null}
+      {quoteAuthor ? <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 8, fontStyle: 'normal' }}>ï¿½ {quoteAuthor}</Text> : null}
     </View>
 
     {/* Stats Row (3 cards) */}
@@ -542,11 +555,13 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userStats, days
     {/* Recent Community Submissions (full-width cards) */}
     <View style={li.section}>
       <Text style={li.sectionTitle}>Recent Community Submissions</Text>
+      <>{recent.length === 0 ? (
+        <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+          <Text style={{ color: C.TEXT_SECONDARY, fontSize: 15, fontWeight: '700' }}>No community submissions yet.</Text>
+        </View>
+      ) : (
       <View style={li.communityGrid}>
-        {(recent.length > 0 ? recent : [
-          { id: 1, user_name: 'sarah_lens', title: 'Golden hour reflections', photo1_url: null, _localPhoto: PHOTO2_MOUNTAIN, like_count: 234, comment_count: 18 },
-          { id: 2, user_name: 'mike_photo', title: 'City lights at dusk', photo1_url: null, _localPhoto: PHOTO8_ALLEY, like_count: 189, comment_count: 24 },
-        ]).slice(0, 4).map((sub: any) => (
+        {recent.slice(0, 4).map((sub: any) => (
           <TouchableOpacity
             key={sub.id}
             style={li.communityCard}
@@ -557,13 +572,20 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userStats, days
               <Text style={li.communityUser}>@{sub.user_name || 'unknown'}</Text>
               <Text style={li.communityTitle}>{sub.title || 'Untitled'}</Text>
               <View style={li.communityStats}>
-                <Text style={li.communityStat}>?? {sub.like_count || 0}</Text>
-                <Text style={li.communityStat}>?? {sub.comment_count || 0}</Text>
+                <View style={li.communityStat}>
+                  <IconGlyph name="heart" color="#FF5A5F" size={14} />
+                  <Text style={li.communityStatText}>{sub.like_count || 0}</Text>
+                </View>
+                <View style={li.communityStat}>
+                  <IconGlyph name="chat" color="#C8CEDA" size={14} />
+                  <Text style={li.communityStatText}>{sub.comment_count || 0}</Text>
+                </View>
               </View>
             </View>
           </TouchableOpacity>
         ))}
       </View>
+      )}</>
     </View>
 
     {/* Quick Actions Grid (3 buttons) */}
@@ -612,22 +634,13 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, userStats
   const photosSubmitted = userStats?.submissions ?? userStats?.submission_count ?? submissions.filter((s: any) => s.user_id === user?.id).length;
   const displayStreak = userStats?.streak ?? streak;
   const milesTracked = Number(userStats?.totalMiles ?? userStats?.total_miles ?? fallbackMilesTracked) || 0;
-  const challenge = featured || {
-    title: 'Golden Hour Magic',
-    description: 'Capture the breathtaking beauty of golden hour. Show us how the warm, soft light transforms ordinary scenes.',
-    cover_image_url: null,
-    _localCover: PHOTO3_FIELD,
-    submission_count: 144,
-  };
-  const challengeImage = challenge.cover_image_url ? { uri: fullUrl(challenge.cover_image_url) } : (challenge._localCover || PHOTO3_FIELD);
-  const challengeCategory = displayTag(normalizeChallengeCategory(challenge.category), challenge.category);
-  const challengeFeeling = displayTag(normalizeFeelingCategory(challenge.feeling_category || challenge.feeling_tag), challenge.feeling_category || challenge.feeling_tag);
-  const challengeMovement = displayTag(normalizeMovementCategory(challenge.movement_category || challenge.movement_tag), challenge.movement_category || challenge.movement_tag);
+  const challenge = featured || null;
+  const challengeImage = challenge?.cover_image_url ? { uri: fullUrl(challenge.cover_image_url) } : PHOTO3_FIELD;
+  const challengeCategory = displayTag(normalizeChallengeCategory(challenge?.category), challenge?.category);
+  const challengeFeeling = displayTag(normalizeFeelingCategory(challenge?.feeling_category || challenge?.feeling_tag), challenge?.feeling_category || challenge?.feeling_tag);
+  const challengeMovement = displayTag(normalizeMovementCategory(challenge?.movement_category || challenge?.movement_tag), challenge?.movement_category || challenge?.movement_tag);
   const challengeStats = getChallengeStats(challenge, submissions, daysLeft);
-  const cards = recent.length > 0 ? recent : [
-    { id: 1, user_name: 'hannah_jane', title: 'Golden hour reflections', photo1_url: null, _localPhoto: PHOTO7_OCEAN, like_count: 234, comment_count: 18 },
-    { id: 2, user_name: 'mike_photo', title: 'City lights at dusk', photo1_url: null, _localPhoto: PHOTO1_CITY, like_count: 189, comment_count: 24 },
-  ];
+  const cards = recent;
 
   return (
     <View style={pm.wrap}>
@@ -647,56 +660,64 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, userStats
         </View>
       </ImageBackground>
 
-      <View style={pm.challengeCard}>
-        <Image
-          source={challengeImage}
-          style={pm.challengeImg}
-          resizeMode="cover"
-        />
-        <View style={pm.challengeBody}>
-          <View style={pm.challengeHead}>
-            <Text style={pm.challengeTitle}>{challenge.title}</Text>
-            <View style={pm.activePill}><Text style={pm.activeText}>Active Challenge</Text></View>
-            {isProOnlyChallenge(challenge) && (
-              <View style={pm.proOnlyPill}><Text style={pm.proOnlyText}>Pro Only</Text></View>
-            )}
-          </View>
-          <Text style={pm.challengeDesc} numberOfLines={3}>{challenge.description}</Text>
-          <Text style={pm.kicker}>Challenge Category</Text>
-          <View style={pm.metaGrid}>
-            <View style={pm.metaBox}>
-              <Text style={pm.metaLabel}>Category</Text>
-              <Text style={pm.metaValue}>{challengeCategory}</Text>
+      {challenge ? (
+        <View style={pm.challengeCard}>
+          <Image
+            source={challengeImage}
+            style={pm.challengeImg}
+            resizeMode="cover"
+          />
+          <View style={pm.challengeBody}>
+            <View style={pm.challengeHead}>
+              <Text style={pm.challengeTitle}>{challenge.title}</Text>
+              <View style={pm.activePill}><Text style={pm.activeText}>Active Challenge</Text></View>
+              {isProOnlyChallenge(challenge) && (
+                <View style={pm.proOnlyPill}><Text style={pm.proOnlyText}>Pro Only</Text></View>
+              )}
             </View>
-            <View style={pm.metaBox}>
-              <Text style={pm.metaLabel}>Feeling</Text>
-              <Text style={pm.metaValue}>{challengeFeeling}</Text>
+            <Text style={pm.challengeDesc} numberOfLines={3}>{challenge.description}</Text>
+            <Text style={pm.kicker}>Challenge Category</Text>
+            <View style={pm.metaGrid}>
+              <View style={pm.metaBox}>
+                <Text style={pm.metaLabel}>Category</Text>
+                <Text style={pm.metaValue}>{challengeCategory}</Text>
+              </View>
+              <View style={pm.metaBox}>
+                <Text style={pm.metaLabel}>Feeling</Text>
+                <Text style={pm.metaValue}>{challengeFeeling}</Text>
+              </View>
+              <View style={pm.metaBox}>
+                <Text style={pm.metaLabel}>Movement</Text>
+                <Text style={pm.metaValue}>{challengeMovement}</Text>
+              </View>
+              <View style={pm.metaBox}>
+                <Text style={pm.metaLabel}>Days Left</Text>
+                <Text style={pm.metaValue}>{challengeStats.daysLeft}</Text>
+              </View>
+              <View style={pm.metaBox}>
+                <Text style={pm.metaLabel}>Participants</Text>
+                <Text style={pm.metaValue}>{challengeStats.participantCount}</Text>
+              </View>
             </View>
-            <View style={pm.metaBox}>
-              <Text style={pm.metaLabel}>Movement</Text>
-              <Text style={pm.metaValue}>{challengeMovement}</Text>
+            <View style={pm.challengeActions}>
+              <TouchableOpacity
+                style={pm.submitBtn}
+                onPress={() => navigation.navigate('SubmitPhoto', { challengeId: challenge.id, id: challenge.id })}
+              >
+                <Text style={pm.submitText}>Submit Photos</Text>
+              </TouchableOpacity>
             </View>
-            <View style={pm.metaBox}>
-              <Text style={pm.metaLabel}>Days Left</Text>
-              <Text style={pm.metaValue}>{challengeStats.daysLeft}</Text>
-            </View>
-            <View style={pm.metaBox}>
-              <Text style={pm.metaLabel}>Participants</Text>
-              <Text style={pm.metaValue}>{challengeStats.participantCount}</Text>
-            </View>
-          </View>
-          <View style={pm.challengeActions}>
-            <TouchableOpacity
-              style={pm.submitBtn}
-              onPress={() => challenge?.id
-                ? navigation.navigate('SubmitPhoto', { challengeId: challenge.id, id: challenge.id })
-                : navigation.navigate('ChallengesTab')}
-            >
-              <Text style={pm.submitText}>Submit Photos</Text>
-            </TouchableOpacity>
           </View>
         </View>
-      </View>
+      ) : (
+        <View style={[pm.challengeCard, pm.emptyChallengeCard]}>
+          <Text style={pm.emptyChallengeTitle}>No active challenges yet.</Text>
+          <Text style={pm.emptyChallengeText}>New challenges will show here when they are created.</Text>
+          <TouchableOpacity style={pm.browseBtn} onPress={() => navigation.navigate('ChallengesTab')}>
+            <Text style={pm.browseText}>Browse Challenges</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <ImageBackground source={PHOTO9_CLOUDS} style={pm.quote} imageStyle={pm.quoteImage}>
         <Text style={pm.quoteText}>{motivationalQuote}</Text>
@@ -742,7 +763,11 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, userStats
       )}
 
       <Text style={pm.sectionTitle}>Recent Community Submissions</Text>
-      {cards.slice(0, 2).map((sub: any) => (
+      {cards.length === 0 ? (
+        <View style={pm.emptyShareState}>
+          <Text style={pm.emptyShareText}>No community submissions yet.</Text>
+        </View>
+      ) : cards.slice(0, 2).map((sub: any) => (
         <TouchableOpacity
           key={sub.id}
           style={pm.submission}
@@ -753,8 +778,14 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, userStats
             <Text style={pm.userName}>@{sub.user_name}</Text>
             <Text style={pm.subTitle}>{sub.title}</Text>
             <View style={pm.subStats}>
-              <Text style={pm.subStat}>? {sub.like_count || 0}</Text>
-              <Text style={pm.subStat}>?? {sub.comment_count || 0}</Text>
+              <View style={pm.subStat}>
+                <IconGlyph name="heart" color="#FF5A5F" size={11} />
+                <Text style={pm.subStatText}>{sub.like_count || 0}</Text>
+              </View>
+              <View style={pm.subStat}>
+                <IconGlyph name="chat" color="#C8CEDA" size={11} />
+                <Text style={pm.subStatText}>{sub.comment_count || 0}</Text>
+              </View>
             </View>
           </View>
         </TouchableOpacity>
@@ -830,13 +861,7 @@ const SkySection = ({ children, style, alt = false, bgPosition = 'center', bgSiz
 const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation, isMobile }: any) => {
   const featuredStats = getChallengeStats(featured, submissions, daysLeft);
   const featuredCategory = displayTag(normalizeChallengeCategory(featured?.category), featured?.category || 'Photo Challenge');
-  const fallbackShareItems = [
-    { id: 'local-1', user_name: 'Skyline', challenge_title: 'Color after dusk', _localPhoto: PHOTO2_MOUNTAIN, like_count: 93 },
-    { id: 'local-2', user_name: 'Renew', challenge_title: 'Morning portrait', _localPhoto: PHOTO7_OCEAN, like_count: 129 },
-    { id: 'local-3', user_name: 'Trailblazer', challenge_title: 'Small discoveries', _localPhoto: PHOTO3_FIELD, like_count: 84 },
-    { id: 'local-4', user_name: 'Mindful', challenge_title: 'Community light', _localPhoto: PHOTO8_ALLEY, like_count: 111 },
-  ];
-  const shareItems = (recent.length > 0 ? recent : fallbackShareItems).slice(0, 4);
+  const shareItems = recent.slice(0, 4);
   const openShareItem = (item: any) => {
     if (item?.id && !String(item.id).startsWith('local-')) {
       navigation.navigate('SubmissionDetail' as never, { submissionId: item.id, id: item.id } as never);
@@ -919,6 +944,11 @@ const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation
       <SkySection style={isMobile && landing.skySectionMobile} bgPosition="center 108%" bgSize="135% auto">
         <View style={landing.shareSection}>
           <Text style={landing.sectionTitle}>Here's what people are sharing NOW</Text>
+          {shareItems.length === 0 ? (
+            <View style={landing.emptyShareState}>
+              <Text style={landing.emptyShareText}>No community submissions yet.</Text>
+            </View>
+          ) : (
           <View style={[landing.shareGrid, isMobile && landing.shareGridMobile]}>
             {shareItems.map((item: any) => (
               <TouchableOpacity key={item.id} style={landing.shareCard} onPress={() => openShareItem(item)}>
@@ -940,6 +970,7 @@ const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation
               </TouchableOpacity>
             ))}
           </View>
+          )}
           <TouchableOpacity style={landing.browseBtn} onPress={() => navigation.navigate('Main' as never, { screen: 'CommunityTab' } as never)}>
             <Text style={landing.browseBtnText}>Browse All</Text>
           </TouchableOpacity>
@@ -969,7 +1000,7 @@ const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation
 const HomeScreen = () => {
   const navigation = useNavigation<any>();
 
-  const [motivationalQuote, setMotivationalQuote] = useState('The secret of getting ahead is getting started. — Mark Twain');
+  const [motivationalQuote, setMotivationalQuote] = useState('The secret of getting ahead is getting started. ï¿½ Mark Twain');
   const [quoteAuthor, setQuoteAuthor] = useState('');
   React.useEffect(() => {
     fetch('https://motivational-spark-api.vercel.app/api/quotes/random')
@@ -1019,9 +1050,9 @@ const HomeScreen = () => {
     }, [user?.id])
   );
 
-  const featured = challenges.find(isJoinableChallenge) ||
-    challenges.find((c) => c.is_active || c.status === 'active') ||
-    challenges[0];
+  const featured = user
+    ? challenges.find(isUserActiveChallenge) || null
+    : challenges.find(isJoinableChallenge) || null;
   const recent = [...submissions]
     .sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
     .slice(0, 8);
@@ -1405,6 +1436,17 @@ const landing = StyleSheet.create({
   shareGridMobile: {
     flexWrap: 'wrap',
     gap: 12,
+  },
+  emptyShareState: {
+    width: '100%' as any,
+    alignItems: 'center',
+    paddingVertical: 22,
+  },
+  emptyShareText: {
+    ...type.subtext,
+    color: '#D5DEEF',
+    fontSize: 17,
+    textAlign: 'center',
   },
   shareCard: {
     width: 240,
@@ -2422,6 +2464,9 @@ const pm = StyleSheet.create({
   } as any,
   submitText: { ...type.button, color: '#FFFFFF', fontSize: 14 },
   challengeActions: { gap: 8 },
+  emptyChallengeCard: { padding: 16, alignItems: 'center' },
+  emptyChallengeTitle: { ...type.heading, color: '#FFFFFF', fontSize: 15, marginBottom: 6, textAlign: 'center' },
+  emptyChallengeText: { ...type.subtext, color: '#C8CEDA', fontSize: 11, lineHeight: 16, marginBottom: 14, textAlign: 'center' },
   browseBtn: {
     flex: 1,
     height: 38,
@@ -2506,6 +2551,17 @@ const pm = StyleSheet.create({
   orderUpdatesLinkText: { ...type.button, color: C.TEAL, fontSize: 10 },
 
   sectionTitle: { ...type.heading, color: '#FFFFFF', fontSize: 14, marginBottom: 12, marginTop: 4 },
+  emptyShareState: {
+    backgroundColor: '#272B40',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#363B55',
+    paddingVertical: 22,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  emptyShareText: { ...type.subtext, color: '#C8CEDA', fontSize: 11, textAlign: 'center' },
   submission: {
     backgroundColor: '#272B40',
     borderRadius: 8,
@@ -2518,8 +2574,9 @@ const pm = StyleSheet.create({
   submissionBody: { padding: 10 },
   userName: { ...type.label, color: C.TEAL, fontSize: 10, marginBottom: 3 },
   subTitle: { ...type.subtext, color: '#FFFFFF', fontSize: 10, marginBottom: 7 },
-  subStats: { flexDirection: 'row', gap: 12 },
-  subStat: { ...type.subtext, color: '#C8CEDA', fontSize: 9 },
+  subStats: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  subStat: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  subStatText: { ...type.subtext, color: '#C8CEDA', fontSize: 9 },
 
   quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 0 },
   quickCard: {
@@ -2775,8 +2832,9 @@ const li = StyleSheet.create({
   communityInfo: { padding: 14 },
   communityUser: { ...type.label, color: C.TEAL, fontSize: 15, marginBottom: 3 },
   communityTitle: { ...type.label, color: C.TEXT, fontSize: 17, marginBottom: 9 },
-  communityStats: { flexDirection: 'row', gap: 16 },
-  communityStat: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 14 },
+  communityStats: { flexDirection: 'row', gap: 16, alignItems: 'center' },
+  communityStat: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  communityStatText: { ...type.subtext, color: C.TEXT_SECONDARY, fontSize: 14 },
 
   // Quick actions (2x2)
   quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },

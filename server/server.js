@@ -544,6 +544,71 @@ async function markDiscountCodesUsed(codes) {
   }
 }
 
+async function syncStripeSubscriptionForUser(userId, userRow = null) {
+  if (!stripe || !userId) return null;
+
+  try {
+    const [[user]] = userRow
+      ? [[userRow]]
+      : await pool.query(
+          `SELECT id, email, stripe_customer_id, stripe_subscription_id, subscription_status, subscription_type
+           FROM users WHERE id = ?`,
+          [userId]
+        );
+    if (!user) return null;
+
+    let customerId = user.stripe_customer_id || null;
+    let subscriptions = [];
+
+    if (customerId) {
+      subscriptions = (await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 10 })).data || [];
+    } else if (user.email) {
+      const customers = await stripe.customers.list({ email: user.email, limit: 10 });
+      for (const customer of customers.data || []) {
+        const customerSubscriptions = (await stripe.subscriptions.list({ customer: customer.id, status: 'all', limit: 10 })).data || [];
+        const hasActive = customerSubscriptions.some(s => ['active', 'trialing'].includes(s.status));
+        if (hasActive) {
+          customerId = customer.id;
+          subscriptions = customerSubscriptions;
+          break;
+        }
+      }
+    }
+
+    const activeSub = subscriptions
+      .filter(s => ['active', 'trialing'].includes(s.status))
+      .sort((a, b) => (b.current_period_end || 0) - (a.current_period_end || 0))[0];
+
+    if (!activeSub) return null;
+
+    const endsAt = activeSub.current_period_end
+      ? new Date(activeSub.current_period_end * 1000)
+      : null;
+
+    await pool.query(
+      `UPDATE users
+       SET subscription_status = 'active',
+           subscription_type = 'stripe',
+           stripe_customer_id = COALESCE(?, stripe_customer_id),
+           stripe_subscription_id = ?,
+           subscription_ends_at = ?,
+           subscription_started_at = COALESCE(subscription_started_at, NOW())
+       WHERE id = ?`,
+      [customerId, activeSub.id, endsAt, userId]
+    );
+
+    return {
+      status: 'active',
+      subscriptionId: activeSub.id,
+      customerId,
+      endsAt,
+    };
+  } catch (e) {
+    console.error('[stripe-sync]', e.message);
+    return null;
+  }
+}
+
 // ==================== AUTH ROUTES ====================
 
 app.post('/api/auth/register', async (req, res) => {
@@ -581,12 +646,14 @@ app.post('/api/auth/login', async (req, res) => {
     if (!valid) return res.status(401).json({ error: 'Invalid id/password' });
 
     const role = user.role || (user.is_admin ? 'admin' : 'user');
+    const stripeSync = await syncStripeSubscriptionForUser(user.id, user);
+    const subscriptionStatus = stripeSync?.status || user.subscription_status;
     const token = jwt.sign({ id: user.id, email: user.email, is_admin: !!user.is_admin, role }, JWT_SECRET, { expiresIn: '30d' });
     // Track last login time
     pool.query('UPDATE users SET last_login_at = NOW() WHERE id = ?', [user.id]).catch(() => {});
     res.json({
       token,
-      user: { id: user.id, name: user.name, email: user.email, avatar_url: user.avatar_url, is_admin: !!user.is_admin, role, subscription_status: user.subscription_status, created_at: user.created_at },
+      user: { id: user.id, name: user.name, email: user.email, avatar_url: user.avatar_url, is_admin: !!user.is_admin, role, subscription_status: subscriptionStatus, is_pro: subscriptionStatus === 'active', created_at: user.created_at },
     });
   } catch (err) {
     res.status(500).json({ error: 'Login failed' });
@@ -603,8 +670,17 @@ app.get('/api/auth/me', auth, async (req, res) => {
       [users] = await pool.query('SELECT id, name, email, avatar_url, bio, location, website, phone, is_admin, subscription_status, total_miles, created_at FROM users WHERE id = ?', [req.user.id]);
     }
     if (users.length === 0) return res.status(404).json({ error: 'User not found' });
+    const synced = await syncStripeSubscriptionForUser(req.user.id, users[0]);
+    if (synced?.status) {
+      try {
+        [users] = await pool.query('SELECT id, name, email, avatar_url, bio, location, website, phone, is_admin, role, subscription_status, total_miles, created_at FROM users WHERE id = ?', [req.user.id]);
+      } catch (err) {
+        if (err.code !== 'ER_BAD_FIELD_ERROR') throw err;
+        [users] = await pool.query('SELECT id, name, email, avatar_url, bio, location, website, phone, is_admin, subscription_status, total_miles, created_at FROM users WHERE id = ?', [req.user.id]);
+      }
+    }
     const u = users[0];
-    res.json({ user: { ...u, is_admin: !!u.is_admin, role: u.role || (u.is_admin ? 'admin' : 'user') } });
+    res.json({ user: { ...u, is_admin: !!u.is_admin, role: u.role || (u.is_admin ? 'admin' : 'user'), is_pro: u.subscription_status === 'active' } });
   } catch {
     res.status(500).json({ error: 'Failed to get user' });
   }
@@ -811,26 +887,21 @@ app.get('/api/admin/users/:id/subscription-history', adminAuth, async (req, res)
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// GET /api/submissions/:id/download â€” serve the stored submission photo to Pro subscribers who own it, or admins.
-// Submitted photos are watermarked before upload by the web client.
+// GET /api/submissions/:id/download - serve the original stored submission photo to Pro subscribers or admins.
 app.get('/api/submissions/:id/download', auth, async (req, res) => {
   try {
+    await syncStripeSubscriptionForUser(req.user.id);
     const photoNumber = ['1', '2', '3', '4'].includes(String(req.query.photo || '1'))
       ? String(req.query.photo || '1')
       : '1';
     const photo = `photo${photoNumber}_url`;
     const [[sub]] = await pool.query('SELECT user_id, photo1_url, photo2_url, photo3_url, photo4_url, title FROM submissions WHERE id = ?', [req.params.id]);
     if (!sub) return res.status(404).json({ error: 'Submission not found' });
-    // Must own the photo
-    if (sub.user_id !== req.user.id && !req.user.is_admin) {
-      return res.status(403).json({ error: 'You can only download your own photos' });
-    }
-    // Must be Pro subscriber (admins bypass this check)
-    if (!req.user.is_admin) {
-      const [[u]] = await pool.query('SELECT subscription_status FROM users WHERE id = ?', [req.user.id]);
-      if (u?.subscription_status !== 'active') {
-        return res.status(403).json({ error: 'pro_required', message: 'Upgrade to Pro to download your photos.' });
-      }
+    const [[u]] = await pool.query('SELECT subscription_status, is_admin, role FROM users WHERE id = ?', [req.user.id]);
+    const isAdmin = !!req.user.is_admin || req.user.role === 'admin' || !!u?.is_admin || u?.role === 'admin';
+    const isPro = u?.subscription_status === 'active' || req.user.role === 'pro';
+    if (!isAdmin && !isPro) {
+      return res.status(403).json({ error: 'pro_required', message: 'Upgrade to Pro to download original photos.' });
     }
     const url = sub[photo];
     if (!url) return res.status(404).json({ error: 'Photo not found' });
@@ -843,6 +914,7 @@ app.get('/api/submissions/:id/download', auth, async (req, res) => {
 // GET /api/users/me/access â€” returns what the current user can access
 app.get('/api/users/me/access', auth, async (req, res) => {
   try {
+    await syncStripeSubscriptionForUser(req.user.id);
     const [[u]] = await pool.query('SELECT subscription_status FROM users WHERE id = ?', [req.user.id]);
     const isPro = u?.subscription_status === 'active';
     // Count this month's submissions
@@ -1306,6 +1378,19 @@ async function notifyOrderConfirmation(order) {
     phpReq.write(payload);
     phpReq.end();
   });
+}
+
+async function notifyOrderPaidOnce(order) {
+  if (!order || order.confirmation_sent) return;
+  const paidOrder = { ...order, status: 'paid' };
+  notifyOrderConfirmation(paidOrder).catch(() => {});
+  await createOrderNotification(paidOrder, {
+    type: 'order_paid',
+    title: 'Order received',
+    message: `Order #${paidOrder.id} is paid and being prepared.`,
+    relatedId: paidOrder.id,
+  });
+  pool.query('UPDATE orders SET confirmation_sent = 1 WHERE id = ?', [paidOrder.id]).catch(() => {});
 }
 
 async function notifyPhotoActivityDigest(digest) {
@@ -1875,7 +1960,7 @@ app.post('/api/submissions/:id/like', auth, async (req, res) => {
     const submissionId = Number(req.params.id);
     if (!submissionId) return res.status(400).json({ error: 'Submission ID required' });
 
-    const [[submission]] = await pool.query('SELECT id FROM submissions WHERE id = ?', [submissionId]);
+    const [[submission]] = await pool.query('SELECT id, user_id, title FROM submissions WHERE id = ?', [submissionId]);
     if (!submission) return res.status(404).json({ error: 'Submission not found' });
 
     const [existing] = await pool.query(
@@ -1892,6 +1977,16 @@ app.post('/api/submissions/:id/like', auth, async (req, res) => {
         [req.user.id, submissionId]
       );
       liked = true;
+      if (submission.user_id && Number(submission.user_id) !== Number(req.user.id)) {
+        const [[actor]] = await pool.query('SELECT name FROM users WHERE id = ?', [req.user.id]);
+        const actorName = actor?.name || 'Someone';
+        await createUserNotification(submission.user_id, {
+          type: 'photo_like',
+          title: `${actorName} liked your photo`,
+          message: submission.title ? `"${submission.title}" received a new like.` : 'Your photo received a new like.',
+          relatedId: submissionId,
+        });
+      }
     }
 
     const [[countRow]] = await pool.query(
@@ -1937,6 +2032,17 @@ app.post('/api/comments', auth, async (req, res) => {
       'INSERT INTO comments (submission_id, user_id, text) VALUES (?, ?, ?)',
       [submission_id, req.user.id, text]
     );
+    const [[submission]] = await pool.query('SELECT id, user_id, title FROM submissions WHERE id = ?', [submission_id]);
+    if (submission?.user_id && Number(submission.user_id) !== Number(req.user.id)) {
+      const [[actor]] = await pool.query('SELECT name FROM users WHERE id = ?', [req.user.id]);
+      const actorName = actor?.name || 'Someone';
+      await createUserNotification(submission.user_id, {
+        type: 'photo_comment',
+        title: `${actorName} commented on your photo`,
+        message: text.length > 120 ? `${text.slice(0, 117)}...` : text,
+        relatedId: submission_id,
+      });
+    }
     res.json({ id: result.insertId, success: true });
   } catch {
     res.status(500).json({ error: 'Failed to create comment' });
@@ -2218,17 +2324,27 @@ const PRO_PLAN = {
   interval: 'month',
 };
 
+function safeRelativeReturnPath(value) {
+  const path = String(value || '').trim();
+  if (!path || !path.startsWith('/') || path.startsWith('//') || /^(https?:)?\/\//i.test(path)) return '';
+  return path.slice(0, 500);
+}
+
 // GET /api/subscription/status
 app.get('/api/subscription/status', auth, async (req, res) => {
   try {
+    const synced = await syncStripeSubscriptionForUser(req.user.id);
     const [[u]] = await pool.query(
       'SELECT subscription_status, stripe_subscription_id, subscription_ends_at FROM users WHERE id = ?',
       [req.user.id]
     );
+    const status = synced?.status || u?.subscription_status || 'free';
     res.json({
-      status: u?.subscription_status || 'free',
-      subscriptionId: u?.stripe_subscription_id || null,
-      endsAt: u?.subscription_ends_at || null,
+      status,
+      subscriptionId: synced?.subscriptionId || u?.stripe_subscription_id || null,
+      endsAt: synced?.endsAt || u?.subscription_ends_at || null,
+      is_pro: status === 'active',
+      isPro: status === 'active',
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -2237,10 +2353,18 @@ app.get('/api/subscription/status', auth, async (req, res) => {
 
 // POST /api/subscribe â€” create Stripe Checkout session (subscription mode)
 app.post('/api/subscribe', auth, async (req, res) => {
-  if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
+  if (!stripe) {
+    return res.json({
+      checkoutUnavailable: true,
+      error: 'stripe_not_configured',
+      message: 'Stripe is not configured for this environment yet.',
+    });
+  }
   try {
     const [[u]] = await pool.query('SELECT id, name, email, stripe_customer_id FROM users WHERE id = ?', [req.user.id]);
-    const origin = process.env.APP_URL || 'https://photoai.betaplanets.com';
+    const origin = req.body?.origin || req.headers.origin || process.env.APP_URL || 'https://photoai.betaplanets.com';
+    const returnTo = safeRelativeReturnPath(req.body?.returnTo || req.body?.return_to);
+    const returnParam = returnTo ? `&return_to=${encodeURIComponent(returnTo)}` : '';
 
     // Create or reuse Stripe customer
     let customerId = u.stripe_customer_id;
@@ -2263,9 +2387,9 @@ app.post('/api/subscribe', auth, async (req, res) => {
         quantity: 1,
       }],
       // PHP trampoline to bypass LiteSpeed WAF
-      success_url: `${origin}/stripe-return.php?type=sub&status=success`,
-      cancel_url: `${origin}/stripe-return.php?type=sub&status=cancelled`,
-      metadata: { user_id: String(u.id), type: 'subscription' },
+      success_url: `${origin}/stripe-return.php?type=sub&status=success${returnParam}`,
+      cancel_url: `${origin}/stripe-return.php?type=sub&status=cancelled${returnParam}`,
+      metadata: { user_id: String(u.id), type: 'subscription', return_to: returnTo },
     });
 
     res.json({ url: session.url });
@@ -2300,7 +2424,7 @@ app.post('/api/subscription/portal', auth, async (req, res) => {
   try {
     const [[u]] = await pool.query('SELECT stripe_customer_id FROM users WHERE id = ?', [req.user.id]);
     if (!u?.stripe_customer_id) return res.status(400).json({ error: 'No billing info found' });
-    const origin = process.env.APP_URL || 'https://photoai.betaplanets.com';
+    const origin = req.body?.origin || req.headers.origin || process.env.APP_URL || 'https://photoai.betaplanets.com';
     const portal = await stripe.billingPortal.sessions.create({
       customer: u.stripe_customer_id,
       return_url: `${origin}/subscription`,
@@ -2919,16 +3043,7 @@ app.post('/api/checkout/verify-session', async (req, res) => {
 
     // Fetch final order and send confirmation email once
     const [[order]] = await pool.query('SELECT * FROM orders WHERE stripe_session_id = ?', [session_id]);
-    if (order && !order.confirmation_sent) {
-      notifyOrderConfirmation(order).catch(() => {});
-      createOrderNotification(order, {
-        type: 'order_paid',
-        title: 'Order received',
-        message: `Order #${order.id} is paid and being prepared.`,
-        relatedId: order.id,
-      });
-      pool.query('UPDATE orders SET confirmation_sent = 1 WHERE id = ?', [order.id]).catch(() => {});
-    }
+    await notifyOrderPaidOnce(order);
 
     res.json({ status: 'paid', paid: true, order_id: order?.id });
   } catch (e) {
@@ -2987,8 +3102,10 @@ app.post('/api/webhook/stripe', async (req, res) => {
         const shipping = extractStripeShipping(session);
         const shippingAddr = shipping.address ? JSON.stringify({ name: shipping.name, ...shipping.address }) : null;
         await pool.query(
-          `UPDATE orders SET status = 'paid', stripe_payment_intent = ?, customer_email = ?,
-           customer_name = ?, user_id = COALESCE(user_id, ?),
+          `UPDATE orders SET status = 'paid', stripe_payment_intent = ?,
+           customer_email = COALESCE(?, customer_email),
+           customer_name = COALESCE(?, customer_name),
+           user_id = COALESCE(user_id, ?),
            shipping_address_json = COALESCE(shipping_address_json, ?),
            shipping_method = COALESCE(shipping_method, ?)
            WHERE stripe_session_id = ?`,
@@ -2997,14 +3114,7 @@ app.post('/api/webhook/stripe', async (req, res) => {
         );
         console.log('[Stripe] Order paid:', session.id);
         const [[order]] = await pool.query('SELECT * FROM orders WHERE stripe_session_id = ?', [session.id]).catch(() => [[]]);
-        if (order) {
-          createOrderNotification({ ...order, user_id: order.user_id || metaUserId }, {
-            type: 'order_paid',
-            title: 'Order received',
-            message: `Order #${order.id} is paid and being prepared.`,
-            relatedId: order.id,
-          });
-        }
+        await notifyOrderPaidOnce(order ? { ...order, user_id: order.user_id || metaUserId } : null);
       }
     } catch (e) {
       console.error('[Stripe webhook] checkout.session.completed error:', e.message);
@@ -3193,18 +3303,7 @@ app.patch('/api/admin/orders/:id/mark-paid', adminAuth, async (req, res) => {
     if (!order) return res.status(404).json({ error: 'Order not found' });
     if (order.status !== 'pending') return res.status(400).json({ error: 'Order is not in pending state' });
     await pool.query(`UPDATE orders SET status = 'paid' WHERE id = ?`, [req.params.id]);
-    // Send confirmation email if not already sent
-    if (!order.confirmation_sent) {
-      const updated = { ...order, status: 'paid' };
-      notifyOrderConfirmation(updated).catch(() => {});
-      createOrderNotification(order, {
-        type: 'order_paid',
-        title: 'Order received',
-        message: `Order #${order.id} is paid and being prepared.`,
-        relatedId: order.id,
-      });
-      pool.query('UPDATE orders SET confirmation_sent = 1 WHERE id = ?', [req.params.id]).catch(() => {});
-    }
+    await notifyOrderPaidOnce({ ...order, status: 'paid' });
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -3669,7 +3768,7 @@ app.patch('/api/admin/orders/bundle/:bundleId/fulfill', adminAuth, async (req, r
   try {
     const { tracking_number } = req.body;
     const [orders] = await pool.query(
-      `SELECT id, customer_email, customer_name, items_json, total_amount FROM orders WHERE bundle_id = ? AND status != 'archived'`,
+      `SELECT id, user_id, customer_email, customer_name, items_json, total_amount FROM orders WHERE bundle_id = ? AND archived = 0`,
       [req.params.bundleId]
     );
     if (!orders.length) return res.status(404).json({ error: 'Bundle not found' });

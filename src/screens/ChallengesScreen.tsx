@@ -12,6 +12,7 @@ import { C, borderRadius } from '../theme';
 import AppFooter from '../components/AppFooter';
 import { Image } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { fullUrl } from '../config/api';
 import {
   CHALLENGE_CATEGORIES,
   FEELING_CATEGORIES,
@@ -23,8 +24,6 @@ import {
 
 const CHALLENGE_LOGO = require('../../assets/Pose_6-removebg-preview.png');
 
-const BASE_URL = 'https://photoai.betaplanets.com';
-const fullUrl = (u?: string) => u ? (u.startsWith('http') ? u : BASE_URL + u) : undefined;
 const primaryValue = (value?: string) => (value || '').split(',')[0].trim();
 const tagDisplayValue = (normalized: string, fallback?: string) => {
   const value = normalized && normalized !== '-' ? normalized : fallback;

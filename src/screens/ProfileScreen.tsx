@@ -11,11 +11,11 @@ import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
 import { C, borderRadius } from '../theme';
+import { fullUrl as resolveUrl } from '../config/api';
 
 const PROFILE_LOGO = require('../../assets/Pose_7-removebg-preview.png');
 
-const BASE = 'https://photoai.betaplanets.com';
-const fullUrl = (url?: string) => (!url ? '' : url.startsWith('http') ? url : BASE + url);
+const fullUrl = (url?: string) => resolveUrl(url) || '';
 
 const ACTION_BUTTONS = [
   { icon: '\u270F\uFE0F', label: 'Edit Profile',   screen: 'EditProfile',   color: '#54DFB6' },

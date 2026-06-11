@@ -11,9 +11,18 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
 import PhotoLightbox from '../components/PhotoLightbox';
 import { C, borderRadius } from '../theme';
+import { fullUrl as resolveUrl } from '../config/api';
 
-const BASE = 'https://photoai.betaplanets.com';
-const fullUrl = (u) => u ? (u.startsWith('http') ? u : BASE + u) : null;
+const fullUrl = (u) => resolveUrl(u) || null;
+
+const isEnabledFlag = (value: any) => {
+  if (value === true || value === 1) return true;
+  const normalized = String(value ?? '').trim().toLowerCase();
+  return ['1', 'true', 'yes', 'y', 'pro', 'pro_only', 'pro-only'].includes(normalized);
+};
+
+const isProOnlyProduct = (product: any) =>
+  isEnabledFlag(product?.is_pro_only) || isEnabledFlag(product?.pro_only) || isEnabledFlag(product?.requires_pro);
 
 export default function ProductDetailScreen() {
   const navigation = useNavigation();
@@ -24,6 +33,17 @@ export default function ProductDetailScreen() {
   const { addItem, itemCount } = useCart();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const currentReturnTo = () => (
+    typeof window !== 'undefined'
+      ? `${window.location.pathname}${window.location.search}`
+      : `/shop/product/${resolvedId}`
+  );
+  const goToSubscription = () => {
+    const parent = navigation.getParent?.();
+    const params = { returnTo: currentReturnTo() };
+    if (parent) parent.navigate('Subscription', params);
+    else navigation.navigate('Subscription', params);
+  };
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -44,10 +64,10 @@ export default function ProductDetailScreen() {
   const isPro = user?.subscription_status === 'active' || user?.role === 'pro' || !!user?.is_pro;
 
   const handleAddToCart = () => {
-    if (product.is_pro_only && !isPro) {
+    if (isProOnlyProduct(product) && !isPro) {
       Alert.alert('Pro Members Only', 'Upgrade to Pro to purchase this item.', [
         { text: 'Cancel' },
-        { text: 'Go Pro', onPress: () => navigation.navigate('Subscription') },
+        { text: 'Go Pro', onPress: goToSubscription },
       ]);
       return;
     }
@@ -79,6 +99,7 @@ export default function ProductDetailScreen() {
   const name = product.title || product.name || 'Product';
   const imgUrl = fullUrl(product.image_url);
   const price = Number(product.price || 0);
+  const isProOnly = isProOnlyProduct(product);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={{ flexGrow: 1 }}>
@@ -109,9 +130,9 @@ export default function ProductDetailScreen() {
               <Text style={styles.featuredBadgeText}>⭐ Featured</Text>
             </View>
           )}
-          {!!product.is_pro_only && (
+          {isProOnly && (
             <View style={styles.proBadgeImg}>
-              <Text style={styles.proBadgeImgText}>⭐ Pro Only</Text>
+              <Text style={styles.proBadgeImgText}>Pro Only</Text>
             </View>
           )}
         </View>
@@ -122,9 +143,9 @@ export default function ProductDetailScreen() {
           <Text style={styles.name}>{name}</Text>
           <Text style={styles.price}>${price.toFixed(2)}</Text>
 
-          {!!product.is_pro_only && !isPro && (
+          {isProOnly && !isPro && (
             <View style={styles.proAlert}>
-              <Text style={styles.proAlertText}>🔒 Pro members only</Text>
+              <Text style={styles.proAlertText}>Pro members only</Text>
             </View>
           )}
 
@@ -190,7 +211,7 @@ export default function ProductDetailScreen() {
             label={added ? '✓ Added to Cart!' : 'Add to Cart'}
             variant={added ? 'teal' : 'primary'}
             onPress={handleAddToCart}
-            disabled={!!product.is_pro_only && !isPro}
+            disabled={isProOnly && !isPro}
             style={{ marginTop: 16 }}
           />
 
@@ -202,11 +223,11 @@ export default function ProductDetailScreen() {
             </TouchableOpacity>
           )}
 
-          {!!product.is_pro_only && !isPro && (
+          {isProOnly && !isPro && (
             <GradientButton
               label="Upgrade to Pro"
               variant="outline"
-              onPress={() => navigation.navigate('Subscription')}
+              onPress={goToSubscription}
               style={{ marginTop: 10 }}
             />
           )}

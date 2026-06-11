@@ -32,6 +32,7 @@ import AdminScreen from './src/screens/AdminScreen';
 import GalleryScreen from './src/screens/GalleryScreen';
 import SubscriptionScreen from './src/screens/SubscriptionScreen';
 import OrderHistoryScreen from './src/screens/OrderHistoryScreen';
+import NotificationsScreen from './src/screens/NotificationsScreen';
 import PartnersScreen from './src/screens/PartnersScreen';
 import ContactScreen from './src/screens/ContactScreen';
 import AboutScreen from './src/screens/AboutScreen';
@@ -53,7 +54,7 @@ const navTheme = {
 };
 
 const linking = {
-  prefixes: ['https://photoai.betaplanets.com', 'http://localhost:19006'],
+  prefixes: ['https://photoai.betaplanets.com', 'https://photohealthy.htbluestone.com', 'http://localhost:19006'],
   config: {
     screens: {
       Main: {
@@ -80,6 +81,7 @@ const linking = {
       Gallery: 'gallery',
       Subscription: 'subscription',
       OrderHistory: 'my-orders',
+      Notifications: 'notifications',
       Partners: 'partners',
       Contact: 'contact',
       About: 'about',
@@ -223,6 +225,7 @@ function AppNavigator() {
         <Stack.Screen name="Gallery">{(p) => <OuterScreenWrapper><GalleryScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="Subscription">{(p) => <OuterScreenWrapper><SubscriptionScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="OrderHistory">{(p) => <OuterScreenWrapper><OrderHistoryScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="Notifications">{(p) => <OuterScreenWrapper><NotificationsScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="Partners">{(p) => <OuterScreenWrapper><PartnersScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="Contact">{(p) => <OuterScreenWrapper><ContactScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="About">{(p) => <OuterScreenWrapper><AboutScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>

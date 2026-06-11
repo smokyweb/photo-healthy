@@ -1,6 +1,17 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
+const webManifest = {
+  name: 'PhotoHealthy',
+  short_name: 'PhotoHealthy',
+  description: 'Capture, Share, Thrive. Join photo challenges and a wellness photography community.',
+  start_url: '/',
+  display: 'standalone',
+  background_color: '#0A0A1A',
+  theme_color: '#0A0A1A',
+  icons: [],
+};
+
 const babelConfig = {
   presets: [
     ['@babel/preset-env', {
@@ -49,6 +60,16 @@ module.exports = {
       template: './web-index.html',
       filename: 'index.html',
     }),
+    {
+      apply(compiler) {
+        compiler.hooks.thisCompilation.tap('PhotoHealthyManifestPlugin', compilation => {
+          compilation.emitAsset(
+            'manifest.json',
+            new compiler.webpack.sources.RawSource(JSON.stringify(webManifest, null, 2))
+          );
+        });
+      },
+    },
   ],
   optimization: {
     minimize: true,

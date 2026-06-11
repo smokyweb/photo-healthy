@@ -2,9 +2,9 @@ import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { C, borderRadius } from '../theme';
 import { normalizeChallengeCategory, normalizeFeelingCategory, normalizeMovementCategory } from '../constants/taxonomy';
+import { fullUrl as resolveUrl } from '../config/api';
 
-const BASE = 'https://photoai.betaplanets.com';
-const fullUrl = (url: string) => (!url ? '' : url.startsWith('http') ? url : BASE + url);
+const fullUrl = (url: string) => resolveUrl(url) || '';
 
 interface Challenge {
   id: number;

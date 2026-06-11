@@ -9,9 +9,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
 import { C, borderRadius } from '../theme';
 import { normalizeChallengeCategory, normalizeFeelingCategory, normalizeMovementCategory } from '../constants/taxonomy';
-
-const BASE_URL = 'https://photoai.betaplanets.com';
-const fullUrl = (u?: string) => u ? (u.startsWith('http') ? u : BASE_URL + u) : undefined;
+import { fullUrl } from '../config/api';
 
 const SORTS = [
   { key: 'recent', label: 'Recent' },

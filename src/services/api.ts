@@ -1,6 +1,5 @@
 import { addWatermark } from '../utils/watermark';
-
-const BASE_URL = 'https://photoai.betaplanets.com';
+import { API_BASE_URL, IS_LOCAL_API } from '../config/api';
 
 const TOKEN_KEY = 'ph_token';
 
@@ -21,11 +20,26 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function unwrapLocalProxyPath(method: string, path: string) {
+  if (!IS_LOCAL_API || !path.startsWith('/admin-api-proxy.php')) {
+    return { method, path };
+  }
+  const query = path.includes('?') ? path.slice(path.indexOf('?') + 1) : '';
+  const params = new URLSearchParams(query);
+  return {
+    method: params.get('method') || method,
+    path: params.get('path') || path,
+  };
+}
+
 async function request<T = any>(
   method: string,
   path: string,
   body?: any
 ): Promise<T> {
+  const resolved = unwrapLocalProxyPath(method, path);
+  method = resolved.method;
+  path = resolved.path;
   const isOverride =
     ['PATCH', 'PUT', 'DELETE'].includes(method.toUpperCase());
   const fetchMethod = isOverride ? 'POST' : method.toUpperCase();
@@ -39,7 +53,7 @@ async function request<T = any>(
     headers['X-HTTP-Method-Override'] = method.toUpperCase();
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
     method: fetchMethod,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -60,8 +74,8 @@ async function request<T = any>(
 
 // â”€â”€ Admin proxy (bypasses LiteSpeed WAF) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function adminGet<T = any>(path: string): Promise<T> {
-  const proxyPath = `/admin-api-proxy.php?path=${encodeURIComponent(path)}`;
-  const res = await fetch(`${BASE_URL}${proxyPath}`, {
+  const proxyPath = IS_LOCAL_API ? path : `/admin-api-proxy.php?path=${encodeURIComponent(path)}`;
+  const res = await fetch(`${API_BASE_URL}${proxyPath}`, {
     headers: authHeaders(),
   });
   if (!res.ok) {
@@ -78,9 +92,9 @@ async function adminGet<T = any>(path: string): Promise<T> {
 // â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function adminPut<T = any>(path: string, body?: any): Promise<T> {
-  const proxyPath = `/admin-api-proxy.php?path=${encodeURIComponent(path)}&method=PUT`;
-  const res = await fetch(`${BASE_URL}${proxyPath}`, {
-    method: 'POST',
+  const proxyPath = IS_LOCAL_API ? path : `/admin-api-proxy.php?path=${encodeURIComponent(path)}&method=PUT`;
+  const res = await fetch(`${API_BASE_URL}${proxyPath}`, {
+    method: IS_LOCAL_API ? 'PUT' : 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
@@ -115,6 +129,9 @@ export const updateUser = (id: number, data: any) =>
 export const adminResetPassword = (id: number) =>
   request('POST', '/admin-api-proxy.php?path=/api/admin/users/' + id + '/reset-password&method=POST', {});
 
+export const adminGrantPro = (id: number, data: { days?: number; note?: string }) =>
+  request('POST', `/admin-api-proxy.php?path=/api/admin/users/${id}/grant-pro&method=POST`, data);
+
 export const deleteUser = (id: number) =>
   request('POST', `/admin-api-proxy.php?path=/api/users/${id}/delete&method=POST`);
 
@@ -140,7 +157,7 @@ export const getChallenges = (params?: Record<string, string>) => {
 
 export const getPublicChallenges = async (params?: Record<string, string>) => {
   const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-  const res = await fetch(`${BASE_URL}/api/challenges${qs}`);
+  const res = await fetch(`${API_BASE_URL}/api/challenges${qs}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 };
@@ -174,6 +191,21 @@ export const getSubmissions = (params?: Record<string, string>) => {
 
 export const getSubmission = (id: number) =>
   request('GET', `/api/submissions/${id}`);
+
+export const downloadSubmissionPhoto = async (id: number | string, photo = 1): Promise<Blob> => {
+  const res = await fetch(`${API_BASE_URL}/api/submissions/${id}/download?photo=${photo}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try {
+      const err = await res.json();
+      msg = err.error || err.message || msg;
+    } catch {}
+    throw new Error(msg);
+  }
+  return res.blob();
+};
 
 export const createSubmission = (data: any) =>
   request('POST', '/api/submissions', data);
@@ -282,7 +314,7 @@ export const cancelSubscription = () =>
   request('POST', '/api/subscription/cancel');
 
 export const getSubscriptionPortal = () =>
-  request('GET', '/api/subscription/portal');
+  request('POST', '/api/subscription/portal');
 
 // â”€â”€ Admin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const adminGetDashboardStats = () =>
@@ -319,7 +351,7 @@ export const submitPartnerInquiry = (data: any) =>
 export async function uploadPhoto(file: File, options: { watermark?: boolean } = {}): Promise<{ url: string }> {
   const resizedDataUrl = await resizeImage(file, 1200, 0.82);
   const dataUrl = options.watermark ? await addWatermark(resizedDataUrl) : resizedDataUrl;
-  const res = await fetch(`${BASE_URL}/upload.php`, {
+  const res = await fetch(`${API_BASE_URL}/api/upload-base64`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -5,9 +5,9 @@ import { getSubmissions } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
 import { C, borderRadius } from '../theme';
+import { fullUrl as resolveUrl } from '../config/api';
 
-const BASE_URL = 'https://photoai.betaplanets.com';
-const fullUrl = (u?: string) => u ? (u.startsWith('http') ? u : BASE_URL + u) : null;
+const fullUrl = (u?: string) => resolveUrl(u) || null;
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];

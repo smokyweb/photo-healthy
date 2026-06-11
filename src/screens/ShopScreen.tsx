@@ -11,9 +11,18 @@ import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
 import { C, borderRadius, brandGradients, fontFamilies } from '../theme';
+import { fullUrl as resolveUrl } from '../config/api';
 
-const fullUrl = (u?: string) =>
-  u ? (u.startsWith('http') ? u : 'https://photoai.betaplanets.com' + u) : null;
+const fullUrl = (u?: string) => resolveUrl(u) || null;
+
+const isEnabledFlag = (value: any) => {
+  if (value === true || value === 1) return true;
+  const normalized = String(value ?? '').trim().toLowerCase();
+  return ['1', 'true', 'yes', 'y', 'pro', 'pro_only', 'pro-only'].includes(normalized);
+};
+
+const isProOnlyProduct = (product: any) =>
+  isEnabledFlag(product?.is_pro_only) || isEnabledFlag(product?.pro_only) || isEnabledFlag(product?.requires_pro);
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
   const chunks: T[][] = [];
@@ -29,6 +38,17 @@ export default function ShopScreen() {
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 640;
+  const currentReturnTo = () => (
+    typeof window !== 'undefined'
+      ? `${window.location.pathname}${window.location.search}`
+      : '/shop'
+  );
+  const goToSubscription = () => {
+    const parent = navigation.getParent?.();
+    const params = { returnTo: currentReturnTo() } as never;
+    if (parent) parent.navigate('Subscription' as never, params);
+    else navigation.navigate('Subscription' as never, params);
+  };
 
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,13 +100,13 @@ export default function ShopScreen() {
 
   const isPro = user?.subscription_status === 'active' || user?.role === 'pro' || !!user?.is_pro;
   const handleAddToCart = (product: any) => {
-    if (product.is_pro_only && !isPro) {
+    if (isProOnlyProduct(product) && !isPro) {
       Alert.alert(
         'Pro Members Only',
         'This item is available for Pro members. Upgrade to access exclusive products.',
         [
           { text: 'Maybe Later' },
-          { text: 'Go Pro', onPress: () => navigation.navigate('Subscription' as never) },
+          { text: 'Go Pro', onPress: goToSubscription },
         ]
       );
       return;
@@ -222,7 +242,8 @@ export default function ShopScreen() {
             <View key={rowIdx} style={styles.productRow}>
               {row.map((item: any) => {
                 const imgUri = fullUrl(item.image_url);
-                const requiresProUpgrade = !!item.is_pro_only && !isPro;
+                const isProOnly = isProOnlyProduct(item);
+                const requiresProUpgrade = isProOnly && !isPro;
                 return (
                   <TouchableOpacity
                     key={item.id}
@@ -241,9 +262,9 @@ export default function ShopScreen() {
                       <View style={styles.featuredBadge}>
                         <Text style={styles.featuredBadgeText}>Featured</Text>
                       </View>
-                      {!!item.is_pro_only && (
+                      {isProOnly && (
                         <View style={styles.proBadge}>
-                          <Text style={styles.proBadgeText}>⭐ Pro Only</Text>
+                          <Text style={styles.proBadgeText}>Pro Only</Text>
                         </View>
                       )}
                     </View>
@@ -251,7 +272,7 @@ export default function ShopScreen() {
                       <Text style={styles.productName} numberOfLines={2}>{item.title}</Text>
                       <Text style={styles.price}>${Number(item.price).toFixed(2)}</Text>
                       <GradientButton
-                        label={requiresProUpgrade ? '⭐ Pro Only' : cartAdded === item.id ? '✓ Added!' : '🛒 Add to Cart'}
+                        label={requiresProUpgrade ? 'Pro Only' : cartAdded === item.id ? 'Added!' : 'Add to Cart'}
                         onPress={() => handleAddToCart(item)}
                         style={styles.addBtn}
                         size="sm"
@@ -281,7 +302,8 @@ export default function ShopScreen() {
             <View key={rowIdx} style={styles.productRow}>
               {row.map((item: any) => {
                 const imgUri = fullUrl(item.image_url);
-                const requiresProUpgrade = !!item.is_pro_only && !isPro;
+                const isProOnly = isProOnlyProduct(item);
+                const requiresProUpgrade = isProOnly && !isPro;
                 return (
                   <TouchableOpacity
                     key={item.id}
@@ -297,9 +319,9 @@ export default function ShopScreen() {
                           <Text style={{ fontSize: 32 }}>🛒️</Text>
                         </View>
                       )}
-                      {!!item.is_pro_only && (
+                      {isProOnly && (
                         <View style={styles.proBadge}>
-                          <Text style={styles.proBadgeText}>⭐ Pro Only</Text>
+                          <Text style={styles.proBadgeText}>Pro Only</Text>
                         </View>
                       )}
                     </View>
@@ -307,7 +329,7 @@ export default function ShopScreen() {
                       <Text style={styles.productName} numberOfLines={2}>{item.title}</Text>
                       <Text style={styles.price}>${Number(item.price).toFixed(2)}</Text>
                       <GradientButton
-                        label={requiresProUpgrade ? '⭐ Pro Only' : cartAdded === item.id ? '✓ Added!' : '🛒 Add to Cart'}
+                        label={requiresProUpgrade ? 'Pro Only' : cartAdded === item.id ? 'Added!' : 'Add to Cart'}
                         onPress={() => handleAddToCart(item)}
                         variant="outline"
                         style={styles.addBtn}

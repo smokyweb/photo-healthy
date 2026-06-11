@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Image, ScrollView,
   TouchableOpacity, TextInput, RefreshControl, Alert,
@@ -6,17 +6,16 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { getChallenge, getSubmissions, getUserAccess, getChallengeEnrollment, enterChallenge } from '../services/api';
+import { getChallenge, getSubmissions, getUserAccess, getChallengeEnrollment, enterChallenge, downloadSubmissionPhoto } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
 import PhotoLightbox from '../components/PhotoLightbox';
 import { C, borderRadius } from '../theme';
 import { normalizeChallengeCategory, normalizeFeelingCategory, normalizeMovementCategory } from '../constants/taxonomy';
+import { fullUrl as resolveUrl } from '../config/api';
 
-const BASE = 'https://photoai.betaplanets.com';
-const fullUrl = (url?: string | null) =>
-  url ? (url.startsWith('http') ? url : BASE + url) : null;
+const fullUrl = (url?: string | null) => resolveUrl(url) || null;
 
 const isEnabledFlag = (value: any) => {
   if (value === true || value === 1) return true;
@@ -46,6 +45,17 @@ export default function ChallengeDetailScreen() {
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
+  const currentReturnTo = () => (
+    typeof window !== 'undefined'
+      ? `${window.location.pathname}${window.location.search}`
+      : `/challenge/${challengeId}`
+  );
+  const goToSubscription = () => {
+    const parent = navigation.getParent?.();
+    const params = { returnTo: currentReturnTo() };
+    if (parent) parent.navigate('Subscription', params);
+    else navigation.navigate('Subscription', params);
+  };
 
   const [challenge, setChallenge] = useState<any>(null);
   const [submissions, setSubmissions] = useState<any[]>([]);
@@ -56,7 +66,8 @@ export default function ChallengeDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [subSearch, setSubSearch] = useState('');
   const [activeTagFilter, setActiveTagFilter] = useState<{ type: 'category' | 'feeling' | 'movement'; value: string } | null>(null);
-  const [lightboxPhoto, setLightboxPhoto] = useState<{ uri: string; title?: string } | null>(null);
+  const [lightboxPhoto, setLightboxPhoto] = useState<{ uri: string; title?: string; submissionId?: number | string; photoIndex?: number } | null>(null);
+  const [downloadingPhoto, setDownloadingPhoto] = useState(false);
 
   useEffect(() => {
     if (
@@ -111,7 +122,7 @@ export default function ChallengeDetailScreen() {
         'This challenge is exclusive to Pro members. Upgrade to access all Pro challenges.',
         [
           { text: 'Maybe Later' },
-          { text: 'Go Pro ⭐', onPress: () => navigation.navigate('Subscription') },
+          { text: 'Go Pro ⭐', onPress: goToSubscription },
         ]
       );
       return;
@@ -142,12 +153,40 @@ export default function ChallengeDetailScreen() {
         'You have 0 remaining this month. Upgrade to Pro for unlimited submissions.',
         [
           { text: 'Maybe Later' },
-          { text: 'Go Pro ⭐', onPress: () => navigation.navigate('Subscription') },
+          { text: 'Go Pro ⭐', onPress: goToSubscription },
         ]
       );
       return;
     }
     navigation.navigate('SubmitPhoto', { challengeId });
+  };
+
+  const safeFileName = (value: string) =>
+    String(value || 'photo-healthy-photo').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'photo-healthy-photo';
+
+  const handleLightboxDownload = async () => {
+    if (!lightboxPhoto?.uri || downloadingPhoto) return;
+    setDownloadingPhoto(true);
+    try {
+      const blob = lightboxPhoto.submissionId
+        ? await downloadSubmissionPhoto(lightboxPhoto.submissionId, lightboxPhoto.photoIndex || 1)
+        : await fetch(lightboxPhoto.uri).then(res => {
+            if (!res.ok) throw new Error('Could not download this image.');
+            return res.blob();
+          });
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = `${safeFileName(lightboxPhoto.title || challenge?.title)}-${lightboxPhoto.photoIndex || 1}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (e: any) {
+      Alert.alert('Download failed', e.message || 'Could not download this photo.');
+    } finally {
+      setDownloadingPhoto(false);
+    }
   };
 
   if (loading) return <LoadingSpinner fullScreen />;
@@ -344,7 +383,7 @@ export default function ChallengeDetailScreen() {
                     label="Become a PRO"
                     variant="outline"
                     pill={false}
-                    onPress={() => navigation.navigate('Subscription')}
+                    onPress={goToSubscription}
                     style={styles.secondaryActionBtn}
                   />
                 )}
@@ -373,7 +412,7 @@ export default function ChallengeDetailScreen() {
             <GradientButton
               label="Become a PRO"
               variant="outline" pill={false}
-              onPress={() => navigation.navigate('Subscription')}
+              onPress={goToSubscription}
               style={styles.actionBtn}
             />
           )}
@@ -450,7 +489,7 @@ export default function ChallengeDetailScreen() {
                   <View>
                     {imgUrl ? (
                       <TouchableOpacity
-                        onPress={() => setLightboxPhoto({ uri: imgUrl, title: sub.title || challenge.title })}
+                        onPress={() => setLightboxPhoto({ uri: imgUrl, title: sub.title || challenge.title, submissionId: sub.id, photoIndex: 1 })}
                         activeOpacity={0.9}
                         accessibilityLabel="Open photo larger"
                       >
@@ -526,6 +565,9 @@ export default function ChallengeDetailScreen() {
         uri={lightboxPhoto?.uri}
         title={lightboxPhoto?.title}
         onClose={() => setLightboxPhoto(null)}
+        onDownload={lightboxPhoto?.uri && isPro ? handleLightboxDownload : undefined}
+        downloading={downloadingPhoto}
+        downloadLabel="Download Original"
       />
     </ScrollView>
   );

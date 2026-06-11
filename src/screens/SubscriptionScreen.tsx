@@ -2,7 +2,7 @@
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import {
   getSubscriptionStatus,
@@ -26,10 +26,12 @@ const BENEFITS = [
 
 export default function SubscriptionScreen() {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const { user } = useAuth();
   const [subscription, setSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
@@ -39,29 +41,57 @@ export default function SubscriptionScreen() {
       .finally(() => setLoading(false));
   }, [user]);
 
+  const safeReturnTo = (value?: string | null) => {
+    const path = String(value || '').trim();
+    if (!path || !path.startsWith('/') || path.startsWith('//') || /^(https?:)?\/\//i.test(path)) return '';
+    return path;
+  };
+
+  const getReturnTo = () => {
+    const params = route.params || {};
+    const search = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const stored = typeof window !== 'undefined' ? window.sessionStorage?.getItem('ph_pro_return_to') : '';
+    return safeReturnTo(params.returnTo || params.return_to || search?.get('return_to') || stored);
+  };
+
   const handleSubscribe = async () => {
     if (!user) { navigation.navigate('Login' as never); return; }
     setSubscribing(true);
+    setCheckoutError('');
     try {
-      const data = await subscribe({ plan: 'pro' });
-      if (data?.url) {
-        (window as any).location.href = data.url;
+      const data = await subscribe({
+        plan: 'pro',
+        origin: typeof window !== 'undefined' ? window.location.origin : undefined,
+        returnTo: getReturnTo(),
+      });
+      if (data?.checkoutUnavailable || data?.error) {
+        throw new Error(data.message || 'Stripe checkout is not available on this environment yet.');
+      }
+      const checkoutUrl = data?.url || data?.checkout_url || data?.checkoutUrl;
+      if (checkoutUrl && typeof window !== 'undefined') {
+        const returnTo = getReturnTo();
+        if (returnTo) window.sessionStorage?.setItem('ph_pro_return_to', returnTo);
+        window.location.assign(checkoutUrl);
       } else {
-        Alert.alert('Success', 'Welcome to Pro!');
-        navigation.goBack();
+        throw new Error('Stripe did not return a checkout link. Please try again.');
       }
     } catch (e: any) {
-      Alert.alert('Error', e.message || 'Subscription failed. Please try again.');
+      const message = e.message || 'Subscription failed. Please try again.';
+      setCheckoutError(message);
+      Alert.alert('Subscription unavailable', message);
     }
     setSubscribing(false);
   };
 
   const handleManageBilling = async () => {
+    setCheckoutError('');
     try {
       const data = await getSubscriptionPortal();
-      if (data?.url) { (window as any).location.href = data.url; }
+      if (data?.url && typeof window !== 'undefined') { window.location.assign(data.url); }
     } catch (e: any) {
-      Alert.alert('Error', 'Could not open billing portal. Please try again.');
+      const message = e.message || 'Could not open billing portal. Please try again.';
+      setCheckoutError(message);
+      Alert.alert('Billing unavailable', message);
     }
   };
 
@@ -168,6 +198,9 @@ export default function SubscriptionScreen() {
               size="lg"
               style={styles.upgradeBtn}
             />
+            {!!checkoutError && (
+              <Text style={styles.checkoutError}>{checkoutError}</Text>
+            )}
 
             <TouchableOpacity onPress={handleManageBilling} style={styles.manageBillingRow}>
               <Text style={styles.manageBillingLink}>Already subscribed? Manage billing</Text>
@@ -297,6 +330,14 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   upgradeBtn: { width: '100%' },
+  checkoutError: {
+    color: '#FCA5A5',
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: 12,
+    lineHeight: 18,
+  },
   manageBillingRow: { marginTop: 18 },
   manageBillingLink: {
     color: C.TEAL,

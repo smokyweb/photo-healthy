@@ -15,6 +15,7 @@ import {
   adminGetOrders, adminMarkOrderPaid, adminProcessOrder, adminFulfillOrder, adminUpdateTracking, adminArchiveOrder, deleteUser, restoreUser, updateUser, adminSuspendUser,
   adminGetTaxonomy, adminUpdateTaxonomy,
   adminGetActivity, adminGetUserSubmissions, adminGetUserComments, adminGetUserOrders, adminCreateUser, adminResetPassword,
+  adminGrantPro,
   uploadPhoto,
 } from '../services/api';
 import GradientButton from '../components/GradientButton';
@@ -24,8 +25,58 @@ import PhotoLightbox from '../components/PhotoLightbox';
 import { C, borderRadius } from '../theme';
 import { DEFAULT_TAXONOMY } from '../constants/taxonomy';
 import { addWatermark } from '../utils/watermark';
+import { fullUrl } from '../config/api';
 
 const TABS = ['Dashboard', 'Challenges', 'Users', 'Feed', 'Products', 'Discounts', 'Orders', 'Settings', 'Taxonomy'];
+
+const isEnabledFlag = (value: any) => {
+  if (value === true || value === 1) return true;
+  const normalized = String(value ?? '').trim().toLowerCase();
+  return ['1', 'true', 'yes', 'y', 'pro', 'pro_only', 'pro-only'].includes(normalized);
+};
+
+const isProOnlyProduct = (product: any) =>
+  isEnabledFlag(product?.is_pro_only) || isEnabledFlag(product?.pro_only) || isEnabledFlag(product?.requires_pro);
+
+const stopModalKeyboardBubble = (e: any) => {
+  e?.stopPropagation?.();
+};
+
+const AdminModal = ({ visible, onClose, children }: { visible: boolean; onClose: () => void; children: React.ReactNode }) => (
+  <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <View style={styles.modalOverlay}>
+      <View
+        style={styles.modalPanel}
+        {...({
+          onKeyDown: stopModalKeyboardBubble,
+          onKeyUp: stopModalKeyboardBubble,
+          onKeyPress: stopModalKeyboardBubble,
+        } as any)}
+      >
+        <TouchableOpacity
+          onPress={onClose}
+          style={styles.modalCloseBtn}
+          accessibilityLabel="Close modal"
+          activeOpacity={0.82}
+        >
+          <Text style={styles.modalCloseText}>x</Text>
+        </TouchableOpacity>
+        <ScrollView
+          style={styles.modalScroll}
+          contentContainerStyle={styles.modalContent}
+          keyboardShouldPersistTaps="handled"
+          {...({
+            onKeyDown: stopModalKeyboardBubble,
+            onKeyUp: stopModalKeyboardBubble,
+            onKeyPress: stopModalKeyboardBubble,
+          } as any)}
+        >
+          {children}
+        </ScrollView>
+      </View>
+    </View>
+  </Modal>
+);
 
 export default function AdminScreen() {
   const navigation = useNavigation<any>();
@@ -138,38 +189,6 @@ export default function AdminScreen() {
       return next;
     });
   };
-
-  const stopModalKeyboardBubble = (e: any) => {
-    e?.stopPropagation?.();
-  };
-
-  const AdminModal = ({ visible, onClose, children }: { visible: boolean; onClose: () => void; children: React.ReactNode }) => (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={() => {}}>
-      <View style={styles.modalOverlay}>
-        <View
-          style={styles.modalPanel}
-          {...({
-            onKeyDown: stopModalKeyboardBubble,
-            onKeyUp: stopModalKeyboardBubble,
-            onKeyPress: stopModalKeyboardBubble,
-          } as any)}
-        >
-          <ScrollView
-            style={styles.modalScroll}
-            contentContainerStyle={styles.modalContent}
-            keyboardShouldPersistTaps="handled"
-            {...({
-              onKeyDown: stopModalKeyboardBubble,
-              onKeyUp: stopModalKeyboardBubble,
-              onKeyPress: stopModalKeyboardBubble,
-            } as any)}
-          >
-            {children}
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
-  );
 
   // Product form state
   const [showProductForm, setShowProductForm] = useState(false);
@@ -437,7 +456,7 @@ export default function AdminScreen() {
         cover_image_url: ch.cover_image_url || '',
         partner_url: ch.partner_url || '',
       });
-      setChallengeImgPreview(ch.cover_image_url ? ('https://photoai.betaplanets.com' + ch.cover_image_url).replace('https://photoai.betaplanets.comhttp', 'http') : '');
+      setChallengeImgPreview(fullUrl(ch.cover_image_url) || '');
       setChallengeImgFile(null);
     } else {
       setEditingChallenge(null);
@@ -622,7 +641,7 @@ export default function AdminScreen() {
 
       {challenges.map(ch => {
         const imgUri = ch.cover_image_url
-          ? (ch.cover_image_url.startsWith('http') ? ch.cover_image_url : 'https://photoai.betaplanets.com' + ch.cover_image_url)
+          ? (fullUrl(ch.cover_image_url))
           : null;
         const daysLeft = ch.end_date
           ? Math.max(0, Math.ceil((new Date(ch.end_date).getTime() - Date.now()) / 86400000))
@@ -874,7 +893,7 @@ export default function AdminScreen() {
               }}
             >
               {s.photo1_url ? (
-                <Image source={{ uri: s.photo1_url.startsWith('http') ? s.photo1_url : 'https://photoai.betaplanets.com' + s.photo1_url }} style={styles.thumbImage} resizeMode="contain" />
+                <Image source={{ uri: fullUrl(s.photo1_url) }} style={styles.thumbImage} resizeMode="contain" />
               ) : (
                 <View style={[styles.thumbImage, styles.thumbPlaceholder]}>
                   <Text style={{ fontSize: 20 }}>📷</Text>
@@ -1063,11 +1082,7 @@ export default function AdminScreen() {
                     // If Pro was selected, grant pro membership
                     if (newUserForm.subscription_status === 'active' && created?.id) {
                       const days = parseInt(newUserForm.pro_days) || 30;
-                      await fetch('/admin-api-proxy.php?path=/api/admin/users/' + created.id + '/grant-pro&method=POST', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ph_token') || '') },
-                        body: JSON.stringify({ days, note: 'Admin assigned at creation' })
-                      }).catch(() => {});
+                      await adminGrantPro(created.id, { days, note: 'Admin assigned at creation' }).catch(() => {});
                     }
                     const d = await adminGetUsers();
                     setUsers(d?.users || d || []);
@@ -1288,7 +1303,7 @@ export default function AdminScreen() {
     if (selectedSubmission) {
       const sub = selectedSubmission;
       const imgUri = sub.image_url
-        ? (sub.image_url.startsWith('http') ? sub.image_url : 'https://photoai.betaplanets.com' + sub.image_url)
+        ? (fullUrl(sub.image_url))
         : null;
 
       return (
@@ -1306,7 +1321,7 @@ export default function AdminScreen() {
               sub.photo4_url,
             ]
               .filter(Boolean)
-              .map((u: string) => u.startsWith('http') ? u : 'https://photoai.betaplanets.com' + u)
+              .map((u: string) => fullUrl(u))
               .filter((url: string, index: number, arr: string[]) => arr.indexOf(url) === index);
             if (photoUrls.length === 0) return (
               <View style={{ width: '100%', height: 200, borderRadius: 12, backgroundColor: C.CARD_BG2, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
@@ -1587,7 +1602,7 @@ export default function AdminScreen() {
             >
               {item.image_url ? (
                 <Image
-                  source={{ uri: item.image_url.startsWith('http') ? item.image_url : 'https://photoai.betaplanets.com' + item.image_url }}
+                  source={{ uri: fullUrl(item.image_url) }}
                   style={styles.thumbImage}
                   resizeMode="contain"
                 />
@@ -1742,7 +1757,7 @@ export default function AdminScreen() {
       return productTitle(p).toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q);
     }).sort((a, b) => {
       if (productSort === 'price') return (a.price || 0) - (b.price || 0);
-      if (productSort === 'type') return (a.is_pro_only ? 1 : 0) - (b.is_pro_only ? 1 : 0);
+      if (productSort === 'type') return (isProOnlyProduct(a) ? 1 : 0) - (isProOnlyProduct(b) ? 1 : 0);
       return productTitle(a).localeCompare(productTitle(b));
     });
 
@@ -1903,7 +1918,7 @@ export default function AdminScreen() {
             )}
             {productEditForm.image_url ? (
               <View style={{ marginBottom: 8 }}>
-                <Image source={{ uri: productEditForm.image_url.startsWith('http') ? productEditForm.image_url : 'https://photoai.betaplanets.com' + productEditForm.image_url }} style={{ width: '100%', height: 120, borderRadius: 8 }} resizeMode="cover" />
+                <Image source={{ uri: fullUrl(productEditForm.image_url) }} style={{ width: '100%', height: 120, borderRadius: 8 }} resizeMode="cover" />
               </View>
             ) : null}
             <Input label="Or paste image URL" value={productEditForm.image_url || ''} onChangeText={v => setProductEditForm((f: any) => ({ ...f, image_url: v }))} placeholder="https://..." />
@@ -1914,7 +1929,7 @@ export default function AdminScreen() {
             </View>
             <View style={styles.switchRow}>
               <Text style={styles.switchLabel}>Pro Only</Text>
-              <Switch value={!!productEditForm.is_pro_only} onValueChange={v => setProductEditForm((f: any) => ({ ...f, is_pro_only: v }))} trackColor={{ true: C.ORANGE }} />
+              <Switch value={isEnabledFlag(productEditForm.is_pro_only)} onValueChange={v => setProductEditForm((f: any) => ({ ...f, is_pro_only: v }))} trackColor={{ true: C.ORANGE }} />
             </View>
             <View style={styles.formBtns}>
               <GradientButton label="Save" onPress={handleSaveProductEdit} variant="primary" style={{ flex: 1, marginRight: 8 }} />
@@ -1937,7 +1952,7 @@ export default function AdminScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <Text style={styles.listItemTitle}>{productTitle(p)}</Text>
                 {p.featured ? <View style={styles.badgeTeal}><Text style={styles.badgeText}>Featured</Text></View> : null}
-                {p.is_pro_only ? <View style={styles.badgeOrange}><Text style={styles.badgeText}>Pro Only</Text></View> : null}
+                {isProOnlyProduct(p) ? <View style={styles.badgeOrange}><Text style={styles.badgeText}>Pro Only</Text></View> : null}
                 {!p.is_active ? <View style={{ backgroundColor: '#ef444422', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: '#ef444455' }}><Text style={{ color: '#ef4444', fontSize: 10, fontWeight: '700' }}>HIDDEN</Text></View> : null}
               </View>
               <Text style={[styles.listItemSub, { color: C.TEAL, fontWeight: '700' }]}>${Number(p.price || 0).toFixed(2)}</Text>
@@ -1949,7 +1964,7 @@ export default function AdminScreen() {
                 </View>
                 <View style={styles.toggleItem}>
                   <Text style={styles.toggleLabel}>Pro</Text>
-                  <Switch value={!!p.is_pro_only} onValueChange={v => handleProductToggle(p, 'is_pro_only', v)} trackColor={{ true: C.ORANGE }} />
+                  <Switch value={isProOnlyProduct(p)} onValueChange={v => handleProductToggle(p, 'is_pro_only', v)} trackColor={{ true: C.ORANGE }} />
                 </View>
                 <View style={styles.toggleItem}>
                   <Text style={[styles.toggleLabel, { color: p.is_active ? '#22c55e' : '#ef4444' }]}>{p.is_active ? 'Listed' : 'Hidden'}</Text>
@@ -1959,7 +1974,7 @@ export default function AdminScreen() {
             </View>
             <View style={{ gap: 4 }}>
               <TouchableOpacity
-                onPress={() => { setEditingProduct(p); setProductEditForm({ name: productTitle(p), description: p.description || '', price: productPriceText(p.price), is_pro_only: !!p.is_pro_only, featured: !!p.featured, emoji: p.emoji || '', image_url: p.image_url || '', sizes: p.sizes || '' }); }}
+                onPress={() => { setEditingProduct(p); setProductEditForm({ name: productTitle(p), description: p.description || '', price: productPriceText(p.price), is_pro_only: isProOnlyProduct(p), featured: !!p.featured, emoji: p.emoji || '', image_url: p.image_url || '', sizes: p.sizes || '' }); }}
                 style={styles.iconBtn}
               >
                 <Text style={styles.editIcon}>✏️</Text>
@@ -3018,8 +3033,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.18)',
   },
+  modalCloseBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 20,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(8,12,24,0.92)',
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+  },
+  modalCloseText: {
+    color: C.TEXT,
+    fontSize: 18,
+    lineHeight: 20,
+    fontWeight: '900',
+  },
   modalScroll: { width: '100%' },
-  modalContent: { padding: 0 },
+  modalContent: { padding: 0, paddingTop: 4 },
   modalFormCard: { marginBottom: 0, borderWidth: 0, borderRadius: 0 },
   formTitle: { color: C.TEXT, fontWeight: '800', fontSize: 22, marginBottom: 14 },
   formBtns: { flexDirection: 'row', marginTop: 8 },

@@ -6,7 +6,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { getMyNotifications, markMyNotificationsRead } from '../services/api';
+import { getMyNotifications } from '../services/api';
 import { C, borderRadius } from '../theme';
 
 const LOGO_IMG = require('../../assets/logo.png');
@@ -40,11 +40,7 @@ export default function TopNavBar() {
 
   const openNotifications = () => {
     setMenuOpen(false);
-    if (notificationCount > 0) {
-      setNotificationCount(0);
-      markMyNotificationsRead().catch(() => {});
-    }
-    navigation.navigate('OrderHistory' as never);
+    navigation.navigate('Notifications' as never);
   };
 
   const initials = user?.name
