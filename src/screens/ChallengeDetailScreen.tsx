@@ -147,7 +147,7 @@ export default function ChallengeDetailScreen() {
       ]);
       return;
     }
-    if (remainingSubmissions !== undefined && remainingSubmissions <= 0) {
+    if (typeof remainingSubmissions === 'number' && remainingSubmissions <= 0) {
       Alert.alert(
         'Monthly Limit Reached',
         'You have 0 remaining this month. Upgrade to Pro for unlimited submissions.',
@@ -204,7 +204,13 @@ export default function ChallengeDetailScreen() {
     challenge.end_date
       ? Math.max(0, Math.floor((new Date(challenge.end_date).getTime() - Date.now()) / 86400000))
       : null;
-  const isPro = access?.isPro;
+  const isPro = !!(
+    access?.isPro ||
+    access?.is_pro ||
+    user?.subscription_status === 'active' ||
+    user?.role === 'pro' ||
+    user?.is_pro
+  );
   const isProOnly = isChallengeProOnly(challenge);
   const remainingSubmissions = access?.remainingSubmissions;
   const hasPartner = !!challenge.partner_url;
@@ -427,7 +433,7 @@ export default function ChallengeDetailScreen() {
           )}
 
           {/* Remaining submissions */}
-          {remainingSubmissions !== undefined && (
+          {typeof remainingSubmissions === 'number' && (
             <Text style={styles.remainingText}>
               {remainingSubmissions} remaining this month
             </Text>

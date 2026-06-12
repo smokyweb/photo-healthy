@@ -1222,11 +1222,17 @@ app.get('/api/challenges/:id', async (req, res) => {
 
 app.post('/api/challenges/:id/enter', auth, async (req, res) => {
   try {
-    const [challenges] = await pool.query('SELECT id, duration_days, is_active, end_date FROM challenges WHERE id = ?', [req.params.id]);
+    const [challenges] = await pool.query('SELECT id, duration_days, is_active, end_date, is_pro_only FROM challenges WHERE id = ?', [req.params.id]);
     if (challenges.length === 0) return res.status(404).json({ error: 'Challenge not found' });
     if (!challenges[0].is_active) return res.status(400).json({ error: 'Challenge is not active' });
     if (challenges[0].end_date && new Date(challenges[0].end_date).getTime() < Date.now()) {
       return res.status(400).json({ error: 'Challenge is archived' });
+    }
+    await syncStripeSubscriptionForUser(req.user.id);
+    const [[userRow]] = await pool.query('SELECT is_suspended, subscription_status FROM users WHERE id = ?', [req.user.id]);
+    if (userRow?.is_suspended) return res.status(403).json({ error: 'Your account has been suspended' });
+    if (challenges[0].is_pro_only && userRow?.subscription_status !== 'active') {
+      return res.status(403).json({ error: 'pro_required', message: 'This challenge is exclusive to Pro members.' });
     }
     const durationDays = Number(challenges[0].duration_days || 30);
     await pool.query(
@@ -1838,6 +1844,7 @@ app.post('/api/submissions', auth, async (req, res) => {
     if (!challenge_id || !title || !photoUrls[0]) return res.status(400).json({ error: 'Challenge, title, and photo required' });
 
     // Check user not suspended + get subscription status
+    await syncStripeSubscriptionForUser(req.user.id);
     const [userRows] = await pool.query('SELECT is_suspended, subscription_status FROM users WHERE id = ?', [req.user.id]);
     if (userRows[0]?.is_suspended) return res.status(403).json({ error: 'Your account has been suspended' });
     const isPro = userRows[0]?.subscription_status === 'active';
