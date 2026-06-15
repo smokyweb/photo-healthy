@@ -13,6 +13,7 @@ import AppFooter from '../components/AppFooter';
 import { C, borderRadius } from '../theme';
 import { normalizeChallengeCategory, normalizeFeelingCategory, normalizeMovementCategory } from '../constants/taxonomy';
 import { fullUrl as resolveUrl } from '../config/api';
+import { addWatermark } from '../utils/watermark';
 
 const fullUrl = (u?: string) => resolveUrl(u) || null;
 type SubmissionTagType = 'name' | 'category' | 'feeling' | 'movement';
@@ -27,6 +28,14 @@ function initials(name: string) {
 }
 const safeFileName = (value: string) =>
   String(value || 'photo-healthy-photo').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'photo-healthy-photo';
+
+const blobToDataUrl = (blob: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 
 export default function SubmissionDetailScreen() {
   const navigation = useNavigation<any>();
@@ -183,14 +192,16 @@ export default function SubmissionDetailScreen() {
 
   const handleDownloadPhoto = async () => {
     if (!activePhoto || downloadingPhoto) return;
-    if (!user) {
+    if (!canDownloadPhoto) {
       Alert.alert('Pro Members Only', 'Please sign in with a Pro account to download photos.');
       return;
     }
     setDownloadingPhoto(true);
     try {
       const blob = await downloadSubmissionPhoto(submissionId, activePhotoIndex + 1);
-      const objectUrl = URL.createObjectURL(blob);
+      const watermarkedDataUrl = await addWatermark(await blobToDataUrl(blob));
+      const watermarkedBlob = await fetch(watermarkedDataUrl).then(res => res.blob());
+      const objectUrl = URL.createObjectURL(watermarkedBlob);
       const link = document.createElement('a');
       link.href = objectUrl;
       link.download = `${safeFileName(submission.title || submission.challenge_title)}-${activePhotoIndex + 1}.jpg`;
@@ -232,9 +243,7 @@ export default function SubmissionDetailScreen() {
     subscriptionStatus?.status === 'active' ||
     !!subscriptionStatus?.is_pro ||
     !!subscriptionStatus?.isPro ||
-    user.role === 'pro' ||
-    user.role === 'admin' ||
-    !!user.is_admin
+    user.role === 'pro'
   );
   const dateStr = submission.created_at
     ? new Date(submission.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
@@ -327,7 +336,7 @@ export default function SubmissionDetailScreen() {
                       <View style={styles.downloadArrow} />
                       <View style={styles.downloadBase} />
                     </View>
-                    <Text style={styles.downloadOverlayText}>{downloadingPhoto ? 'Preparing...' : 'Download Original'}</Text>
+                    <Text style={styles.downloadOverlayText}>{downloadingPhoto ? 'Preparing...' : 'Download'}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -523,7 +532,7 @@ export default function SubmissionDetailScreen() {
                     activeOpacity={0.82}
                     disabled={downloadingPhoto}
                   >
-                    <Text style={styles.viewerDownloadText}>{downloadingPhoto ? 'Preparing...' : 'Download Original'}</Text>
+                    <Text style={styles.viewerDownloadText}>{downloadingPhoto ? 'Preparing...' : 'Download'}</Text>
                   </TouchableOpacity>
                 )}
               </View>

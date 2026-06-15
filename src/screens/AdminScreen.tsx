@@ -10,7 +10,7 @@ import {
   adminGetDashboardStats, adminGetUsers, adminGetSettings, adminUpdateSettings,
   adminGetProducts, createProduct, updateProduct, deleteProduct,
   adminGetDiscountCodes, createDiscountCode, updateDiscountCode, deleteDiscountCode,
-  getChallenges, createChallenge, updateChallenge, deleteChallenge,
+  getChallenges, getPublicChallenges, createChallenge, updateChallenge, deleteChallenge,
   deleteSubmission, updateSubmission, deleteComment, updateComment, getComments, getSubmissions,
   adminGetOrders, adminMarkOrderPaid, adminProcessOrder, adminFulfillOrder, adminUpdateTracking, adminArchiveOrder, deleteUser, restoreUser, updateUser, adminSuspendUser,
   adminGetTaxonomy, adminUpdateTaxonomy,
@@ -37,6 +37,20 @@ const isEnabledFlag = (value: any) => {
 
 const isProOnlyProduct = (product: any) =>
   isEnabledFlag(product?.is_pro_only) || isEnabledFlag(product?.pro_only) || isEnabledFlag(product?.requires_pro);
+
+const normalizeChallengeResponse = (data: any) =>
+  Array.isArray(data) ? data : Array.isArray(data?.challenges) ? data.challenges : [];
+
+const loadAdminChallenges = async () => {
+  const primary = normalizeChallengeResponse(await getChallenges());
+  if (primary.length > 0) return primary;
+
+  // Keep the admin dashboard populated even if the authenticated/general
+  // challenges request is empty in a hosted environment. The public challenge
+  // screen already uses this fallback, so mirror that behavior here.
+  const fallback = normalizeChallengeResponse(await getPublicChallenges().catch(() => null));
+  return fallback;
+};
 
 const stopModalKeyboardBubble = (e: any) => {
   e?.stopPropagation?.();
@@ -208,14 +222,18 @@ export default function AdminScreen() {
     try {
       switch (tab) {
         case 'Dashboard': {
-          const data = await adminGetDashboardStats();
+          const [data, chalData] = await Promise.all([
+            adminGetDashboardStats(),
+            loadAdminChallenges().catch(() => []),
+          ]);
           setStats(data || {});
+          setChallenges(chalData);
           break;
         }
         case 'Challenges': {
-          const [chalData, taxData] = await Promise.all([getChallenges(), adminGetTaxonomy()]);
-          setChallenges(chalData?.challenges || chalData || []);
-          setTaxonomy(DEFAULT_TAXONOMY);
+          const [chalData, taxData] = await Promise.all([loadAdminChallenges(), adminGetTaxonomy()]);
+          setChallenges(chalData);
+          setTaxonomy(taxData?.taxonomy || taxData || DEFAULT_TAXONOMY);
           break;
         }
         case 'Users': {
@@ -499,8 +517,8 @@ export default function AdminScreen() {
         setEditingChallenge(null);
         setProductSaveMsg('Challenge updated!');
       } else {
-        const created = await createChallenge(payload);
-        setChallenges(cs => [...cs, created?.challenge || created]);
+        await createChallenge(payload);
+        await loadTab('Challenges');
         setProductSaveMsg('Challenge created!');
       }
       setShowChallengeForm(false);

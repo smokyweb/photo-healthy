@@ -887,7 +887,7 @@ app.get('/api/admin/users/:id/subscription-history', adminAuth, async (req, res)
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// GET /api/submissions/:id/download - serve the original stored submission photo to Pro subscribers or admins.
+// GET /api/submissions/:id/download - serve a stored submission photo to Pro subscribers only.
 app.get('/api/submissions/:id/download', auth, async (req, res) => {
   try {
     await syncStripeSubscriptionForUser(req.user.id);
@@ -897,10 +897,9 @@ app.get('/api/submissions/:id/download', auth, async (req, res) => {
     const photo = `photo${photoNumber}_url`;
     const [[sub]] = await pool.query('SELECT user_id, photo1_url, photo2_url, photo3_url, photo4_url, title FROM submissions WHERE id = ?', [req.params.id]);
     if (!sub) return res.status(404).json({ error: 'Submission not found' });
-    const [[u]] = await pool.query('SELECT subscription_status, is_admin, role FROM users WHERE id = ?', [req.user.id]);
-    const isAdmin = !!req.user.is_admin || req.user.role === 'admin' || !!u?.is_admin || u?.role === 'admin';
-    const isPro = u?.subscription_status === 'active' || req.user.role === 'pro';
-    if (!isAdmin && !isPro) {
+    const [[u]] = await pool.query('SELECT subscription_status, role FROM users WHERE id = ?', [req.user.id]);
+    const isPro = u?.subscription_status === 'active' || u?.role === 'pro' || req.user.role === 'pro';
+    if (!isPro) {
       return res.status(403).json({ error: 'pro_required', message: 'Upgrade to Pro to download original photos.' });
     }
     const url = sub[photo];

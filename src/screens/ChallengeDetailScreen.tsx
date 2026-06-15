@@ -14,8 +14,17 @@ import PhotoLightbox from '../components/PhotoLightbox';
 import { C, borderRadius } from '../theme';
 import { normalizeChallengeCategory, normalizeFeelingCategory, normalizeMovementCategory } from '../constants/taxonomy';
 import { fullUrl as resolveUrl } from '../config/api';
+import { addWatermark } from '../utils/watermark';
 
 const fullUrl = (url?: string | null) => resolveUrl(url) || null;
+
+const blobToDataUrl = (blob: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 
 const isEnabledFlag = (value: any) => {
   if (value === true || value === 1) return true;
@@ -165,16 +174,13 @@ export default function ChallengeDetailScreen() {
     String(value || 'photo-healthy-photo').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'photo-healthy-photo';
 
   const handleLightboxDownload = async () => {
-    if (!lightboxPhoto?.uri || downloadingPhoto) return;
+    if (!lightboxPhoto?.uri || !lightboxPhoto.submissionId || downloadingPhoto) return;
     setDownloadingPhoto(true);
     try {
-      const blob = lightboxPhoto.submissionId
-        ? await downloadSubmissionPhoto(lightboxPhoto.submissionId, lightboxPhoto.photoIndex || 1)
-        : await fetch(lightboxPhoto.uri).then(res => {
-            if (!res.ok) throw new Error('Could not download this image.');
-            return res.blob();
-          });
-      const objectUrl = URL.createObjectURL(blob);
+      const blob = await downloadSubmissionPhoto(lightboxPhoto.submissionId, lightboxPhoto.photoIndex || 1);
+      const watermarkedDataUrl = await addWatermark(await blobToDataUrl(blob));
+      const watermarkedBlob = await fetch(watermarkedDataUrl).then(res => res.blob());
+      const objectUrl = URL.createObjectURL(watermarkedBlob);
       const link = document.createElement('a');
       link.href = objectUrl;
       link.download = `${safeFileName(lightboxPhoto.title || challenge?.title)}-${lightboxPhoto.photoIndex || 1}.jpg`;
@@ -492,7 +498,7 @@ export default function ChallengeDetailScreen() {
                   key={sub.id}
                   style={styles.subCard}
                 >
-                  <View>
+                  <View style={styles.subImageWrap}>
                     {imgUrl ? (
                       <TouchableOpacity
                         onPress={() => setLightboxPhoto({ uri: imgUrl, title: sub.title || challenge.title, submissionId: sub.id, photoIndex: 1 })}
@@ -500,6 +506,7 @@ export default function ChallengeDetailScreen() {
                         accessibilityLabel="Open photo larger"
                       >
                         <Image source={{ uri: imgUrl }} style={styles.subImg} resizeMode="contain" />
+                        <Text style={styles.subWatermark}>Photo Healthy</Text>
                       </TouchableOpacity>
                     ) : (
                       <View style={[styles.subImg, styles.subImgPlaceholder]}>
@@ -571,9 +578,9 @@ export default function ChallengeDetailScreen() {
         uri={lightboxPhoto?.uri}
         title={lightboxPhoto?.title}
         onClose={() => setLightboxPhoto(null)}
-        onDownload={lightboxPhoto?.uri && isPro ? handleLightboxDownload : undefined}
+        onDownload={lightboxPhoto?.submissionId && isPro ? handleLightboxDownload : undefined}
         downloading={downloadingPhoto}
-        downloadLabel="Download Original"
+        downloadLabel="Download"
       />
     </ScrollView>
   );
@@ -830,7 +837,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
   },
+  subImageWrap: { position: 'relative' },
   subImg: { width: '100%', aspectRatio: 1, backgroundColor: C.CARD_BG2 },
+  subWatermark: {
+    position: 'absolute',
+    right: 8,
+    bottom: 8,
+    color: 'rgba(255,255,255,0.56)',
+    backgroundColor: 'rgba(8,12,24,0.32)',
+    borderRadius: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    fontSize: 10,
+    fontWeight: '900',
+  },
   subImgPlaceholder: {
     backgroundColor: C.CARD_BG2,
     alignItems: 'center',

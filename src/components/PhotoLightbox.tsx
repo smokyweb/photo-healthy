@@ -33,6 +33,7 @@ export default function PhotoLightbox({ visible, uri, title, onClose, downloadLa
           {uri ? (
             <View style={styles.imageWrap}>
               <Image source={{ uri }} style={styles.image} resizeMode="contain" />
+              <Text style={styles.watermark}>Photo Healthy</Text>
               {!!onDownload && (
                 <TouchableOpacity
                   onPress={onDownload}
@@ -174,5 +175,17 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: '#05070D',
+  },
+  watermark: {
+    position: 'absolute',
+    right: 18,
+    bottom: 18,
+    color: 'rgba(255,255,255,0.56)',
+    backgroundColor: 'rgba(8,12,24,0.32)',
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    fontSize: 13,
+    fontWeight: '900',
   },
 });
