@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { C } from '../theme';
+import { getPublicSettings } from '../services/api';
 
 const PAGE_MAX_WIDTH = 1120;
 const ORANGE_GRADIENT = 'linear-gradient(90deg, #F55B09 0%, #FFD000 100%)';
@@ -58,6 +59,23 @@ export default function AppFooter() {
   const nav = useNavigation<any>();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
+  const [siteName, setSiteName] = useState('Photo Healthy');
+  const [tagline, setTagline] = useState('Empowering and encouraging you to grow, connect, share in your wellness community.');
+
+  useEffect(() => {
+    let active = true;
+    getPublicSettings()
+      .then((data: any) => {
+        if (!active) return;
+        const settings = data?.settings || {};
+        const nextSiteName = String(settings.site_name || '').trim();
+        const nextTagline = String(settings.tagline || '').trim();
+        if (nextSiteName) setSiteName(nextSiteName);
+        if (nextTagline) setTagline(nextTagline);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   const FooterLink = ({ label }: { label: string }) => (
     <Pressable
@@ -101,9 +119,9 @@ export default function AppFooter() {
       <View style={[styles.grid, isMobile && styles.gridMobile]}>
         {/* Brand */}
         <View style={[styles.brand, isMobile && styles.brandMobile]}>
-          <Text style={styles.brandTitle}>Photo Healthy</Text>
+          <Text style={styles.brandTitle}>{siteName}</Text>
           <Text style={styles.brandCopy}>
-            Empowering and encouraging you to grow, connect, share in your wellness community.
+            {tagline}
           </Text>
         </View>
 
@@ -130,7 +148,7 @@ export default function AppFooter() {
       </View>
 
       <View style={styles.rule} />
-      <Text style={styles.copy}>{'\u00A9'} 2026 Photo Healthy. All rights reserved.</Text>
+      <Text style={styles.copy}>{'\u00A9'} 2026 {siteName}. All rights reserved.</Text>
     </View>
   );
 }

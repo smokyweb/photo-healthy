@@ -33,6 +33,42 @@ const PHOTO9_CLOUDS = require('../../assets/photo9-mountain-clouds.png');
 const fullUrl = (url?: string | null) =>
   resolveUrl(url) || '';
 
+const DEFAULT_HOME_QUOTE = 'Every photo tells a story. Make yours worth telling.';
+
+const parseHomeQuoteLibrary = (value: any) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string' || !value.trim()) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return value.split('\n');
+  }
+};
+
+const getHomeQuoteFromSettings = (data: any) => {
+  const settings = data?.settings || data || {};
+  const library = parseHomeQuoteLibrary(settings.quotes_list)
+    .map((item: any) => {
+      if (typeof item === 'string') return { quote: item.trim(), author: '' };
+      return {
+        quote: String(item?.quote || item?.text || item?.content || '').trim(),
+        author: String(item?.author || item?.name || '').trim(),
+      };
+    })
+    .filter((item: any) => item.quote);
+
+  if (library.length > 0) {
+    return library[Math.floor(Math.random() * library.length)];
+  }
+
+  const selectedQuote = String(settings.motivational_quote || '').trim();
+  const selectedAuthor = String(settings.motivational_quote_author || '').trim();
+  if (selectedQuote) return { quote: selectedQuote, author: selectedAuthor };
+
+  return { quote: DEFAULT_HOME_QUOTE, author: '' };
+};
+
 const isJoinableChallenge = (challenge: any) => {
   if (!challenge) return false;
   if (!(challenge.is_active || challenge.status === 'active')) return false;
@@ -240,6 +276,44 @@ const calcStreak = (submissions: any[], userId: number): number => {
   return streak;
 };
 
+const normalizeList = (data: any, key: string) =>
+  Array.isArray(data) ? data : Array.isArray(data?.[key]) ? data[key] : [];
+
+const buildUserHomeStats = (userStats: any, user: any, userSubmissions: any[], allSubmissions: any[], fallbackStreak: number) => {
+  const stats = userStats?.stats || userStats || {};
+  const userId = user?.id;
+  const mine = userSubmissions.length
+    ? userSubmissions
+    : allSubmissions.filter((s: any) => String(s.user_id ?? s.userId ?? '') === String(userId ?? ''));
+  const submittedCount = numberOrNull(
+    stats.submissions ??
+    stats.submission_count ??
+    stats.photo_count ??
+    stats.photosSubmitted
+  );
+  const streakValue = numberOrNull(
+    stats.streak ??
+    stats.day_streak ??
+    stats.current_streak
+  );
+  const milesFromStats = numberOrNull(
+    stats.totalMiles ??
+    stats.total_miles ??
+    stats.milesTracked ??
+    stats.miles_tracked
+  );
+  const milesFromSubs = mine.reduce((sum: number, s: any) => {
+    const miles = numberOrNull(s.miles_walked ?? s.miles ?? s.distance ?? s.miles_tracked);
+    return sum + (miles ?? 0);
+  }, 0);
+
+  return {
+    photosSubmitted: submittedCount ?? mine.length,
+    displayStreak: streakValue ?? calcStreak(mine, userId) ?? fallbackStreak,
+    milesTracked: milesFromStats ?? milesFromSubs,
+  };
+};
+
 const FOOTER_NAV_MAP: Record<string, string | { screen: string; params?: any }> = {
   'About Us': 'About', 'FAQ': 'FAQ', 'Shop': 'Shop', 'Contact': 'Contact',
   'Partners': 'Partners',
@@ -379,7 +453,7 @@ const HomeBottomSections = ({ isMobile, showHow = true, onHowItWorksLayout, onHo
   );
 };
 
-const LoggedInHome = ({ user, featured, challenges, submissions, userStats, daysLeft, navigation, recent, streak, motivationalQuote, quoteAuthor }: any) => {
+const LoggedInHome = ({ user, featured, challenges, submissions, userSubmissions, userStats, daysLeft, navigation, recent, streak, motivationalQuote, quoteAuthor }: any) => {
   const firstName = (user.name || 'User').split(' ')[0];
   const today = formatDate(new Date());
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -392,12 +466,7 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userStats, days
   const orderNotifications = notifications
     .filter((n: any) => ['order_paid', 'order_processed', 'order_shipped', 'tracking_updated'].includes(n.type))
     .slice(0, 3);
-  const fallbackMilesTracked = submissions
-    .filter((s: any) => !s.user_id || s.user_id === user?.id)
-    .reduce((sum: number, s: any) => sum + (parseFloat(s.miles ?? s.distance ?? s.miles_tracked ?? 0) || 0), 0);
-  const photosSubmitted = userStats?.submissions ?? userStats?.submission_count ?? submissions.filter((s: any) => s.user_id === user?.id).length;
-  const displayStreak = userStats?.streak ?? streak;
-  const milesTracked = Number(userStats?.totalMiles ?? userStats?.total_miles ?? fallbackMilesTracked) || 0;
+  const { photosSubmitted, displayStreak, milesTracked } = buildUserHomeStats(userStats, user, userSubmissions || [], submissions || [], streak);
   const activeStats = getChallengeStats(featured, submissions, daysLeft);
   const challengeCategory = displayTag(normalizeChallengeCategory(featured?.category), featured?.category);
   const challengeFeeling = displayTag(normalizeFeelingCategory(featured?.feeling_category || featured?.feeling_tag), featured?.feeling_category || featured?.feeling_tag);
@@ -616,7 +685,7 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userStats, days
   );
 };
 
-const MobileLoggedInHome = ({ user, featured, challenges, submissions, userStats, daysLeft, navigation, recent, streak, motivationalQuote }: any) => {
+const MobileLoggedInHome = ({ user, featured, challenges, submissions, userSubmissions, userStats, daysLeft, navigation, recent, streak, motivationalQuote }: any) => {
   const firstName = (user?.name || 'User').split(' ')[0];
   const [notifications, setNotifications] = useState<any[]>([]);
   useEffect(() => {
@@ -628,12 +697,7 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, userStats
   const orderNotifications = notifications
     .filter((n: any) => ['order_paid', 'order_processed', 'order_shipped', 'tracking_updated'].includes(n.type))
     .slice(0, 2);
-  const fallbackMilesTracked = submissions
-    .filter((s: any) => !s.user_id || s.user_id === user?.id)
-    .reduce((sum: number, s: any) => sum + (parseFloat(s.miles ?? s.distance ?? s.miles_tracked ?? 0) || 0), 0);
-  const photosSubmitted = userStats?.submissions ?? userStats?.submission_count ?? submissions.filter((s: any) => s.user_id === user?.id).length;
-  const displayStreak = userStats?.streak ?? streak;
-  const milesTracked = Number(userStats?.totalMiles ?? userStats?.total_miles ?? fallbackMilesTracked) || 0;
+  const { photosSubmitted, displayStreak, milesTracked } = buildUserHomeStats(userStats, user, userSubmissions || [], submissions || [], streak);
   const challenge = featured || null;
   const challengeImage = challenge?.cover_image_url ? { uri: fullUrl(challenge.cover_image_url) } : PHOTO3_FIELD;
   const challengeCategory = displayTag(normalizeChallengeCategory(challenge?.category), challenge?.category);
@@ -1003,23 +1067,24 @@ const HomeScreen = () => {
   const [motivationalQuote, setMotivationalQuote] = useState('The secret of getting ahead is getting started. � Mark Twain');
   const [quoteAuthor, setQuoteAuthor] = useState('');
   React.useEffect(() => {
-    fetch('https://motivational-spark-api.vercel.app/api/quotes/random')
-      .then(r => r.json())
+    let mounted = true;
+    getPublicSettings()
       .then((data: any) => {
-        const q = data?.quote || data?.text || data?.content || (Array.isArray(data) ? data[0]?.quote : null);
-        const a = data?.author || data?.name || '';
-        if (q) {
-          setMotivationalQuote(q);
-          setQuoteAuthor(a && a !== 'null' ? a : '');
-        }
+        if (!mounted) return;
+        const picked = getHomeQuoteFromSettings(data);
+        setMotivationalQuote(picked.quote);
+        setQuoteAuthor(picked.author || '');
       })
       .catch(() => {});
-  }, []);  setFooterNav((r: string, params?: any) => navigation.navigate(r as never, params as never));
+    return () => { mounted = false; };
+  }, []);
+  setFooterNav((r: string, params?: any) => navigation.navigate(r as never, params as never));
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const [challenges, setChallenges] = useState<any[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
+  const [userSubmissions, setUserSubmissions] = useState<any[]>([]);
   const [userStats, setUserStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<ScrollView>(null);
@@ -1029,19 +1094,30 @@ const HomeScreen = () => {
     useCallback(() => {
       let active = true;
       const load = async () => {
-        try {
-          const [cData, sData, statsData] = await Promise.all([
-            api.getChallenges(),
-            api.getSubmissions(),
-            user ? api.getUserStats().catch(() => null) : Promise.resolve(null),
-          ]);
-          if (!active) return;
-          setChallenges(cData.challenges || []);
-          setSubmissions(sData.submissions || []);
-          setUserStats(statsData);
-        } catch {} finally {
-          if (active) setLoading(false);
-        }
+        setLoading(true);
+        const [cResult, sResult, mySubsResult, statsResult] = await Promise.allSettled([
+          api.getChallenges(),
+          api.getSubmissions(),
+          user ? api.getSubmissions({ user_id: String(user.id), userId: String(user.id), limit: '100' }) : Promise.resolve(null),
+          user ? api.getUserStats() : Promise.resolve(null),
+        ]);
+        if (!active) return;
+
+        const nextChallenges = cResult.status === 'fulfilled'
+          ? normalizeList(cResult.value, 'challenges')
+          : [];
+        const nextSubmissions = sResult.status === 'fulfilled'
+          ? normalizeList(sResult.value, 'submissions')
+          : [];
+        const nextUserSubmissions = mySubsResult.status === 'fulfilled'
+          ? normalizeList(mySubsResult.value, 'submissions')
+          : [];
+
+        setChallenges(nextChallenges);
+        setSubmissions(nextSubmissions);
+        setUserSubmissions(nextUserSubmissions);
+        setUserStats(statsResult.status === 'fulfilled' ? statsResult.value : null);
+        setLoading(false);
       };
       load();
       return () => {
@@ -1117,6 +1193,7 @@ const HomeScreen = () => {
           featured={featured}
           challenges={challenges}
           submissions={submissions}
+          userSubmissions={userSubmissions}
           userStats={userStats}
           daysLeft={daysLeft}
           navigation={navigation}
@@ -1132,6 +1209,7 @@ const HomeScreen = () => {
           featured={featured}
           challenges={challenges}
           submissions={submissions}
+          userSubmissions={userSubmissions}
           userStats={userStats}
           daysLeft={daysLeft}
           navigation={navigation}

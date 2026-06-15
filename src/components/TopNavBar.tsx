@@ -6,7 +6,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { getMyNotifications } from '../services/api';
+import { getMyNotifications, getPublicSettings } from '../services/api';
 import { C, borderRadius } from '../theme';
 
 const LOGO_IMG = require('../../assets/logo.png');
@@ -32,6 +32,7 @@ export default function TopNavBar() {
   const isMobile = width < 1100;
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [siteName, setSiteName] = useState('Photo Healthy');
 
   const nav = (screen: string, params?: any) => {
     setMenuOpen(false);
@@ -49,9 +50,16 @@ export default function TopNavBar() {
 
   useEffect(() => {
     let active = true;
+    getPublicSettings()
+      .then((data: any) => {
+        if (!active) return;
+        const nextSiteName = String(data?.settings?.site_name || '').trim();
+        if (nextSiteName) setSiteName(nextSiteName);
+      })
+      .catch(() => {});
     if (!user) {
       setNotificationCount(0);
-      return;
+      return () => { active = false; };
     }
     getMyNotifications()
       .then((data: any) => {
@@ -81,7 +89,7 @@ export default function TopNavBar() {
         {/* Logo */}
         <TouchableOpacity onPress={() => nav('Main', { screen: 'HomeTab' })} style={styles.logoWrap}>
           <Image source={LOGO_IMG} style={styles.logo} resizeMode="contain" />
-          <Text style={[styles.logoText, isMobile && styles.logoTextMobile]} numberOfLines={1}>Photo Healthy</Text>
+          <Text style={[styles.logoText, isMobile && styles.logoTextMobile]} numberOfLines={1}>{siteName}</Text>
         </TouchableOpacity>
 
         {/* Desktop nav links */}
@@ -89,7 +97,7 @@ export default function TopNavBar() {
           <View style={styles.navLinks}>
             {NAV_LINKS.map(l => (
               <TouchableOpacity key={l.label} onPress={() => nav(l.screen, l.params)} style={styles.navLinkBtn}>
-                <Text style={[styles.navLinkText, isActive(l) && styles.navLinkTextActive]}>{l.label}</Text>
+                <Text style={[styles.navLinkText, isActive(l) && styles.navLinkTextActive]}>{l.label === 'Photo Healthy' ? siteName : l.label}</Text>
               </TouchableOpacity>
             ))}
           </View>

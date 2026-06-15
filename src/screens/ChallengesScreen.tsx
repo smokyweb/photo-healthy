@@ -4,7 +4,7 @@ import {
   TouchableOpacity, ScrollView, RefreshControl, useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { getChallengeEnrollment, getChallenges, getMyChallenges, getPublicChallenges } from '../services/api';
+import { getChallengeEnrollment, getChallenges, getMyChallenges, getPublicChallenges, getPublicSettings } from '../services/api';
 import ChallengeCard from '../components/ChallengeCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import GradientButton from '../components/GradientButton';
@@ -23,6 +23,28 @@ import {
 } from '../constants/taxonomy';
 
 const CHALLENGE_LOGO = require('../../assets/Pose_6-removebg-preview.png');
+
+const DEFAULT_CHALLENGE_QUOTE = 'Every photo tells a story. Make yours worth telling.';
+
+const selectedSiteQuote = (data: any) => {
+  const settings = data?.settings || data || {};
+  try {
+    const list = JSON.parse(settings.quotes_list || '[]');
+    const items = Array.isArray(list)
+      ? list.map((item: any) => typeof item === 'string'
+        ? { quote: item.trim(), author: '' }
+        : { quote: String(item?.quote || '').trim(), author: String(item?.author || '').trim() })
+        .filter((item: any) => item.quote)
+      : [];
+    if (items.length > 0) return items[Math.floor(Math.random() * items.length)];
+  } catch {}
+
+  const selectedQuote = String(settings.motivational_quote || '').trim();
+  const selectedAuthor = String(settings.motivational_quote_author || '').trim();
+  if (selectedQuote) return { quote: selectedQuote, author: selectedAuthor };
+
+  return { quote: DEFAULT_CHALLENGE_QUOTE, author: '' };
+};
 
 const primaryValue = (value?: string) => (value || '').split(',')[0].trim();
 const tagDisplayValue = (normalized: string, fallback?: string) => {
@@ -150,24 +172,21 @@ const mergeChallengeEnrollments = async (list: any[]) => {
 export default function ChallengesScreen() {
   const navigation = useNavigation<any>();
   const { user, loading: authLoading } = useAuth();
-  const [motivationalQuote, setMotivationalQuote] = useState('The secret of getting ahead is getting started. — Mark Twain');
+  const [motivationalQuote, setMotivationalQuote] = useState(DEFAULT_CHALLENGE_QUOTE);
   const [quoteAuthor, setQuoteAuthor] = useState('');
   const [dismissSignupBanner, setDismissSignupBanner] = useState(false);
   
   React.useEffect(() => {
-    fetch('https://motivational-spark-api.vercel.app/api/quotes/random')
-      .then(r => r.json())
+    let mounted = true;
+    getPublicSettings()
       .then((data: any) => {
-        const q = data?.quote || data?.text || data?.content || (Array.isArray(data) ? data[0]?.quote : null);
-        const a = data?.author || data?.name || '';
-        if (q) {
-          setMotivationalQuote(q);
-          setQuoteAuthor(a && a !== 'null' ? a : '');
-        }
+        if (!mounted) return;
+        const picked = selectedSiteQuote(data);
+        setMotivationalQuote(picked.quote);
+        setQuoteAuthor(picked.author || '');
       })
-      .catch(() => {
-        // Keep default quote on error
-      });
+      .catch(() => {});
+    return () => { mounted = false; };
   }, []);
 
   const [challenges, setChallenges] = useState<any[]>([]);

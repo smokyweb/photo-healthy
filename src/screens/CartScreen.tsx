@@ -16,6 +16,8 @@ export default function CartScreen() {
   const [loading, setLoading] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [giftCode, setGiftCode] = useState('');
+  const [checkoutError, setCheckoutError] = useState('');
+  const [showFreeOrderAddress, setShowFreeOrderAddress] = useState(false);
   const [shippingAddress, setShippingAddress] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -48,6 +50,7 @@ export default function CartScreen() {
 
   const handleCheckout = async () => {
     setLoading(true);
+    setCheckoutError('');
     try {
       const data = await createCheckoutSession(
         items.map(i => ({ id: i.id, quantity: i.quantity, size: i.size || null })),
@@ -61,7 +64,14 @@ export default function CartScreen() {
       );
       if (data?.url) { (window as any).location.href = data.url; }
       else { clearCart(); navigation.navigate('CheckoutSuccess' as never, { freeOrder: true } as never); }
-    } catch (e: any) { Alert.alert('Checkout Failed', e.message || 'Something went wrong.'); }
+    } catch (e: any) {
+      const message = e.message || 'Something went wrong.';
+      setCheckoutError(message);
+      if (message.toLowerCase().includes('shipping address required')) {
+        setShowFreeOrderAddress(true);
+      }
+      Alert.alert('Checkout Failed', message);
+    }
     setLoading(false);
   };
 
@@ -105,25 +115,36 @@ export default function CartScreen() {
           <View style={[styles.checkoutGrid, isMobile && styles.checkoutGridMobile, isDesktop && styles.checkoutGridDesktop]}>
             <View style={[styles.checkoutInfo, isMobile && styles.cartPanelMobile]}>
               <Text style={styles.summaryTitle}>Checkout Details</Text>
-              <Text style={styles.checkoutLine}>Shipping address and delivery options are collected during secure checkout.</Text>
-              <Text style={styles.checkoutLine}>If a coupon or gift code covers the full order, use these shipping fields so the order can still be mailed.</Text>
-              <View style={styles.shippingFields}>
-                <Text style={styles.codeLabel}>Name</Text>
-                <TextInput value={shippingAddress.name} onChangeText={v => setShippingAddress(s => ({ ...s, name: v }))} placeholder="Full name" placeholderTextColor={C.TEXT_MUTED} style={styles.codeInput} />
-                <Text style={styles.codeLabel}>Email</Text>
-                <TextInput value={shippingAddress.email} onChangeText={v => setShippingAddress(s => ({ ...s, email: v }))} placeholder="Email address" placeholderTextColor={C.TEXT_MUTED} keyboardType="email-address" autoCapitalize="none" style={styles.codeInput} />
-                <Text style={styles.codeLabel}>Address</Text>
-                <TextInput value={shippingAddress.line1} onChangeText={v => setShippingAddress(s => ({ ...s, line1: v }))} placeholder="Street address" placeholderTextColor={C.TEXT_MUTED} style={styles.codeInput} />
-                <TextInput value={shippingAddress.line2} onChangeText={v => setShippingAddress(s => ({ ...s, line2: v }))} placeholder="Apartment, suite, etc." placeholderTextColor={C.TEXT_MUTED} style={styles.codeInput} />
-                <View style={styles.shippingRow}>
-                  <TextInput value={shippingAddress.city} onChangeText={v => setShippingAddress(s => ({ ...s, city: v }))} placeholder="City" placeholderTextColor={C.TEXT_MUTED} style={[styles.codeInput, styles.shippingRowField]} />
-                  <TextInput value={shippingAddress.state} onChangeText={v => setShippingAddress(s => ({ ...s, state: v }))} placeholder="State" placeholderTextColor={C.TEXT_MUTED} autoCapitalize="characters" style={[styles.codeInput, styles.shippingRowField]} />
+              <Text style={styles.checkoutLine}>Stripe Checkout collects the shipping address, delivery option, and payment details on the secure payment screen.</Text>
+              <Text style={styles.checkoutLine}>You only need to enter a mailing address here if a coupon or gift code covers the full order and there is no Stripe payment screen.</Text>
+              <TouchableOpacity
+                onPress={() => setShowFreeOrderAddress(v => !v)}
+                style={styles.freeOrderToggle}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.freeOrderToggleText}>
+                  {showFreeOrderAddress ? 'Hide free-order mailing address' : 'Add free-order mailing address'}
+                </Text>
+              </TouchableOpacity>
+              {showFreeOrderAddress && (
+                <View style={styles.shippingFields}>
+                  <Text style={styles.codeLabel}>Name</Text>
+                  <TextInput value={shippingAddress.name} onChangeText={v => setShippingAddress(s => ({ ...s, name: v }))} placeholder="Full name" placeholderTextColor={C.TEXT_MUTED} style={styles.codeInput} />
+                  <Text style={styles.codeLabel}>Email</Text>
+                  <TextInput value={shippingAddress.email} onChangeText={v => setShippingAddress(s => ({ ...s, email: v }))} placeholder="Email address" placeholderTextColor={C.TEXT_MUTED} keyboardType="email-address" autoCapitalize="none" style={styles.codeInput} />
+                  <Text style={styles.codeLabel}>Address</Text>
+                  <TextInput value={shippingAddress.line1} onChangeText={v => setShippingAddress(s => ({ ...s, line1: v }))} placeholder="Street address" placeholderTextColor={C.TEXT_MUTED} style={styles.codeInput} />
+                  <TextInput value={shippingAddress.line2} onChangeText={v => setShippingAddress(s => ({ ...s, line2: v }))} placeholder="Apartment, suite, etc." placeholderTextColor={C.TEXT_MUTED} style={styles.codeInput} />
+                  <View style={styles.shippingRow}>
+                    <TextInput value={shippingAddress.city} onChangeText={v => setShippingAddress(s => ({ ...s, city: v }))} placeholder="City" placeholderTextColor={C.TEXT_MUTED} style={[styles.codeInput, styles.shippingRowField]} />
+                    <TextInput value={shippingAddress.state} onChangeText={v => setShippingAddress(s => ({ ...s, state: v }))} placeholder="State" placeholderTextColor={C.TEXT_MUTED} autoCapitalize="characters" style={[styles.codeInput, styles.shippingRowField]} />
+                  </View>
+                  <View style={styles.shippingRow}>
+                    <TextInput value={shippingAddress.postal_code} onChangeText={v => setShippingAddress(s => ({ ...s, postal_code: v }))} placeholder="ZIP" placeholderTextColor={C.TEXT_MUTED} style={[styles.codeInput, styles.shippingRowField]} />
+                    <TextInput value={shippingAddress.country} onChangeText={v => setShippingAddress(s => ({ ...s, country: v.toUpperCase() }))} placeholder="Country" placeholderTextColor={C.TEXT_MUTED} autoCapitalize="characters" style={[styles.codeInput, styles.shippingRowField]} />
+                  </View>
                 </View>
-                <View style={styles.shippingRow}>
-                  <TextInput value={shippingAddress.postal_code} onChangeText={v => setShippingAddress(s => ({ ...s, postal_code: v }))} placeholder="ZIP" placeholderTextColor={C.TEXT_MUTED} style={[styles.codeInput, styles.shippingRowField]} />
-                  <TextInput value={shippingAddress.country} onChangeText={v => setShippingAddress(s => ({ ...s, country: v.toUpperCase() }))} placeholder="Country" placeholderTextColor={C.TEXT_MUTED} autoCapitalize="characters" style={[styles.codeInput, styles.shippingRowField]} />
-                </View>
-              </View>
+              )}
               <Text style={styles.checkoutLine}>Coupons and gift codes can be entered before checkout.</Text>
               <Text style={styles.checkoutLine}>Card details are entered on the payment screen, not saved on this cart page.</Text>
               <Text style={styles.returnNote}>Shipping and return options are determined by the customer address.</Text>
@@ -157,6 +178,11 @@ export default function CartScreen() {
             <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Subtotal ({items.reduce((s,i) => s+i.quantity, 0)} items)</Text><Text style={styles.summaryValue}>${total.toFixed(2)}</Text></View>
             <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Shipping</Text><Text style={styles.summaryValue}>Calculated at checkout</Text></View>
             <View style={[styles.summaryRow, styles.totalRow]}><Text style={styles.totalLabel}>Total</Text><Text style={styles.totalAmt}>${total.toFixed(2)}</Text></View>
+            {!!checkoutError && (
+              <View style={styles.checkoutErrorBox}>
+                <Text style={styles.checkoutErrorText}>{checkoutError}</Text>
+              </View>
+            )}
             <GradientButton
               label={loading ? 'Redirecting...' : 'Proceed to Checkout'}
               onPress={handleCheckout}
@@ -207,6 +233,17 @@ const styles = StyleSheet.create({
   cartPanelMobile: { padding: 14, borderRadius: borderRadius.lg },
   checkoutLine: { color: C.TEXT_SECONDARY, fontSize: 14, lineHeight: 22, marginBottom: 10 },
   returnNote: { color: C.TEAL, fontSize: 13, lineHeight: 20, marginTop: 4, fontWeight: '700' },
+  freeOrderToggle: {
+    alignSelf: 'flex-start',
+    borderRadius: borderRadius.pill,
+    borderWidth: 1,
+    borderColor: C.ORANGE,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    marginTop: 2,
+    marginBottom: 12,
+  },
+  freeOrderToggleText: { color: C.ORANGE, fontSize: 13, fontWeight: '800' },
   shippingFields: { gap: 8, marginTop: 4, marginBottom: 14 },
   shippingRow: { flexDirection: 'row', gap: 8 },
   shippingRowField: { flex: 1, minWidth: 0 },
@@ -232,6 +269,15 @@ const styles = StyleSheet.create({
   totalRow: { borderTopWidth: 1, borderTopColor: C.DIVIDER, paddingTop: 12, marginTop: 4, marginBottom: 16 },
   totalLabel: { color: C.TEXT, fontSize: 16, fontWeight: '700' },
   totalAmt: { color: C.ORANGE, fontSize: 22, fontWeight: '800' },
+  checkoutErrorBox: {
+    backgroundColor: '#ef444422',
+    borderWidth: 1,
+    borderColor: '#ef444466',
+    borderRadius: borderRadius.md,
+    padding: 12,
+    marginBottom: 12,
+  },
+  checkoutErrorText: { color: '#fecaca', fontSize: 13, fontWeight: '700', lineHeight: 19 },
   checkoutButton: { marginTop: 4, width: '100%', maxWidth: '100%', alignSelf: 'stretch', paddingHorizontal: 10, minWidth: 0, boxSizing: 'border-box' },
   checkoutButtonText: { textAlign: 'center', flexShrink: 1 },
   continueShopping: { alignItems: 'center', marginTop: 12 },

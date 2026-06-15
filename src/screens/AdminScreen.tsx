@@ -52,6 +52,55 @@ const loadAdminChallenges = async () => {
   return fallback;
 };
 
+type QuoteLibraryItem = { quote: string; author?: string };
+
+const DEFAULT_QUOTE_LIBRARY: QuoteLibraryItem[] = [
+  { quote: 'Every photo tells a story. Make yours worth telling.' },
+  { quote: 'Movement is medicine. Capture yours.' },
+  { quote: 'Small steps every day lead to big changes.' },
+];
+
+const normalizeQuoteLibrary = (
+  value: any,
+  selectedQuote?: string,
+  selectedAuthor?: string
+): QuoteLibraryItem[] => {
+  let rawItems: any[] = [];
+  if (Array.isArray(value)) {
+    rawItems = value;
+  } else if (typeof value === 'string' && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      rawItems = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      rawItems = value.split('\n');
+    }
+  }
+
+  const items = rawItems
+    .map((item: any) => {
+      if (typeof item === 'string') return { quote: item.trim(), author: '' };
+      return {
+        quote: String(item?.quote || item?.text || item?.content || '').trim(),
+        author: String(item?.author || item?.name || '').trim(),
+      };
+    })
+    .filter((item: QuoteLibraryItem) => item.quote);
+
+  const current = String(selectedQuote || '').trim();
+  if (current && !items.some(item => item.quote === current)) {
+    items.unshift({ quote: current, author: String(selectedAuthor || '').trim() });
+  }
+
+  return items.length ? items : DEFAULT_QUOTE_LIBRARY;
+};
+
+const stringifyQuoteLibrary = (items: QuoteLibraryItem[]) =>
+  JSON.stringify(items.map(item => ({
+    quote: String(item.quote || '').trim(),
+    author: String(item.author || '').trim(),
+  })).filter(item => item.quote));
+
 const stopModalKeyboardBubble = (e: any) => {
   e?.stopPropagation?.();
 };
@@ -160,6 +209,7 @@ export default function AdminScreen() {
   const [orderActionBusy, setOrderActionBusy] = useState<Record<number, string>>({});
 
   const [settings, setSettings] = useState<any>({});
+  const [settingsSaveStatus, setSettingsSaveStatus] = useState('');
 
   // Taxonomy state
   const [taxonomy, setTaxonomy] = useState<{
@@ -330,7 +380,7 @@ export default function AdminScreen() {
         }
         case 'Settings': {
           const data = await adminGetSettings();
-          setSettings(data || {});
+          setSettings(data?.settings || data || {});
           break;
         }
         case 'Taxonomy': {
@@ -2544,8 +2594,39 @@ export default function AdminScreen() {
     </View>
   );
 
+  const renderSettings = () => {
+    const quoteLibrary = normalizeQuoteLibrary(
+      settings.quotes_list,
+      settings.motivational_quote,
+      settings.motivational_quote_author
+    );
 
-  const renderSettings = () => (
+    const saveQuoteLibrary = (items: QuoteLibraryItem[]) => {
+      const cleanItems = items.map(item => ({
+        quote: String(item.quote || '').trim(),
+        author: String(item.author || '').trim(),
+      })).filter(item => item.quote);
+
+      const nextItems = cleanItems.length ? cleanItems : DEFAULT_QUOTE_LIBRARY;
+      setSettings((s: any) => ({
+        ...s,
+        quotes_list: stringifyQuoteLibrary(nextItems),
+        motivational_quote: nextItems[0].quote,
+        motivational_quote_author: nextItems[0].author || '',
+      }));
+    };
+
+    const updateQuoteItem = (index: number, patch: Partial<QuoteLibraryItem>) => {
+      const next = quoteLibrary.map((item, i) => i === index ? { ...item, ...patch } : item);
+      setSettings((s: any) => ({
+        ...s,
+        quotes_list: stringifyQuoteLibrary(next),
+        motivational_quote: String(next[0]?.quote || '').trim(),
+        motivational_quote_author: String(next[0]?.author || '').trim(),
+      }));
+    };
+
+    return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>⚙ Site Settings</Text>
       <Input
@@ -2565,14 +2646,73 @@ export default function AdminScreen() {
         keyboardType="numeric"
       />
 
-      <Input
-        label="Motivational Quote (shown on home page)"
-        value={settings.motivational_quote || ''}
-        onChangeText={v => setSettings((s: any) => ({ ...s, motivational_quote: v }))}
-        multiline
-        numberOfLines={2}
-        placeholder="Every photo tells a story..."
-      />
+      <View style={[styles.formCard, { marginTop: 8 }]}>
+        <Text style={styles.formTitle}>Home Quote Library</Text>
+        <Text style={{ color: C.TEXT_MUTED, fontSize: 12, marginBottom: 12 }}>
+          Add quotes here. The home and challenge pages will randomly show one quote from this list.
+        </Text>
+
+        {quoteLibrary.map((item, index) => {
+          return (
+            <View
+              key={`${item.quote}-${index}`}
+              style={{
+                borderWidth: 1,
+                borderColor: C.CARD_BORDER,
+                backgroundColor: C.CARD_BG2,
+                borderRadius: borderRadius.md,
+                padding: 12,
+                marginBottom: 12,
+              }}
+            >
+              <View style={[styles.rowBetween, { alignItems: 'center', gap: 12, marginBottom: 8 }]}>
+                <Text style={{ color: C.TEXT_SECONDARY, fontSize: 13, fontWeight: '800' }}>
+                  Quote {index + 1}
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity
+                    onPress={() => saveQuoteLibrary(quoteLibrary.filter((_, i) => i !== index))}
+                    disabled={quoteLibrary.length <= 1}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: quoteLibrary.length <= 1 ? C.TEXT_DISABLED : C.DANGER,
+                      borderRadius: borderRadius.pill,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      opacity: quoteLibrary.length <= 1 ? 0.5 : 1,
+                    }}
+                  >
+                    <Text style={{ color: quoteLibrary.length <= 1 ? C.TEXT_DISABLED : C.DANGER, fontSize: 12, fontWeight: '800' }}>
+                      Remove
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <Input
+                label="Quote"
+                value={item.quote}
+                onChangeText={v => updateQuoteItem(index, { quote: v })}
+                multiline
+                numberOfLines={2}
+                placeholder="Every photo tells a story..."
+              />
+              <Input
+                label="Author or Partner Note (optional)"
+                value={item.author || ''}
+                onChangeText={v => updateQuoteItem(index, { author: v })}
+                placeholder="Photo Healthy"
+              />
+            </View>
+          );
+        })}
+
+        <GradientButton
+          label="+ Add Quote"
+          variant="outline-teal"
+          size="sm"
+          onPress={() => saveQuoteLibrary([...quoteLibrary, { quote: 'New quote', author: '' }])}
+        />
+      </View>
 
       {/* Shipping Settings */}
       <View style={[styles.formCard, { marginTop: 20 }]}>
@@ -2615,15 +2755,26 @@ export default function AdminScreen() {
 
       <GradientButton
         label="Save All Settings"
-        onPress={() =>
-          adminUpdateSettings(settings)
-            .then(() => Alert.alert('Saved', 'Settings updated. Shipping rates will apply on next checkout.'))
-            .catch((e: any) => Alert.alert('Error', e.message))
-        }
+        onPress={async () => {
+          setSettingsSaveStatus('Saving settings...');
+          try {
+            await adminUpdateSettings(settings);
+            setSettingsSaveStatus('Settings saved. Changes are active now; shipping changes apply on the next checkout.');
+          } catch (e: any) {
+            setSettingsSaveStatus(`Settings failed to save: ${e.message}`);
+            Alert.alert('Error', e.message);
+          }
+        }}
         style={{ marginTop: 16 } as any}
       />
+      {!!settingsSaveStatus && (
+        <Text style={{ color: settingsSaveStatus.includes('failed') ? C.DANGER : C.TEAL, fontSize: 13, fontWeight: '800', marginTop: 10 }}>
+          {settingsSaveStatus}
+        </Text>
+      )}
     </View>
-  );
+    );
+  };
 
   return (
     <>

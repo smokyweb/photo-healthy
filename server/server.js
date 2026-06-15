@@ -116,6 +116,88 @@ const DEFAULT_TAXONOMY = {
   ],
 };
 
+async function getAppSettings(keys = null) {
+  const where = Array.isArray(keys) && keys.length
+    ? ` WHERE setting_key IN (${keys.map(() => '?').join(',')})`
+    : '';
+  const [rows] = await pool.query(`SELECT setting_key, setting_value FROM app_settings${where}`, keys || []);
+  const settings = {};
+  rows.forEach(row => { settings[row.setting_key] = row.setting_value; });
+  return settings;
+}
+
+const intSetting = (settings, key, fallback, min = 0) => {
+  const parsed = parseInt(settings?.[key], 10);
+  return Number.isFinite(parsed) && parsed >= min ? parsed : fallback;
+};
+
+async function getFreeSubmissionLimit() {
+  const settings = await getAppSettings(['max_free_submissions', 'free_submission_limit']).catch(() => ({}));
+  return intSetting(settings, 'max_free_submissions', intSetting(settings, 'free_submission_limit', 50, 1), 1);
+}
+
+async function getShippingOptionsFromSettings() {
+  const settings = await getAppSettings([
+    'shipping_standard_name',
+    'shipping_standard_cents',
+    'shipping_standard_days_min',
+    'shipping_standard_days_max',
+    'shipping_express_name',
+    'shipping_express_cents',
+    'shipping_express_days_min',
+    'shipping_express_days_max',
+  ]).catch(() => ({}));
+
+  const buildOption = (prefix, fallbackName, fallbackCents, fallbackMin, fallbackMax) => {
+    const amount = intSetting(settings, `${prefix}_cents`, fallbackCents, 0);
+    if (amount <= 0) return null;
+    const minDays = intSetting(settings, `${prefix}_days_min`, fallbackMin, 1);
+    const maxDays = Math.max(minDays, intSetting(settings, `${prefix}_days_max`, fallbackMax, minDays));
+    return {
+      shipping_rate_data: {
+        type: 'fixed_amount',
+        fixed_amount: { amount, currency: 'usd' },
+        display_name: String(settings?.[`${prefix}_name`] || fallbackName),
+        delivery_estimate: {
+          minimum: { unit: 'business_day', value: minDays },
+          maximum: { unit: 'business_day', value: maxDays },
+        },
+      },
+    };
+  };
+
+  return [
+    buildOption('shipping_standard', 'Standard Shipping', 599, 5, 10),
+    buildOption('shipping_express', 'Express Shipping', 1299, 2, 3),
+  ].filter(Boolean);
+}
+
+function withSettingDefaults(settings = {}) {
+  const next = { ...settings };
+  next.site_name = next.site_name || 'Photo Healthy';
+  next.tagline = next.tagline || 'Walking and Taking Pictures Challenges';
+  next.motivational_quote = next.motivational_quote || 'Every photo tells a story. Make yours worth telling.';
+  next.quotes_list = next.quotes_list || JSON.stringify([
+    'Every photo tells a story. Make yours worth telling.',
+    'Movement is medicine. Capture yours.',
+    'Wellness is not a destination, it is a journey. Keep moving.',
+    'Small steps every day lead to big changes.',
+    'Your wellness journey is uniquely yours. Celebrate every step.',
+  ]);
+  next.partner_notes_list = next.partner_notes_list || JSON.stringify([]);
+  next.max_free_submissions = next.max_free_submissions || next.free_submission_limit || '50';
+  next.free_submission_limit = next.free_submission_limit || next.max_free_submissions || '50';
+  next.shipping_standard_name = next.shipping_standard_name || 'Standard Shipping';
+  next.shipping_standard_cents = next.shipping_standard_cents || '599';
+  next.shipping_standard_days_min = next.shipping_standard_days_min || '5';
+  next.shipping_standard_days_max = next.shipping_standard_days_max || '10';
+  next.shipping_express_name = next.shipping_express_name || 'Express Shipping';
+  next.shipping_express_cents = next.shipping_express_cents || '1299';
+  next.shipping_express_days_min = next.shipping_express_days_min || '2';
+  next.shipping_express_days_max = next.shipping_express_days_max || '3';
+  return next;
+}
+
 // â”€â”€ Safe ALTER TABLE helper (compatible with MySQL 5.7 which lacks IF NOT EXISTS) â”€â”€
 async function safeAddColumn(table, column, definition) {
   try {
@@ -921,12 +1003,13 @@ app.get('/api/users/me/access', auth, async (req, res) => {
       `SELECT COUNT(*) as monthCount FROM submissions WHERE user_id = ? AND created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')`,
       [req.user.id]
     );
+    const monthlyLimit = await getFreeSubmissionLimit();
     res.json({
       isPro,
-      canSubmit: isPro || monthCount < 50,
+      canSubmit: isPro || monthCount < monthlyLimit,
       monthlySubmissions: monthCount,
-      monthlyLimit: isPro ? null : 50,
-      remainingSubmissions: isPro ? null : Math.max(0, 50 - monthCount),
+      monthlyLimit: isPro ? null : monthlyLimit,
+      remainingSubmissions: isPro ? null : Math.max(0, monthlyLimit - monthCount),
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -967,9 +1050,15 @@ app.get('/api/users/me/stats', auth, async (req, res) => {
 
     res.json({
       submissions: subs.length,
+      submission_count: subs.length,
+      photosSubmitted: subs.length,
       challenges: challengeIds.size,
       streak,
+      day_streak: streak,
+      current_streak: streak,
       totalMiles: Math.round(totalMiles * 10) / 10,
+      total_miles: Math.round(totalMiles * 10) / 10,
+      milesTracked: Math.round(totalMiles * 10) / 10,
       likesReceived: likes[0]?.cnt || 0,
     });
   } catch (e) {
@@ -1869,15 +1958,16 @@ app.post('/api/submissions', auth, async (req, res) => {
       return res.status(403).json({ error: 'pro_required', message: 'This challenge is exclusive to Pro members.' });
     }
 
-    // Free tier monthly submission limit (50 per month)
+    // Free tier monthly submission limit
     if (!isPro) {
       const [[{ monthCount }]] = await pool.query(
         `SELECT COUNT(*) as monthCount FROM submissions
          WHERE user_id = ? AND created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')`,
         [req.user.id]
       );
-      if (monthCount >= 50) {
-        return res.status(403).json({ error: 'limit_reached', message: 'Free accounts can submit to 50 challenges per month. Upgrade to Pro for unlimited submissions.' });
+      const monthlyLimit = await getFreeSubmissionLimit();
+      if (monthCount >= monthlyLimit) {
+        return res.status(403).json({ error: 'limit_reached', message: `Free accounts can submit to ${monthlyLimit} challenges per month. Upgrade to Pro for unlimited submissions.` });
       }
     }
 
@@ -2098,7 +2188,11 @@ app.get('/api/users', adminAuth, async (req, res) => {
         u.is_suspended, u.suspended_reason, u.is_deleted, u.deleted_at, u.bio, u.location, u.created_at,
         COALESCE((SELECT COUNT(*) FROM submissions s WHERE s.user_id = u.id), 0) as submission_count,
         COALESCE((SELECT COUNT(*) FROM comments c WHERE c.user_id = u.id), 0) as comment_count,
-        COALESCE((SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id OR o.customer_email = u.email), 0) as order_count
+        COALESCE((
+          SELECT COUNT(*) FROM orders o
+          WHERE o.user_id = u.id
+             OR (o.customer_email IS NOT NULL AND LOWER(TRIM(o.customer_email)) = LOWER(TRIM(u.email)))
+        ), 0) as order_count
        FROM users u ORDER BY u.created_at DESC`
     );
     res.json({ users: users.map(u => ({ ...u, is_admin: !!u.is_admin, is_deleted: !!u.is_deleted })) });
@@ -2720,32 +2814,57 @@ function extractStripeShipping(session) {
   };
 }
 
+async function findUserIdByEmail(email) {
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  if (!cleanEmail) return null;
+  const [[user]] = await pool.query(
+    'SELECT id FROM users WHERE LOWER(TRIM(email)) = ? AND COALESCE(is_deleted, 0) = 0 LIMIT 1',
+    [cleanEmail]
+  );
+  return user?.id || null;
+}
+
+async function linkOrderToUserByEmail(orderId, email) {
+  const userId = await findUserIdByEmail(email);
+  if (!userId) return null;
+  await pool.query('UPDATE orders SET user_id = COALESCE(user_id, ?) WHERE id = ?', [userId, orderId]);
+  return userId;
+}
+
 async function backfillOrderShippingFromStripe(order) {
   if (!stripe || !order?.stripe_session_id || String(order.stripe_session_id).startsWith('free_')) return order;
-  if (order.shipping_address_json && order.customer_name && order.stripe_payment_intent) return order;
+  if (order.shipping_address_json && order.customer_name && order.stripe_payment_intent && order.user_id) return order;
   try {
     const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id, {
       expand: ['payment_intent'],
     });
     const shipping = extractStripeShipping(session);
     if (!shipping.address && !shipping.name && !shipping.email && !shipping.paymentIntent) return order;
+    const linkedUserId = order.user_id || await findUserIdByEmail(shipping.email);
+    const nextStatus = order.status === 'pending' && session.payment_status === 'paid'
+      ? 'paid'
+      : order.status;
     const next = {
       ...order,
+      status: nextStatus,
       customer_email: order.customer_email || shipping.email,
       customer_name: order.customer_name || shipping.name,
       stripe_payment_intent: order.stripe_payment_intent || shipping.paymentIntent,
       shipping_address_json: order.shipping_address_json || (shipping.address ? JSON.stringify({ name: shipping.name, ...shipping.address }) : null),
       shipping_method: order.shipping_method || shipping.shippingMethod,
+      user_id: linkedUserId || order.user_id,
     };
     await pool.query(
       `UPDATE orders SET
+        status = ?,
         customer_email = COALESCE(customer_email, ?),
         customer_name = COALESCE(customer_name, ?),
         stripe_payment_intent = COALESCE(stripe_payment_intent, ?),
         shipping_address_json = COALESCE(shipping_address_json, ?),
-        shipping_method = COALESCE(shipping_method, ?)
+        shipping_method = COALESCE(shipping_method, ?),
+        user_id = COALESCE(user_id, ?)
        WHERE id = ?`,
-      [shipping.email, shipping.name, shipping.paymentIntent, next.shipping_address_json, shipping.shippingMethod, order.id]
+      [nextStatus, shipping.email, shipping.name, shipping.paymentIntent, next.shipping_address_json, shipping.shippingMethod, linkedUserId, order.id]
     );
     return next;
   } catch (e) {
@@ -2760,12 +2879,18 @@ app.get('/api/orders/my', auth, async (req, res) => {
     const uid = req.user.id;
     const email = req.user.email;
     const [orders] = await pool.query(
-      `SELECT * FROM orders WHERE (user_id = ? OR customer_email = ?) ORDER BY created_at DESC`,
+      `SELECT * FROM orders
+       WHERE user_id = ?
+          OR (customer_email IS NOT NULL AND LOWER(TRIM(customer_email)) = LOWER(TRIM(?)))
+       ORDER BY created_at DESC`,
       [uid, email]
     );
     // Also update any matching-email orders to have user_id
     if (email) {
-      pool.query(`UPDATE orders SET user_id = ? WHERE customer_email = ? AND user_id IS NULL`, [uid, email]).catch(() => {});
+      pool.query(
+        `UPDATE orders SET user_id = ? WHERE LOWER(TRIM(customer_email)) = LOWER(TRIM(?)) AND user_id IS NULL`,
+        [uid, email]
+      ).catch(() => {});
     }
     res.json({ orders });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -2951,26 +3076,9 @@ app.post('/api/checkout/create-session', async (req, res) => {
       },
       // Collect shipping address from customer
       shipping_address_collection: { allowed_countries: ['US', 'CA', 'GB', 'AU', 'NZ'] },
-      // Flat-rate shipping options
-      shipping_options: [
-        {
-          shipping_rate_data: {
-            type: 'fixed_amount',
-            fixed_amount: { amount: 599, currency: 'usd' },
-            display_name: 'Standard Shipping',
-            delivery_estimate: { minimum: { unit: 'business_day', value: 5 }, maximum: { unit: 'business_day', value: 10 } },
-          },
-        },
-        {
-          shipping_rate_data: {
-            type: 'fixed_amount',
-            fixed_amount: { amount: 1299, currency: 'usd' },
-            display_name: 'Express Shipping',
-            delivery_estimate: { minimum: { unit: 'business_day', value: 2 }, maximum: { unit: 'business_day', value: 3 } },
-          },
-        },
-      ],
     };
+    const shippingOptions = await getShippingOptionsFromSettings();
+    if (shippingOptions.length > 0) sessionOpts.shipping_options = shippingOptions;
     if (userEmail) sessionOpts.customer_email = userEmail;
 
     const session = await stripe.checkout.sessions.create(sessionOpts);
@@ -3013,25 +3121,30 @@ app.post('/api/checkout/verify-session', async (req, res) => {
       const total = (session.amount_total || 0) / 100;
       const metaUserId = session.metadata?.user_id ? parseInt(session.metadata.user_id) : null;
       const shipping = extractStripeShipping(session);
+      const shippingAddr = shipping.address ? { name: shipping.name, ...shipping.address } : null;
+      const linkedUserId = metaUserId || await findUserIdByEmail(shipping.email);
       await pool.query(
-        `INSERT INTO orders (user_id, stripe_session_id, status, total_amount, items_json, customer_email, customer_name, stripe_payment_intent)
-         VALUES (?, ?, 'paid', ?, ?, ?, ?, ?)`,
-        [metaUserId, session_id, total, session.metadata?.items_json || '[]',
-         shipping.email, shipping.name, shipping.paymentIntent]
+        `INSERT INTO orders (user_id, stripe_session_id, status, total_amount, items_json, customer_email, customer_name, stripe_payment_intent, shipping_address_json, shipping_method)
+         VALUES (?, ?, 'paid', ?, ?, ?, ?, ?, ?, ?)`,
+        [linkedUserId, session_id, total, session.metadata?.items_json || '[]',
+         shipping.email, shipping.name, shipping.paymentIntent,
+         shippingAddr ? JSON.stringify(shippingAddr) : null, shipping.shippingMethod]
       );
     } else if (existing.status === 'pending') {
       const shipping = extractStripeShipping(session);
       const shippingAddr = shipping.address ? { name: shipping.name, ...shipping.address } : null;
+      const linkedUserId = existing.user_id || await findUserIdByEmail(shipping.email);
       await pool.query(
         `UPDATE orders SET status = 'paid',
          customer_email = COALESCE(customer_email, ?),
          customer_name  = COALESCE(customer_name, ?),
          stripe_payment_intent = COALESCE(stripe_payment_intent, ?),
          shipping_address_json = ?,
-         shipping_method = COALESCE(shipping_method, ?)
+         shipping_method = COALESCE(shipping_method, ?),
+         user_id = COALESCE(user_id, ?)
          WHERE stripe_session_id = ?`,
         [shipping.email, shipping.name, shipping.paymentIntent,
-         shippingAddr ? JSON.stringify(shippingAddr) : null, shipping.shippingMethod, session_id]
+         shippingAddr ? JSON.stringify(shippingAddr) : null, shipping.shippingMethod, linkedUserId, session_id]
       );
     }
 
@@ -3041,8 +3154,9 @@ app.post('/api/checkout/verify-session', async (req, res) => {
       try {
         const jwt = require('jsonwebtoken');
         const decoded = jwt.verify(authHeader.replace('Bearer ', ''), process.env.JWT_SECRET || 'photohealthy_jwt_secret_2026');
-        if (decoded?.userId) {
-          await pool.query('UPDATE orders SET user_id = ? WHERE stripe_session_id = ? AND user_id IS NULL', [decoded.userId, session_id]);
+        const decodedUserId = decoded?.userId || decoded?.id;
+        if (decodedUserId) {
+          await pool.query('UPDATE orders SET user_id = ? WHERE stripe_session_id = ? AND user_id IS NULL', [decodedUserId, session_id]);
         }
       } catch {}
     }
@@ -3107,6 +3221,7 @@ app.post('/api/webhook/stripe', async (req, res) => {
         // â”€â”€ One-time shop order payment â”€â”€
         const shipping = extractStripeShipping(session);
         const shippingAddr = shipping.address ? JSON.stringify({ name: shipping.name, ...shipping.address }) : null;
+        const linkedUserId = metaUserId || await findUserIdByEmail(shipping.email);
         await pool.query(
           `UPDATE orders SET status = 'paid', stripe_payment_intent = ?,
            customer_email = COALESCE(?, customer_email),
@@ -3116,11 +3231,11 @@ app.post('/api/webhook/stripe', async (req, res) => {
            shipping_method = COALESCE(shipping_method, ?)
            WHERE stripe_session_id = ?`,
           [shipping.paymentIntent, shipping.email,
-           shipping.name, metaUserId, shippingAddr, shipping.shippingMethod, session.id]
+           shipping.name, linkedUserId, shippingAddr, shipping.shippingMethod, session.id]
         );
         console.log('[Stripe] Order paid:', session.id);
         const [[order]] = await pool.query('SELECT * FROM orders WHERE stripe_session_id = ?', [session.id]).catch(() => [[]]);
-        await notifyOrderPaidOnce(order ? { ...order, user_id: order.user_id || metaUserId } : null);
+        await notifyOrderPaidOnce(order ? { ...order, user_id: order.user_id || linkedUserId } : null);
       }
     } catch (e) {
       console.error('[Stripe webhook] checkout.session.completed error:', e.message);
@@ -3642,27 +3757,25 @@ app.patch('/api/admin/partner-inquiries/:id', adminAuth, async (req, res) => {
 // GET /api/settings/public â€” public-readable app settings (quote, etc.)
 app.get('/api/settings/public', async (req, res) => {
   try {
-    const [rows] = await pool.query(
-      `SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('motivational_quote','quotes_list','partner_notes_list','free_submission_limit')`
-    );
-    const settings = {};
-    rows.forEach(r => { settings[r.setting_key] = r.setting_value; });
-    // Defaults
-    if (!settings.motivational_quote) {
-      settings.motivational_quote = 'Every photo tells a story. Make yours worth telling.';
-    }
-    if (!settings.quotes_list) {
-      settings.quotes_list = JSON.stringify([
-        'Every photo tells a story. Make yours worth telling.',
-        'Movement is medicine. Capture yours.',
-        'Wellness is not a destination, it is a journey. Keep moving.',
-        'Small steps every day lead to big changes.',
-        'Your wellness journey is uniquely yours. Celebrate every step.',
-      ]);
-    }
-    if (!settings.partner_notes_list) {
-      settings.partner_notes_list = JSON.stringify([]);
-    }
+    const publicKeys = [
+      'site_name',
+      'tagline',
+      'motivational_quote',
+      'motivational_quote_author',
+      'quotes_list',
+      'partner_notes_list',
+      'max_free_submissions',
+      'free_submission_limit',
+      'shipping_standard_name',
+      'shipping_standard_cents',
+      'shipping_standard_days_min',
+      'shipping_standard_days_max',
+      'shipping_express_name',
+      'shipping_express_cents',
+      'shipping_express_days_min',
+      'shipping_express_days_max',
+    ];
+    const settings = withSettingDefaults(await getAppSettings(publicKeys));
     res.json({ settings });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -3674,14 +3787,57 @@ app.get('/api/admin/settings', adminAuth, async (req, res) => {
     const [rows] = await pool.query('SELECT setting_key, setting_value FROM app_settings');
     const settings = {};
     rows.forEach(r => { settings[r.setting_key] = r.setting_value; });
-    res.json({ settings });
+    res.json({ settings: withSettingDefaults(settings) });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
+const saveAdminSettings = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const { key, value } = body;
+    if (key) {
+      await pool.query(
+        'INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?, updated_at = NOW()',
+        [key, value, value]
+      );
+      return res.json({ ok: true, key, value });
+    }
+
+    const settings = body.settings && typeof body.settings === 'object' ? body.settings : body;
+    if (settings.max_free_submissions != null && settings.free_submission_limit == null) {
+      settings.free_submission_limit = settings.max_free_submissions;
+    }
+    if (settings.free_submission_limit != null && settings.max_free_submissions == null) {
+      settings.max_free_submissions = settings.free_submission_limit;
+    }
+    const entries = Object.entries(settings).filter(([settingKey]) => settingKey !== 'settings');
+    if (!entries.length) return res.status(400).json({ error: 'settings required' });
+
+    for (const [settingKey, settingValue] of entries) {
+      const normalizedValue =
+        typeof settingValue === 'string' ? settingValue :
+        settingValue == null ? '' :
+        JSON.stringify(settingValue);
+      await pool.query(
+        'INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?, updated_at = NOW()',
+        [settingKey, normalizedValue, normalizedValue]
+      );
+    }
+
+    res.json({ ok: true, settings });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+// PUT/POST update settings (admin only)
+app.put('/api/admin/settings', adminAuth, saveAdminSettings);
+app.post('/api/admin/settings', adminAuth, saveAdminSettings);
+
 // PUT update a setting (admin only)
-app.put('/api/admin/settings', adminAuth, async (req, res) => {
+app.put('/api/admin/settings/item', adminAuth, async (req, res) => {
   try {
     const { key, value } = req.body;
     if (!key) return res.status(400).json({ error: 'key required' });
