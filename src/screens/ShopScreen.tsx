@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image, TouchableOpacity,
-  TextInput, Alert, useWindowDimensions, RefreshControl,
+  TextInput, useWindowDimensions, RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -101,14 +101,7 @@ export default function ShopScreen() {
   const isPro = user?.subscription_status === 'active' || user?.role === 'pro' || !!user?.is_pro;
   const handleAddToCart = (product: any) => {
     if (isProOnlyProduct(product) && !isPro) {
-      Alert.alert(
-        'Pro Members Only',
-        'This item is available for Pro members. Upgrade to access exclusive products.',
-        [
-          { text: 'Maybe Later' },
-          { text: 'Go Pro', onPress: goToSubscription },
-        ]
-      );
+      goToSubscription();
       return;
     }
     addItem({
@@ -117,6 +110,7 @@ export default function ShopScreen() {
       price: Number(product.price),
       image: fullUrl(product.image_url) || undefined,
       size: null,
+      is_pro_only: isProOnlyProduct(product),
     });
     // Visual feedback - highlight the button briefly
     setCartAdded(product.id);
@@ -168,12 +162,15 @@ export default function ShopScreen() {
       <View style={[styles.controls, isDesktop && styles.controlsDesktop]}>
         <View style={styles.controlsLeft}>
           {/* Category Dropdown */}
-          <View>
+          <View style={styles.dropdownGroup}>
             <TouchableOpacity
               style={styles.dropdownBtn}
-              onPress={() => setCategoryOpen(o => !o)}
+              onPress={() => {
+                setCategoryOpen(o => !o);
+                setPriceOpen(false);
+              }}
             >
-              <Text style={styles.dropdownText}>{selectedCategory} ▼</Text>
+              <Text style={styles.dropdownText}>{selectedCategory} {categoryOpen ? '▲' : '▼'}</Text>
             </TouchableOpacity>
             {categoryOpen && (
               <View style={styles.dropdownMenu}>
@@ -195,12 +192,15 @@ export default function ShopScreen() {
             )}
           </View>
           {/* Price Filter */}
-          <View>
+          <View style={styles.dropdownGroup}>
             <TouchableOpacity
               style={styles.dropdownBtn}
-              onPress={() => setPriceOpen(o => !o)}
+              onPress={() => {
+                setPriceOpen(o => !o);
+                setCategoryOpen(false);
+              }}
             >
-              <Text style={styles.dropdownText}>{priceFilter} ▼</Text>
+              <Text style={styles.dropdownText}>{priceFilter} {priceOpen ? '▲' : '▼'}</Text>
             </TouchableOpacity>
             {priceOpen && (
               <View style={styles.dropdownMenu}>
@@ -386,10 +386,11 @@ const styles = StyleSheet.create({
   },
   controlsDesktop: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
   },
-  controlsLeft: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  controlsLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' },
+  dropdownGroup: { minWidth: 150 },
   dropdownBtn: {
     backgroundColor: C.CARD_BG,
     borderRadius: borderRadius.md,
@@ -400,14 +401,11 @@ const styles = StyleSheet.create({
   },
   dropdownText: { color: C.TEXT_SECONDARY, fontSize: 14, fontFamily: fontFamilies.body },
   dropdownMenu: {
-    position: 'absolute',
-    top: 44,
-    left: 0,
     backgroundColor: C.CARD_BG,
     borderRadius: borderRadius.md,
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
-    zIndex: 100,
+    marginTop: 6,
     minWidth: 180,
     shadowColor: '#000',
     shadowOpacity: 0.3,

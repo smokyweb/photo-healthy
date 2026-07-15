@@ -4,7 +4,7 @@ export const CHALLENGE_CATEGORIES = [
   'Nature & Outdoors',
   'Home & Everyday Life',
   'Joy & Gratitude',
-  'Connection & Community',
+  'Partner Connection & Community',
   'Creativity & Seeing Differently',
   'Strength & Resilience',
   'Reflection & Awareness',

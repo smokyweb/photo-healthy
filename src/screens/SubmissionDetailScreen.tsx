@@ -2,18 +2,21 @@
 import {
   View, Text, StyleSheet, Image, ScrollView,
   TouchableOpacity, TextInput, Alert, RefreshControl, useWindowDimensions,
-  Modal,
+  Modal, Platform,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { getSubmission, getComments, createComment, likeSubmission, deleteComment, createReport, downloadSubmissionPhoto, getSubscriptionStatus } from '../services/api';
+import {
+  getSubmission, getComments, createComment, likeSubmission, deleteComment, createReport,
+  updateSubmission, deleteSubmission, uploadPhoto,
+} from '../services/api';
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
+import WatermarkedImage from '../components/WatermarkedImage';
 import { C, borderRadius } from '../theme';
 import { normalizeChallengeCategory, normalizeFeelingCategory, normalizeMovementCategory } from '../constants/taxonomy';
 import { fullUrl as resolveUrl } from '../config/api';
-import { addWatermark } from '../utils/watermark';
 
 const fullUrl = (u?: string) => resolveUrl(u) || null;
 type SubmissionTagType = 'name' | 'category' | 'feeling' | 'movement';
@@ -23,19 +26,17 @@ type SubmissionTag = {
   value: string;
 };
 
+const REPORT_REASONS = [
+  'Inappropriate content',
+  'Spam or misleading content',
+  'Harassment or abuse',
+  'Privacy concern',
+  'Other community guideline violation',
+];
+
 function initials(name: string) {
   return (name || 'U').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
 }
-const safeFileName = (value: string) =>
-  String(value || 'photo-healthy-photo').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'photo-healthy-photo';
-
-const blobToDataUrl = (blob: Blob): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
 
 export default function SubmissionDetailScreen() {
   const navigation = useNavigation<any>();
@@ -49,8 +50,6 @@ export default function SubmissionDetailScreen() {
   const mainPhotoHeight = isDesktop
     ? Math.min(620, Math.max(440, width * 0.36))
     : Math.min(420, Math.max(280, width - 32));
-  const viewerWidth = Math.max(280, width - 48);
-  const viewerHeight = Math.max(280, height - 120);
 
   const [submission, setSubmission] = useState<any>(null);
   const [comments, setComments] = useState<any[]>([]);
@@ -63,8 +62,19 @@ export default function SubmissionDetailScreen() {
   const [error, setError] = useState('');
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [photoViewerOpen, setPhotoViewerOpen] = useState(false);
-  const [downloadingPhoto, setDownloadingPhoto] = useState(false);
-  const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
+  const [viewerPhotoSize, setViewerPhotoSize] = useState<{ width: number; height: number } | null>(null);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportDetails, setReportDetails] = useState('');
+  const [reporting, setReporting] = useState(false);
+  const [reportError, setReportError] = useState('');
+  const [reportSubmitted, setReportSubmitted] = useState(false);
+  const [reportSuccessMessage, setReportSuccessMessage] = useState('');
+  const [photoActionLoading, setPhotoActionLoading] = useState<string | null>(null);
+  const [photoActionError, setPhotoActionError] = useState('');
+  const [photoActionMessage, setPhotoActionMessage] = useState('');
+  const [replacementPhotoIndex, setReplacementPhotoIndex] = useState(0);
+  const replacementInputRef = React.useRef<any>(null);
 
   const load = async () => {
     if (!submissionId) { setLoading(false); return; }
@@ -93,21 +103,66 @@ export default function SubmissionDetailScreen() {
 
   useEffect(() => { load(); }, [submissionId]);
 
+  const submissionPhotoUrls = submission ? [
+    submission.photo1_url || submission.image_url || submission.photo_url,
+    submission.photo2_url,
+    submission.photo3_url,
+    submission.photo4_url,
+  ].filter(Boolean) as string[] : [];
+  const allPhotos = submissionPhotoUrls.map(u => fullUrl(u as string)).filter(Boolean) as string[];
+  const activePhoto = allPhotos[Math.min(activePhotoIndex, Math.max(allPhotos.length - 1, 0))];
+  const selectedPhotoIndex = Math.min(activePhotoIndex, Math.max(allPhotos.length - 1, 0));
+  const canManageSubmission = !!user && !!submission && (
+    String(user.id) === String(submission.user_id) || user.role === 'admin' || !!user.is_admin
+  );
+  const maxViewerWidth = Math.max(280, width - 48);
+  const maxViewerHeight = Math.max(280, height - 48);
+  const viewerPhotoScale = viewerPhotoSize?.width && viewerPhotoSize?.height
+    ? Math.min(
+        maxViewerWidth / viewerPhotoSize.width,
+        maxViewerHeight / viewerPhotoSize.height,
+        Math.max(1, 240 / Math.max(viewerPhotoSize.width, viewerPhotoSize.height))
+      )
+    : 1;
+  const viewerFrameSize = viewerPhotoSize?.width && viewerPhotoSize?.height
+    ? {
+        width: viewerPhotoSize.width * viewerPhotoScale,
+        height: viewerPhotoSize.height * viewerPhotoScale,
+      }
+    : { width: maxViewerWidth, height: maxViewerHeight };
+
   useEffect(() => {
-    let active = true;
-    if (!user) {
-      setSubscriptionStatus(null);
+    if (!photoViewerOpen || !activePhoto) {
+      setViewerPhotoSize(null);
       return;
     }
-    getSubscriptionStatus()
-      .then((data: any) => {
-        if (active) setSubscriptionStatus(data);
-      })
-      .catch(() => {
-        if (active) setSubscriptionStatus(null);
-      });
+    let active = true;
+    Image.getSize(
+      activePhoto,
+      (photoWidth, photoHeight) => {
+        if (active) setViewerPhotoSize({ width: photoWidth, height: photoHeight });
+      },
+      () => {
+        if (active) setViewerPhotoSize(null);
+      }
+    );
     return () => { active = false; };
-  }, [user?.id, user?.subscription_status, user?.is_pro]);
+  }, [photoViewerOpen, activePhoto]);
+
+  const handleBack = () => {
+    if (navigation.canGoBack?.()) {
+      navigation.goBack();
+      return;
+    }
+    if (submission?.challenge_id) {
+      navigation.navigate('ChallengeDetail' as never, {
+        challengeId: submission.challenge_id,
+        id: submission.challenge_id,
+      } as never);
+      return;
+    }
+    navigation.navigate('Main' as never, { screen: 'CommunityTab' } as never);
+  };
 
   const handleLike = async () => {
     if (!user) {
@@ -152,28 +207,32 @@ export default function SubmissionDetailScreen() {
   };
 
   const handleReport = () => {
-    if (!user) {
-      Alert.alert('Sign In Required', 'Please sign in to report submissions.', [
-        { text: 'Log In', onPress: () => navigation.navigate('Login' as never) },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
-      return;
+    setReportError('');
+    setReportReason('');
+    setReportDetails('');
+    setReportSuccessMessage(reportSubmitted ? 'This photo has already been sent to the moderation team for review.' : '');
+    setReportModalOpen(true);
+  };
+
+  const submitReport = async () => {
+    if (!user || !submissionId || !reportReason || reporting) return;
+    setReporting(true);
+    setReportError('');
+    try {
+      const details = reportDetails.trim();
+      const result = await createReport({
+        type: 'submission',
+        target_id: submissionId,
+        reason: details ? `${reportReason}: ${details}` : reportReason,
+      });
+      setReportSubmitted(true);
+      setReportSuccessMessage(result?.duplicate
+        ? 'This photo is already in the moderation queue. Thank you for checking.'
+        : 'Thank you. This photo was sent to the moderation team for review.');
+    } catch (e: any) {
+      setReportError(e.message || 'Could not submit this report. Please try again.');
     }
-    Alert.alert('Report Submission', 'Send this submission to the moderation team?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Report',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await createReport({ type: 'submission', target_id: submissionId, reason: 'Reported by user' });
-            Alert.alert('Report submitted', 'Thanks. Our team will review it.');
-          } catch (e: any) {
-            Alert.alert('Error', e.message || 'Could not submit report.');
-          }
-        },
-      },
-    ]);
+    setReporting(false);
   };
 
   const handleDeleteComment = async (commentId: number) => {
@@ -190,29 +249,103 @@ export default function SubmissionDetailScreen() {
     }
   };
 
-  const handleDownloadPhoto = async () => {
-    if (!activePhoto || downloadingPhoto) return;
-    if (!canDownloadPhoto) {
-      Alert.alert('Pro Members Only', 'Please sign in with a Pro account to download photos.');
-      return;
+  const savePhotoUrls = async (urls: string[], successMessage: string, nextIndex = 0) => {
+    const payload = {
+      photo1_url: urls[0] || null,
+      photo2_url: urls[1] || null,
+      photo3_url: urls[2] || null,
+      photo4_url: urls[3] || null,
+    };
+    await updateSubmission(Number(submissionId), payload);
+    setSubmission((current: any) => ({ ...current, ...payload, image_url: payload.photo1_url }));
+    setActivePhotoIndex(Math.max(0, Math.min(nextIndex, urls.length - 1)));
+    setPhotoActionMessage(successMessage);
+    setPhotoActionError('');
+  };
+
+  const requestPhotoReplacement = (index: number) => {
+    setReplacementPhotoIndex(index);
+    setPhotoActionError('');
+    setPhotoActionMessage('');
+    if (Platform.OS === 'web' && replacementInputRef.current) {
+      replacementInputRef.current.value = '';
+      replacementInputRef.current.click();
     }
-    setDownloadingPhoto(true);
+  };
+
+  const handleReplacementSelected = async (event: any) => {
+    const file = event?.target?.files?.[0] as File | undefined;
+    if (!file || photoActionLoading) return;
+    setPhotoActionLoading('replace');
+    setPhotoActionError('');
+    setPhotoActionMessage('');
     try {
-      const blob = await downloadSubmissionPhoto(submissionId, activePhotoIndex + 1);
-      const watermarkedDataUrl = await addWatermark(await blobToDataUrl(blob));
-      const watermarkedBlob = await fetch(watermarkedDataUrl).then(res => res.blob());
-      const objectUrl = URL.createObjectURL(watermarkedBlob);
-      const link = document.createElement('a');
-      link.href = objectUrl;
-      link.download = `${safeFileName(submission.title || submission.challenge_title)}-${activePhotoIndex + 1}.jpg`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      const result = await uploadPhoto(file, { watermark: true });
+      const uploadedUrl = result?.url || (result as any)?.photo_url || (result as any)?.image_url;
+      if (!uploadedUrl) throw new Error('The replacement photo did not finish uploading.');
+      const nextUrls = [...submissionPhotoUrls];
+      nextUrls[replacementPhotoIndex] = uploadedUrl;
+      await savePhotoUrls(nextUrls, `Photo ${replacementPhotoIndex + 1} replaced.`, replacementPhotoIndex);
     } catch (e: any) {
-      Alert.alert('Download failed', e.message || 'Could not download this photo.');
-    } finally {
-      setDownloadingPhoto(false);
+      setPhotoActionError(e.message || 'Could not replace this photo.');
+    }
+    setPhotoActionLoading(null);
+  };
+
+  const makeSelectedPhotoCover = async () => {
+    if (selectedPhotoIndex <= 0 || photoActionLoading) return;
+    setPhotoActionLoading('cover');
+    setPhotoActionError('');
+    setPhotoActionMessage('');
+    try {
+      const selected = submissionPhotoUrls[selectedPhotoIndex];
+      const nextUrls = [selected, ...submissionPhotoUrls.filter((_, index) => index !== selectedPhotoIndex)];
+      await savePhotoUrls(nextUrls, 'Home photo updated. This photo will now appear first.', 0);
+    } catch (e: any) {
+      setPhotoActionError(e.message || 'Could not update the home photo.');
+    }
+    setPhotoActionLoading(null);
+  };
+
+  const removeSelectedPhoto = async () => {
+    if (submissionPhotoUrls.length <= 1 || photoActionLoading) return;
+    const confirmed = typeof window === 'undefined' || !window.confirm
+      ? true
+      : window.confirm(`Remove photo ${selectedPhotoIndex + 1} from this submission?`);
+    if (!confirmed) return;
+    setPhotoActionLoading('remove');
+    setPhotoActionError('');
+    setPhotoActionMessage('');
+    try {
+      const nextUrls = submissionPhotoUrls.filter((_, index) => index !== selectedPhotoIndex);
+      await savePhotoUrls(nextUrls, 'Photo removed.', Math.min(selectedPhotoIndex, nextUrls.length - 1));
+    } catch (e: any) {
+      setPhotoActionError(e.message || 'Could not remove this photo.');
+    }
+    setPhotoActionLoading(null);
+  };
+
+  const removeEntireSubmission = async () => {
+    if (photoActionLoading) return;
+    const confirmed = typeof window === 'undefined' || !window.confirm
+      ? true
+      : window.confirm('Delete this entire submission and all of its photos? This cannot be undone.');
+    if (!confirmed) return;
+    setPhotoActionLoading('delete');
+    setPhotoActionError('');
+    try {
+      await deleteSubmission(Number(submissionId));
+      if (submission?.challenge_id) {
+        navigation.replace('ChallengeDetail' as never, {
+          challengeId: submission.challenge_id,
+          id: submission.challenge_id,
+        } as never);
+      } else {
+        navigation.navigate('Main' as never, { screen: 'CommunityTab' } as never);
+      }
+    } catch (e: any) {
+      setPhotoActionError(e.message || 'Could not delete this submission.');
+      setPhotoActionLoading(null);
     }
   };
 
@@ -222,29 +355,13 @@ export default function SubmissionDetailScreen() {
     return (
       <ScrollView style={styles.screen} contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
         <Text style={{ color: C.TEXT_MUTED, fontSize: 16, marginBottom: 16 }}>{error || 'Submission not found'}</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={handleBack}>
           <Text style={{ color: C.ORANGE }}>Back</Text>
         </TouchableOpacity>
       </ScrollView>
     );
   }
 
-  // Collect all photos
-  const allPhotos = [
-    submission.photo1_url || submission.image_url || submission.photo_url,
-    submission.photo2_url,
-    submission.photo3_url,
-    submission.photo4_url,
-  ].map(u => fullUrl(u as string)).filter(Boolean) as string[];
-  const activePhoto = allPhotos[Math.min(activePhotoIndex, Math.max(allPhotos.length - 1, 0))];
-  const canDownloadPhoto = !!user && (
-    user.subscription_status === 'active' ||
-    !!user.is_pro ||
-    subscriptionStatus?.status === 'active' ||
-    !!subscriptionStatus?.is_pro ||
-    !!subscriptionStatus?.isPro ||
-    user.role === 'pro'
-  );
   const dateStr = submission.created_at
     ? new Date(submission.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : '';
@@ -285,11 +402,12 @@ export default function SubmissionDetailScreen() {
       navigation.navigate('ChallengeDetail' as never, {
         challengeId: submission.challenge_id,
         id: submission.challenge_id,
+        returnToSubmissionId: submissionId,
       } as never);
     } else {
       navigation.navigate('Main' as never, {
         screen: 'CommunityTab',
-        params: { communityFilterType: tag.type, communityFilterValue: tag.value },
+        params: { communityFilterType: tag.type, communityFilterValue: tag.value, sourceSubmissionId: submissionId },
       } as never);
     }
   };
@@ -300,8 +418,17 @@ export default function SubmissionDetailScreen() {
       contentContainerStyle={{ flexGrow: 1 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={C.ORANGE} />}
     >
+      {canManageSubmission && Platform.OS === 'web' && (
+        <input
+          ref={replacementInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' } as any}
+          onChange={handleReplacementSelected}
+        />
+      )}
       {/* Back button */}
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
+      <TouchableOpacity onPress={handleBack} style={styles.back}>
         <Text style={styles.backText}>Back</Text>
       </TouchableOpacity>
 
@@ -317,28 +444,13 @@ export default function SubmissionDetailScreen() {
                   accessibilityLabel="View photo larger"
                   style={styles.imagePressArea}
                 >
-                  <Image
+                  <WatermarkedImage
                     source={{ uri: activePhoto }}
                     style={styles.image}
                     resizeMode="contain"
+                    watermarkSize={isDesktop ? 'large' : 'medium'}
                   />
-                  <Text style={styles.displayWatermark}>Photo Healthy</Text>
                 </TouchableOpacity>
-                {canDownloadPhoto && (
-                  <TouchableOpacity
-                    onPress={handleDownloadPhoto}
-                    style={styles.downloadOverlayBtn}
-                    activeOpacity={0.86}
-                    disabled={downloadingPhoto}
-                  >
-                    <View style={styles.downloadIcon}>
-                      <View style={styles.downloadStem} />
-                      <View style={styles.downloadArrow} />
-                      <View style={styles.downloadBase} />
-                    </View>
-                    <Text style={styles.downloadOverlayText}>{downloadingPhoto ? 'Preparing...' : 'Download'}</Text>
-                  </TouchableOpacity>
-                )}
               </View>
               <TouchableOpacity onPress={() => setPhotoViewerOpen(true)} activeOpacity={0.8}>
                 <Text style={styles.expandHint}>Click photo to enlarge</Text>
@@ -359,6 +471,58 @@ export default function SubmissionDetailScreen() {
                       <Image source={{ uri: photo }} style={styles.photoThumbImage} resizeMode="cover" />
                     </TouchableOpacity>
                   ))}
+                </View>
+              )}
+              {canManageSubmission && (
+                <View style={styles.ownerPhotoTools}>
+                  <Text style={styles.ownerPhotoToolsTitle}>Manage your photos</Text>
+                  <Text style={styles.ownerPhotoToolsBody}>
+                    Select a thumbnail above, then replace it, remove it, or choose it as the photo shown first on Home.
+                  </Text>
+                  <View style={styles.ownerPhotoActions}>
+                    <TouchableOpacity
+                      style={styles.ownerPhotoAction}
+                      onPress={() => requestPhotoReplacement(selectedPhotoIndex)}
+                      disabled={!!photoActionLoading}
+                    >
+                      <Text style={styles.ownerPhotoActionText}>
+                        {photoActionLoading === 'replace' ? 'Uploading…' : `Replace photo ${selectedPhotoIndex + 1}`}
+                      </Text>
+                    </TouchableOpacity>
+                    {selectedPhotoIndex > 0 && (
+                      <TouchableOpacity
+                        style={styles.ownerPhotoAction}
+                        onPress={makeSelectedPhotoCover}
+                        disabled={!!photoActionLoading}
+                      >
+                        <Text style={styles.ownerPhotoActionText}>
+                          {photoActionLoading === 'cover' ? 'Updating…' : 'Make Home photo'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    {allPhotos.length > 1 && (
+                      <TouchableOpacity
+                        style={[styles.ownerPhotoAction, styles.ownerPhotoDangerAction]}
+                        onPress={removeSelectedPhoto}
+                        disabled={!!photoActionLoading}
+                      >
+                        <Text style={styles.ownerPhotoDangerText}>
+                          {photoActionLoading === 'remove' ? 'Removing…' : `Remove photo ${selectedPhotoIndex + 1}`}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    style={styles.deleteSubmissionButton}
+                    onPress={removeEntireSubmission}
+                    disabled={!!photoActionLoading}
+                  >
+                    <Text style={styles.deleteSubmissionText}>
+                      {photoActionLoading === 'delete' ? 'Deleting submission…' : 'Delete entire submission'}
+                    </Text>
+                  </TouchableOpacity>
+                  {!!photoActionMessage && <Text style={styles.photoActionSuccess}>{photoActionMessage}</Text>}
+                  {!!photoActionError && <Text style={styles.photoActionError}>{photoActionError}</Text>}
                 </View>
               )}
             </>
@@ -418,8 +582,8 @@ export default function SubmissionDetailScreen() {
               <Text style={styles.actionIcon}>{'\uD83D\uDCAC'}</Text>
               <Text style={styles.actionCount}>{comments.length}</Text>
             </View>
-            <TouchableOpacity style={styles.reportBtn} onPress={handleReport} activeOpacity={0.75}>
-              <Text style={styles.reportText}>Report</Text>
+            <TouchableOpacity style={[styles.reportBtn, reportSubmitted && styles.reportBtnSubmitted]} onPress={handleReport} activeOpacity={0.75}>
+              <Text style={[styles.reportText, reportSubmitted && styles.reportTextSubmitted]}>{reportSubmitted ? 'Report sent' : 'Report photo'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -498,6 +662,73 @@ export default function SubmissionDetailScreen() {
 
       <AppFooter />
       <Modal
+        visible={reportModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !reporting && setReportModalOpen(false)}
+      >
+        <View style={styles.reportModalOverlay}>
+          <TouchableOpacity
+            style={styles.reportModalBackdrop}
+            activeOpacity={1}
+            onPress={() => !reporting && setReportModalOpen(false)}
+            accessibilityLabel="Close report dialog"
+          />
+          <ScrollView
+            style={styles.reportModalPanel}
+            contentContainerStyle={styles.reportModalPanelContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Text style={styles.reportModalTitle}>{reportSuccessMessage ? 'Report received' : 'Report this photo'}</Text>
+            {!user ? (
+              <>
+                <Text style={styles.reportModalBody}>Please sign in before submitting a report.</Text>
+                <View style={styles.reportModalActions}>
+                  <GradientButton label="Sign In" variant="primary" style={{ flex: 1 } as any} onPress={() => { setReportModalOpen(false); navigation.navigate('Login' as never); }} />
+                  <GradientButton label="Cancel" variant="outline" style={{ flex: 1 } as any} onPress={() => setReportModalOpen(false)} />
+                </View>
+              </>
+            ) : reportSuccessMessage ? (
+              <>
+                <Text style={styles.reportSuccessText}>{reportSuccessMessage}</Text>
+                <GradientButton label="Close" variant="primary" onPress={() => setReportModalOpen(false)} />
+              </>
+            ) : (
+              <>
+                <Text style={styles.reportModalBody}>Choose the reason that best describes the problem. Reports are private and reviewed by the Photo Healthy moderation team.</Text>
+                <View style={styles.reportReasonList}>
+                  {REPORT_REASONS.map(reason => (
+                    <TouchableOpacity
+                      key={reason}
+                      style={[styles.reportReasonOption, reportReason === reason && styles.reportReasonOptionSelected]}
+                      onPress={() => setReportReason(reason)}
+                      activeOpacity={0.78}
+                    >
+                      <View style={[styles.reportRadio, reportReason === reason && styles.reportRadioSelected]} />
+                      <Text style={[styles.reportReasonText, reportReason === reason && styles.reportReasonTextSelected]}>{reason}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <TextInput
+                  style={styles.reportDetailsInput}
+                  value={reportDetails}
+                  onChangeText={setReportDetails}
+                  placeholder="Additional details (optional)"
+                  placeholderTextColor={C.TEXT_MUTED}
+                  multiline
+                  maxLength={300}
+                />
+                {reportError ? <Text style={styles.reportErrorText}>{reportError}</Text> : null}
+                <View style={styles.reportModalActions}>
+                  <GradientButton label={reporting ? 'Submitting...' : 'Submit Report'} variant="danger" loading={reporting} disabled={!reportReason || reporting} style={{ flex: 1 } as any} onPress={submitReport} />
+                  <GradientButton label="Cancel" variant="outline" disabled={reporting} style={{ flex: 1 } as any} onPress={() => setReportModalOpen(false)} />
+                </View>
+              </>
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
+      <Modal
         visible={photoViewerOpen}
         transparent
         animationType="fade"
@@ -510,31 +741,22 @@ export default function SubmissionDetailScreen() {
             onPress={() => setPhotoViewerOpen(false)}
           />
           <View style={styles.viewerContent}>
-            <TouchableOpacity
-              style={styles.viewerClose}
-              onPress={() => setPhotoViewerOpen(false)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.viewerCloseText}>Close</Text>
-            </TouchableOpacity>
             {activePhoto ? (
-              <View style={[styles.viewerImageFrame, { width: viewerWidth, height: viewerHeight }]}>
-                <Image
+              <View style={[styles.viewerImageFrame, viewerFrameSize]}>
+                <WatermarkedImage
                   source={{ uri: activePhoto }}
                   style={styles.viewerImage}
                   resizeMode="contain"
+                  watermarkSize="large"
                 />
-                <Text style={styles.viewerWatermark}>Photo Healthy</Text>
-                {canDownloadPhoto && (
-                  <TouchableOpacity
-                    onPress={handleDownloadPhoto}
-                    style={styles.viewerDownloadBtn}
-                    activeOpacity={0.82}
-                    disabled={downloadingPhoto}
-                  >
-                    <Text style={styles.viewerDownloadText}>{downloadingPhoto ? 'Preparing...' : 'Download'}</Text>
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity
+                  style={styles.viewerClose}
+                  onPress={() => setPhotoViewerOpen(false)}
+                  activeOpacity={0.8}
+                  accessibilityLabel="Close photo viewer"
+                >
+                  <Text style={styles.viewerCloseText}>X</Text>
+                </TouchableOpacity>
               </View>
             ) : null}
           </View>
@@ -579,80 +801,12 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  displayWatermark: {
-    position: 'absolute',
-    right: 14,
-    bottom: 14,
-    color: 'rgba(255,255,255,0.52)',
-    backgroundColor: 'rgba(8,12,24,0.28)',
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    fontSize: 12,
-    fontWeight: '800',
-  },
   expandHint: {
     color: C.TEXT_MUTED,
     fontSize: 12,
     fontWeight: '700',
     marginTop: 8,
     textAlign: 'center',
-  },
-  downloadIcon: {
-    width: 16,
-    height: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  downloadStem: {
-    position: 'absolute',
-    top: 2,
-    width: 2,
-    height: 8,
-    borderRadius: 2,
-    backgroundColor: C.TEAL,
-  },
-  downloadArrow: {
-    position: 'absolute',
-    top: 7,
-    width: 8,
-    height: 8,
-    borderRightWidth: 2,
-    borderBottomWidth: 2,
-    borderColor: C.TEAL,
-    transform: [{ rotate: '45deg' }],
-  },
-  downloadBase: {
-    position: 'absolute',
-    bottom: 1,
-    width: 14,
-    height: 2,
-    borderRadius: 2,
-    backgroundColor: C.TEAL,
-  },
-  downloadOverlayBtn: {
-    position: 'absolute',
-    right: 14,
-    top: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderRadius: borderRadius.pill,
-    borderWidth: 1,
-    borderColor: C.TEAL,
-    backgroundColor: 'rgba(8,12,24,0.86)',
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  downloadOverlayText: {
-    color: C.TEAL,
-    fontSize: 13,
-    fontWeight: '900',
   },
   photoStrip: {
     flexDirection: 'row',
@@ -676,6 +830,32 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  ownerPhotoTools: {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+    backgroundColor: C.CARD_BG,
+  },
+  ownerPhotoToolsTitle: { color: C.TEXT, fontSize: 16, fontWeight: '800', marginBottom: 5 },
+  ownerPhotoToolsBody: { color: C.TEXT_SECONDARY, fontSize: 13, lineHeight: 19, marginBottom: 12 },
+  ownerPhotoActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  ownerPhotoAction: {
+    borderWidth: 1,
+    borderColor: C.ORANGE + '99',
+    backgroundColor: C.ORANGE + '14',
+    borderRadius: borderRadius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  ownerPhotoActionText: { color: C.ORANGE, fontSize: 12, fontWeight: '800' },
+  ownerPhotoDangerAction: { borderColor: C.DANGER + '99', backgroundColor: C.DANGER + '14' },
+  ownerPhotoDangerText: { color: C.DANGER, fontSize: 12, fontWeight: '800' },
+  deleteSubmissionButton: { alignSelf: 'flex-start', marginTop: 14, paddingVertical: 5 },
+  deleteSubmissionText: { color: C.DANGER, fontSize: 12, fontWeight: '800', textDecorationLine: 'underline' },
+  photoActionSuccess: { color: C.TEAL, fontSize: 13, lineHeight: 19, fontWeight: '700', marginTop: 11 },
+  photoActionError: { color: C.DANGER, fontSize: 13, lineHeight: 19, fontWeight: '700', marginTop: 11 },
   imagePlaceholder: {
     width: '100%',
     aspectRatio: 1,
@@ -740,7 +920,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     backgroundColor: 'rgba(153, 27, 27, 0.14)',
   },
+  reportBtnSubmitted: { borderColor: C.TEAL, backgroundColor: 'rgba(84, 223, 182, 0.1)' },
   reportText: { color: '#FCA5A5', fontSize: 12, fontWeight: '800' },
+  reportTextSubmitted: { color: C.TEAL },
 
   divider: { height: 1, backgroundColor: C.CARD_BORDER, marginVertical: 16 },
 
@@ -787,12 +969,67 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   signInPromptText: { color: C.ORANGE, fontSize: 14, fontWeight: '600' },
-  viewerOverlay: {
+  reportModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(5,8,16,0.9)',
+    backgroundColor: 'rgba(5,8,16,0.76)',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    padding: 20,
+  },
+  reportModalBackdrop: { ...StyleSheet.absoluteFillObject },
+  reportModalPanel: {
+    width: '100%',
+    maxWidth: 540,
+    maxHeight: '92%' as any,
+    backgroundColor: C.CARD_BG2,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+  },
+  reportModalPanelContent: { padding: 22 },
+  reportModalTitle: { color: C.TEXT, fontSize: 22, lineHeight: 29, fontWeight: '800', fontFamily: "'Lexend', sans-serif", marginBottom: 9 },
+  reportModalBody: { color: C.TEXT_SECONDARY, fontSize: 14, lineHeight: 21, marginBottom: 16 },
+  reportReasonList: { gap: 8, marginBottom: 14 },
+  reportReasonOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 42,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+    backgroundColor: C.CARD_BG,
+  },
+  reportReasonOptionSelected: { borderColor: C.ORANGE, backgroundColor: 'rgba(245,91,9,0.1)' },
+  reportRadio: { width: 16, height: 16, borderRadius: 8, borderWidth: 2, borderColor: C.TEXT_MUTED },
+  reportRadioSelected: { borderColor: C.ORANGE, backgroundColor: C.ORANGE },
+  reportReasonText: { flex: 1, color: C.TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
+  reportReasonTextSelected: { color: C.TEXT, fontWeight: '800' },
+  reportDetailsInput: {
+    minHeight: 82,
+    maxHeight: 130,
+    backgroundColor: C.INPUT_BG,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+    color: C.TEXT,
+    padding: 12,
+    fontSize: 14,
+    textAlignVertical: 'top',
+  },
+  reportErrorText: { color: C.DANGER, fontSize: 13, lineHeight: 19, fontWeight: '700', marginTop: 10 },
+  reportSuccessText: { color: C.TEAL, fontSize: 15, lineHeight: 23, fontWeight: '700', marginBottom: 18 },
+  reportModalActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 18 },
+  viewerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(5,8,16,0.58)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 24,
   },
   viewerBackdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -805,48 +1042,30 @@ const styles = StyleSheet.create({
   },
   viewerClose: {
     position: 'absolute',
-    top: 18,
-    right: 18,
+    top: 10,
+    right: 10,
     zIndex: 2,
     borderRadius: borderRadius.pill,
     borderWidth: 1,
     borderColor: C.ORANGE + '88',
     backgroundColor: 'rgba(10,14,26,0.88)',
-    paddingHorizontal: 16,
-    paddingVertical: 9,
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  viewerCloseText: { color: C.ORANGE, fontSize: 14, fontWeight: '900' },
+  viewerCloseText: { color: C.TEXT, fontSize: 17, fontWeight: '900' },
   viewerImageFrame: {
     maxWidth: '100%' as any,
     maxHeight: '100%' as any,
     position: 'relative',
+    backgroundColor: 'transparent',
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
   },
   viewerImage: {
     width: '100%',
     height: '100%',
+    backgroundColor: 'transparent',
   },
-  viewerWatermark: {
-    position: 'absolute',
-    right: 12,
-    bottom: 12,
-    color: 'rgba(255,255,255,0.5)',
-    backgroundColor: 'rgba(8,12,24,0.26)',
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  viewerDownloadBtn: {
-    position: 'absolute',
-    right: 12,
-    top: 12,
-    borderRadius: borderRadius.pill,
-    borderWidth: 1,
-    borderColor: C.TEAL + '88',
-    backgroundColor: 'rgba(10,14,26,0.78)',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  viewerDownloadText: { color: C.TEAL, fontSize: 13, fontWeight: '900' },
 });

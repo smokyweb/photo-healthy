@@ -13,7 +13,6 @@ const LOGO_IMG = require('../../assets/logo.png');
 const ORANGE_GRADIENT = 'linear-gradient(90deg, #F55B09 0%, #FFD000 100%)';
 
 const NAV_LINKS = [
-  { label: 'Photo Healthy', screen: 'Main', params: { screen: 'HomeTab' } },
   { label: 'Challenges', screen: 'Main', params: { screen: 'ChallengesTab' } },
   { label: 'Community', screen: 'Main', params: { screen: 'CommunityTab' } },
   { label: 'Shop', screen: 'Shop' },
@@ -97,7 +96,7 @@ export default function TopNavBar() {
           <View style={styles.navLinks}>
             {NAV_LINKS.map(l => (
               <TouchableOpacity key={l.label} onPress={() => nav(l.screen, l.params)} style={styles.navLinkBtn}>
-                <Text style={[styles.navLinkText, isActive(l) && styles.navLinkTextActive]}>{l.label === 'Photo Healthy' ? siteName : l.label}</Text>
+                <Text style={[styles.navLinkText, isActive(l) && styles.navLinkTextActive]}>{l.label}</Text>
               </TouchableOpacity>
             ))}
           </View>

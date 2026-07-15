@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, useWindowDimensions, Platform,
+  View, Text, StyleSheet, ScrollView, useWindowDimensions, Platform, Image,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useAuth } from '../context/AuthContext';
+import { getPublicSettings } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import AppFooter from '../components/AppFooter';
 import { C, brandGradients, fontFamilies } from '../theme';
+import { fullUrl } from '../config/api';
+import { DEFAULT_HOW_IT_WORKS_CONTENT, normalizeHowItWorksContent } from '../content/howItWorks';
 
 // ─── Design Tokens ───────────────────────────────────────────────────────────
 const MAX_WIDTH = 1100;
@@ -13,31 +17,6 @@ const SECTION_PAD_V = 64;
 const SECTION_PAD_V_HERO = 80;
 const CONTENT_PAD_H = 24;
 const CARD_RADIUS = 16;
-
-// ─── Data ─────────────────────────────────────────────────────────────────────
-const STEPS = [
-  {
-    num: '1',
-    color: C.ORANGE,
-    title: 'Sign Up & Create Your Profile',
-    body1: 'Join for free in seconds. Create your profile and set your wellness goals to get started on the right foot.',
-    body2: 'Introduce yourself to the community and let others know what you are working toward. No credit card required.',
-  },
-  {
-    num: '2',
-    color: C.TEAL,
-    title: 'Join Challenges & Submit Photos',
-    body1: 'Browse active challenges across nutrition, fitness, mindfulness, and more to find what motivates you.',
-    body2: 'Submit photos to document your journey, inspire others, and stay accountable to your goals every day.',
-  },
-  {
-    num: '3',
-    color: C.ORANGE_END,
-    title: 'Engage, Grow & Track Progress',
-    body1: 'Like and comment on others\'  submissions, receive genuine encouragement, and build real connections.',
-    body2: 'Use your personal dashboard to track your wellness journey and celebrate milestones along the way.',
-  },
-];
 
 const GUIDELINES = [
   {
@@ -72,73 +51,85 @@ const GUIDELINES = [
   },
 ];
 
-const PRO_BENEFITS = [
-  'Unlimited monthly challenge submissions',
-  'Access to Pro-only exclusive challenges',
-  'Pro badge on your profile',
-  'Access to Pro-only shop items',
-];
-
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function HowItWorksScreen() {
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const [pageContent, setPageContent] = useState(DEFAULT_HOW_IT_WORKS_CONTENT);
+
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    getPublicSettings()
+      .then((data: any) => {
+        if (active) setPageContent(normalizeHowItWorksContent(data?.settings?.how_it_works_content));
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []));
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
 
       {/* ── 1. Hero ── */}
-      <View style={styles.heroSection as any}>
-        <Text style={styles.heroTitle}>How It Works</Text>
+      <View style={[styles.heroSection, !isDesktop && styles.heroSectionMobile] as any}>
+        <Text style={styles.heroTitle}>{pageContent.hero_title}</Text>
         <Text style={styles.heroSubtitle}>
-          Getting healthy has never been easier. Join a community that motivates you every single day.
+          {pageContent.hero_subtitle}
         </Text>
       </View>
 
       {/* ── 2. Steps ── */}
-      <View style={styles.stepsSection}>
+      <View style={[styles.stepsSection, !isDesktop && styles.sectionMobile]}>
         <View style={styles.stepsInner}>
-          {STEPS.map((step, idx) => {
+          {pageContent.steps.map((step, idx) => {
             const flip = isDesktop && idx % 2 !== 0;
+            const stepColor = [C.ORANGE, C.TEAL, C.ORANGE_END][idx % 3];
+            const imageUri = fullUrl(step.image_url);
             return (
               <View
-                key={step.num}
+                key={step.id}
                 style={[
                   styles.stepRow,
                   isDesktop && styles.stepRowDesktop,
                   flip && (styles.stepRowReversed as any),
-                  idx < STEPS.length - 1 && styles.stepRowSpaced,
+                  idx < pageContent.steps.length - 1 && styles.stepRowSpaced,
                 ]}
               >
                 {/* Text side */}
                 <View style={[styles.stepTextSide, isDesktop && styles.stepHalf]}>
-                  <View style={[styles.stepBadge, { backgroundColor: step.color }]}>
-                    <Text style={styles.stepBadgeNum}>{step.num}</Text>
+                  <View style={[styles.stepBadge, { backgroundColor: stepColor }]}>
+                    <Text style={styles.stepBadgeNum}>{idx + 1}</Text>
                   </View>
                   <Text style={styles.stepTitle}>{step.title}</Text>
-                  <Text style={styles.stepBody}>{step.body1}</Text>
-                  <Text style={styles.stepBody}>{step.body2}</Text>
+                  {step.body ? <Text style={styles.stepBody}>{step.body}</Text> : null}
                 </View>
-                {/* Image side */}
-                <View style={[styles.stepImageSide, isDesktop && styles.stepHalf]}>
-                  <View style={styles.stepImageCard} />
-                </View>
+                {imageUri ? (
+                  <View style={[styles.stepImageSide, isDesktop && styles.stepHalf]}>
+                    <Image
+                      source={{ uri: imageUri }}
+                      style={styles.stepImageCard}
+                      resizeMode="cover"
+                      accessibilityLabel={step.image_alt || step.title}
+                    />
+                  </View>
+                ) : null}
               </View>
             );
           })}
         </View>
       </View>
 
-      <View style={styles.proSection}>
+      <View style={[styles.proSection, !isDesktop && styles.sectionMobile]}>
         <View style={[styles.proInner, isDesktop && styles.proInnerDesktop]}>
           <View style={styles.proText}>
             <Text style={styles.sectionEyebrow}>Pro Subscription</Text>
-            <Text style={[styles.sectionTitle, styles.proTitle]}>Pro Benefits</Text>
-            <Text style={styles.proBody}>Text to be provided.</Text>
+            <Text style={[styles.sectionTitle, styles.proTitle]}>{pageContent.pro_title}</Text>
+            <Text style={styles.proBody}>{pageContent.pro_body}</Text>
           </View>
           <View style={styles.proBenefitsGrid}>
-            {PRO_BENEFITS.map(item => (
+            {pageContent.pro_benefits.map(item => (
               <View key={item} style={styles.proBenefitCard}>
                 <Text style={styles.proCheck}>✓</Text>
                 <Text style={styles.proBenefitText}>{item}</Text>
@@ -149,7 +140,7 @@ export default function HowItWorksScreen() {
       </View>
 
       {/* ── 3. Community Guidelines ── */}
-      <View style={styles.guidelinesSection}>
+      <View style={[styles.guidelinesSection, !isDesktop && styles.sectionMobile]}>
         <View style={styles.guidelinesInner}>
           <Text style={styles.sectionTitle}>Community Guidelines</Text>
           <View style={[styles.guidelinesGrid, isDesktop && styles.guidelinesGridDesktop]}>
@@ -164,17 +155,19 @@ export default function HowItWorksScreen() {
       </View>
 
       {/* ── 4. CTA Banner ── */}
-      <View style={styles.ctaSection}>
-        <View style={styles.ctaBanner as any}>
-          <Text style={styles.ctaTitle}>Ready to Start Your Journey?</Text>
+      <View style={[styles.ctaSection, !isDesktop && styles.sectionMobile]}>
+        <View style={[styles.ctaBanner, !isDesktop && styles.ctaBannerMobile] as any}>
+          <Text style={styles.ctaTitle}>{pageContent.cta_title}</Text>
           <Text style={styles.ctaSubtitle}>
-            Join thousands of members already living healthier lives
+            {pageContent.cta_subtitle}
           </Text>
           <GradientButton
-            label="Get Started Free"
-            onPress={() => navigation.navigate('Register' as never)}
+            label={user ? 'Explore Challenges' : 'Get Started Free'}
+            onPress={() => user
+              ? navigation.navigate('Main' as never, { screen: 'ChallengesTab' } as never)
+              : navigation.navigate('Register' as never)}
             size="lg"
-            style={styles.ctaBtn}
+            style={[styles.ctaBtn, !isDesktop && styles.ctaBtnMobile]}
             variant="outline"
           />
         </View>
@@ -200,6 +193,10 @@ const styles = StyleSheet.create({
       ? { backgroundImage: brandGradients.primaryCss135 }
       : {}),
   },
+  heroSectionMobile: {
+    paddingVertical: 44,
+    paddingHorizontal: 18,
+  },
   heroTitle: {
     color: C.WHITE,
     fontSize: 40,
@@ -221,22 +218,28 @@ const styles = StyleSheet.create({
     paddingVertical: SECTION_PAD_V,
     paddingHorizontal: CONTENT_PAD_H,
   },
+  sectionMobile: {
+    paddingVertical: 34,
+    paddingHorizontal: 18,
+  },
   stepsInner: {
     maxWidth: MAX_WIDTH,
     alignSelf: 'center',
     width: '100%',
   },
-  stepRow: { gap: 24 },
+  stepRow: { gap: 18 },
   stepRowDesktop: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 48,
   },
   stepRowReversed: { flexDirection: 'row-reverse' },
-  stepRowSpaced: { marginBottom: 48 },
+  stepRowSpaced: { marginBottom: 34 },
   stepHalf: { flex: 1 },
-  stepTextSide: {},
-  stepImageSide: {},
+  stepTextSide: {
+    minWidth: 0,
+  },
+  stepImageSide: { width: '100%' },
   stepBadge: {
     width: 48,
     height: 48,
@@ -262,6 +265,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   stepImageCard: {
+    width: '100%',
     backgroundColor: C.CARD_BG2,
     borderRadius: CARD_RADIUS,
     borderWidth: 1,
@@ -386,6 +390,10 @@ const styles = StyleSheet.create({
       ? { backgroundImage: brandGradients.primaryCss135 }
       : {}),
   },
+  ctaBannerMobile: {
+    paddingVertical: 32,
+    paddingHorizontal: 18,
+  },
   ctaTitle: {
     color: C.WHITE,
     fontSize: 32,
@@ -402,4 +410,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   ctaBtn: { marginTop: 20, borderColor: C.WHITE },
+  ctaBtnMobile: {
+    width: '100%' as any,
+    maxWidth: 320,
+    alignSelf: 'center',
+  },
 });

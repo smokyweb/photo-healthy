@@ -7,6 +7,7 @@ export interface CartItem {
   quantity: number;
   image?: string;
   size?: string | null;
+  is_pro_only?: boolean;
 }
 
 interface CartContextType {
@@ -46,6 +47,7 @@ function loadStoredCart(): CartItem[] {
         quantity: Math.max(1, Number(item.quantity) || 1),
         image: item.image || undefined,
         size: item.size || null,
+        is_pro_only: item.is_pro_only === true || item.is_pro_only === 1 || item.is_pro_only === '1',
       }))
       .filter(item => item.id && item.name);
   } catch {

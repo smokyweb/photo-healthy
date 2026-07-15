@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, useWindowDimensions, Platform, Image,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useAuth } from '../context/AuthContext';
+import { getPublicSettings } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import AppFooter from '../components/AppFooter';
 import { C, brandGradients, fontFamilies } from '../theme';
+import { fullUrl } from '../config/api';
+import { DEFAULT_ABOUT_PAGE_CONTENT, normalizeAboutPageContent } from '../content/aboutPage';
 
 // ─── Design Tokens ───────────────────────────────────────────────────────────
 const MAX_WIDTH = 1100;
@@ -38,79 +42,79 @@ const VALUES = [
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function AboutScreen() {
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const [pageContent, setPageContent] = useState(DEFAULT_ABOUT_PAGE_CONTENT);
+
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    getPublicSettings()
+      .then((data: any) => {
+        if (active) setPageContent(normalizeAboutPageContent(data?.settings?.about_page_content));
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []));
+
+  const heroImageUri = fullUrl(pageContent.hero_image_url);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
 
       {/* ── 1. Hero ── */}
       <View style={styles.heroSection}>
-        <View style={styles.purposeImageContainer}>
+        <View style={[styles.purposeImageContainer, heroImageUri && styles.purposeImageContainerCustom]}>
           <Image
-            source={ABOUT_PURPOSE_IMAGE}
-            style={styles.purposeImage}
-            resizeMode="center"
+            source={heroImageUri ? { uri: heroImageUri } : ABOUT_PURPOSE_IMAGE}
+            style={[styles.purposeImage, heroImageUri && styles.purposeImageCustom]}
+            resizeMode={heroImageUri ? 'cover' : 'center'}
+            accessibilityLabel={pageContent.hero_image_alt}
           />
         </View>
-        <Text style={styles.heroTitle}>Our Purpose</Text>
+        <Text style={styles.heroTitle}>{pageContent.hero_title}</Text>
         <Text style={styles.heroDesc}>
-          Photo Healthy is a vibrant community where wellness meets visual storytelling. We empower
-          individuals to document and share their healthy living journeys through photography,
-          building meaningful connections along the way.
+          {pageContent.hero_body}
         </Text>
         <GradientButton
-          label="Join Our Community"
-          onPress={() => navigation.navigate('Register' as never)}
+          label={user ? 'Visit the Community' : 'Join Our Community'}
+          onPress={() => user
+            ? navigation.navigate('Main' as never, { screen: 'CommunityTab' } as never)
+            : navigation.navigate('Register' as never)}
           style={styles.heroBtn}
         />
       </View>
 
-      {/* ── 2. Philosophy ── */}
-      <View style={styles.philosophySection}>
-        <View style={styles.philosophyInner}>
-          <Text style={styles.sectionTitle}>Our Mission</Text>
-          <Text style={styles.philosophyText}>
-            "We believe that health is not just a destination — it's a daily practice. Every meal
-            prepared with care, every morning run, every mindful breath is a step toward a better
-            you. Our platform exists to celebrate those moments and connect the people who share them."
-          </Text>
-          <Text style={styles.philosophyText}>
-            Photo Healthy was born from a simple idea: that sharing your wellness journey can inspire
-            others to begin their own. When we see someone else's healthy breakfast or sunrise yoga
-            session, something shifts in us. We're reminded that we're not alone on this path.
-          </Text>
-          <Text style={styles.philosophyAttrib}>— Photo Healthy Team</Text>
-        </View>
-      </View>
-
-      {/* ── 3. Our Story ── */}
-      <View style={styles.storySection}>
-        <View style={[styles.storyRow, isDesktop && styles.storyRowDesktop]}>
-          <Image
-            source={ABOUT_STORY_IMAGE}
-            style={[styles.storyImage, isDesktop && styles.storyImageDesktop]}
-            resizeMode="cover"
-          />
-          <View style={[styles.storyTextCol, isDesktop && styles.storyTextColDesktop]}>
-            <Text style={styles.storyTitle}>Our Story</Text>
-            <Text style={styles.storyBody}>
-              Founded in 2024, Photo Healthy grew from a small group of friends who wanted to hold
-              each other accountable for their wellness goals. We started sharing photos of our
-              healthy meals and workouts in a private chat — and it worked.
-            </Text>
-            <Text style={styles.storyBody}>
-              The encouragement was real, the accountability was genuine, and the results were
-              undeniable. We realized this model could help thousands more people achieve their
-              wellness goals if we built a proper platform for it.
-            </Text>
-            <Text style={styles.storyBody}>
-              Today, Photo Healthy is home to a thriving community of health-conscious individuals
-              across the globe, all united by the power of visual storytelling and mutual support.
-            </Text>
+      {pageContent.sections.map((section, index) => {
+        const customImageUri = fullUrl(section.image_url);
+        const sectionImage = customImageUri
+          ? { uri: customImageUri }
+          : section.id === 'our-story' ? ABOUT_STORY_IMAGE : null;
+        const reverse = isDesktop && index % 2 !== 0;
+        return (
+          <View key={section.id} style={[styles.storySection, index % 2 === 0 && styles.contentSectionAlt]}>
+            <View style={[
+              styles.storyRow,
+              isDesktop && styles.storyRowDesktop,
+              reverse && styles.storyRowReversed,
+              !sectionImage && styles.storyRowTextOnly,
+            ]}>
+              {sectionImage ? (
+                <Image
+                  source={sectionImage}
+                  style={[styles.storyImage, isDesktop && styles.storyImageDesktop]}
+                  resizeMode="cover"
+                  accessibilityLabel={section.image_alt || section.title}
+                />
+              ) : null}
+              <View style={[styles.storyTextCol, isDesktop && sectionImage && styles.storyTextColDesktop, !sectionImage && styles.storyTextOnly]}>
+                <Text style={[styles.storyTitle, !sectionImage && styles.storyTitleCentered]}>{section.title}</Text>
+                {section.body ? <Text style={[styles.storyBody, !sectionImage && styles.storyBodyCentered]}>{section.body}</Text> : null}
+              </View>
+            </View>
           </View>
-        </View>
-      </View>
+        );
+      })}
 
       {/* ── 4. Values ── */}
       {/*
@@ -132,13 +136,15 @@ export default function AboutScreen() {
       {/* ── 5. CTA Banner ── */}
       <View style={styles.ctaSection}>
         <View style={styles.ctaBanner as any}>
-          <Text style={styles.ctaTitle}>Join Your Wellness Community</Text>
+          <Text style={styles.ctaTitle}>{pageContent.cta_title}</Text>
           <Text style={styles.ctaSubtitle}>
-            Be a part of our growing wellness community that encourages your every step. Connect and Share with people from around the world.
+            {pageContent.cta_subtitle}
           </Text>
           <GradientButton
-            label="Sign Up Now"
-            onPress={() => navigation.navigate('Register' as never)}
+            label={user ? 'Explore the Community' : 'Sign Up Now'}
+            onPress={() => user
+              ? navigation.navigate('Main' as never, { screen: 'CommunityTab' } as never)
+              : navigation.navigate('Register' as never)}
             size="lg"
             style={styles.ctaBtn}
             textStyle={styles.ctaBtnText}
@@ -170,10 +176,19 @@ const styles = StyleSheet.create({
     marginBottom: 34,
     overflow: 'hidden',
   },
+  purposeImageContainerCustom: {
+    width: '100%',
+    maxWidth: 760,
+    height: 300,
+    borderRadius: CARD_RADIUS,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+  },
   purposeImage: {
     width: '100%',
     height: 180,
   },
+  purposeImageCustom: { height: '100%' },
   heroTitle: {
     color: C.TEXT,
     fontSize: 40,
@@ -223,6 +238,7 @@ const styles = StyleSheet.create({
     paddingVertical: SECTION_PAD_V,
     paddingHorizontal: CONTENT_PAD_H,
   },
+  contentSectionAlt: { backgroundColor: 'rgba(46,49,69,0.34)' },
   storyRow: {
     maxWidth: MAX_WIDTH,
     alignSelf: 'center',
@@ -234,6 +250,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 48,
   },
+  storyRowReversed: { flexDirection: 'row-reverse' },
+  storyRowTextOnly: { maxWidth: 820 },
   storyImage: {
     backgroundColor: C.CARD_BG2,
     borderRadius: CARD_RADIUS,
@@ -244,6 +262,7 @@ const styles = StyleSheet.create({
   storyImageDesktop: { flex: 1 },
   storyTextCol: {},
   storyTextColDesktop: { flex: 1 },
+  storyTextOnly: { width: '100%' },
   storyTitle: {
     color: C.TEXT,
     fontSize: 28,
@@ -251,12 +270,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     ...(Platform.OS === 'web' ? { fontFamily: "'Lexend', sans-serif" } : {}),
   },
+  storyTitleCentered: { textAlign: 'center' },
   storyBody: {
     color: C.TEXT_SECONDARY,
     fontSize: 15,
     lineHeight: 24,
     marginBottom: 12,
   },
+  storyBodyCentered: { textAlign: 'center', fontSize: 16, lineHeight: 28 },
 
   // Values — 3-col grid
   valuesSection: {

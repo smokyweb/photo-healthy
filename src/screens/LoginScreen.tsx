@@ -90,7 +90,7 @@ const LoginScreen = ({ navigation }: any) => {
               </View>
               <Text style={styles.rememberText}>Remember Me</Text>
             </TouchableOpacity>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('ResetPassword')}>
               <Text style={styles.forgotText}>Get New Password</Text>
             </TouchableOpacity>
           </View>

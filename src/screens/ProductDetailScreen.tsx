@@ -78,6 +78,7 @@ export default function ProductDetailScreen() {
       price: Number(product.price),
       image: fullUrl(product.image_url) || undefined,
       size: selectedSize,
+      is_pro_only: isProOnlyProduct(product),
     }, qty);
     setAdded(true);
     setTimeout(() => setAdded(false), 2500);
@@ -240,6 +241,7 @@ export default function ProductDetailScreen() {
         uri={lightboxPhoto}
         title={name}
         onClose={() => setLightboxPhoto(null)}
+        showWatermark={false}
       />
     </ScrollView>
   );

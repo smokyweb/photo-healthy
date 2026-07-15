@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { getSubmissions, getUserStats } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
+import WatermarkedImage from '../components/WatermarkedImage';
 import { C, borderRadius } from '../theme';
 import { fullUrl as resolveUrl } from '../config/api';
 
@@ -121,9 +122,9 @@ export default function MyProgressScreen() {
                   activeOpacity={0.85}
                 >
                   {imgUrl ? (
-                    <Image source={{ uri: imgUrl }} style={styles.photoImg} resizeMode="contain" />
+                    <WatermarkedImage source={{ uri: imgUrl }} style={styles.photoFrame} resizeMode="contain" watermarkSize="tiny" />
                   ) : (
-                    <View style={[styles.photoImg, styles.photoPlaceholder]}>
+                    <View style={styles.photoPlaceholder}>
                       <Text style={{ fontSize: 28 }}>{'📷'}</Text>
                     </View>
                   )}
@@ -212,8 +213,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   photoItem: { marginBottom: 6 },
-  photoImg: { width: '100%', aspectRatio: 1, borderRadius: borderRadius.md },
-  photoPlaceholder: { backgroundColor: C.CARD_BG2, alignItems: 'center', justifyContent: 'center', minHeight: 80 },
+  photoFrame: { width: '100%', aspectRatio: 1, borderRadius: borderRadius.md, overflow: 'hidden', position: 'relative' },
+  photoPlaceholder: { width: '100%', aspectRatio: 1, borderRadius: borderRadius.md, backgroundColor: C.CARD_BG2, alignItems: 'center', justifyContent: 'center', minHeight: 80 },
   photoTitle: { color: C.TEXT_MUTED, fontSize: 10, marginTop: 3, paddingHorizontal: 2 },
 
   emptyState: { alignItems: 'center', paddingVertical: 40 },

@@ -4,6 +4,7 @@ import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/nativ
 import { getSubmissions } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
+import WatermarkedImage from '../components/WatermarkedImage';
 import { C, borderRadius } from '../theme';
 import { fullUrl as resolveUrl } from '../config/api';
 
@@ -87,9 +88,9 @@ export default function UserSubmissionsScreen() {
                     activeOpacity={0.85}
                   >
                     {img ? (
-                      <Image source={{ uri: img }} style={styles.photo} resizeMode="contain" />
+                      <WatermarkedImage source={{ uri: img }} style={styles.photoFrame} resizeMode="contain" watermarkSize="tiny" />
                     ) : (
-                      <View style={[styles.photo, styles.photoPlaceholder]}>
+                      <View style={styles.photoPlaceholder}>
                         <Text style={{ fontSize: 24 }}>\uD83D\uDCF7</Text>
                       </View>
                     )}
@@ -135,8 +136,8 @@ const styles = StyleSheet.create({
   grid: { padding: 4 },
   row: { flexDirection: 'row', gap: 4, marginBottom: 4 },
   cell: {},
-  photo: { width: '100%', aspectRatio: 1, borderRadius: borderRadius.sm },
-  photoPlaceholder: { backgroundColor: C.CARD_BG2, alignItems: 'center', justifyContent: 'center', minHeight: 80 },
+  photoFrame: { width: '100%', aspectRatio: 1, borderRadius: borderRadius.sm, overflow: 'hidden', position: 'relative' },
+  photoPlaceholder: { width: '100%', aspectRatio: 1, borderRadius: borderRadius.sm, backgroundColor: C.CARD_BG2, alignItems: 'center', justifyContent: 'center', minHeight: 80 },
   challengeLabel: { color: C.TEXT_MUTED, fontSize: 9, marginTop: 2, paddingHorizontal: 2 },
   empty: { alignItems: 'center', paddingVertical: 60 },
   emptyText: { color: C.TEXT_MUTED, fontSize: 16 },

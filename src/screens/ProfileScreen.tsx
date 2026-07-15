@@ -10,6 +10,7 @@ import { getUserStats, getSubscriptionStatus, getSubmissions, getMyChallenges } 
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
+import WatermarkedImage from '../components/WatermarkedImage';
 import { C, borderRadius } from '../theme';
 import { fullUrl as resolveUrl } from '../config/api';
 
@@ -282,10 +283,11 @@ export default function ProfileScreen() {
                 activeOpacity={0.85}
               >
                 {(s.image_url || s.photo_url || s.photo1_url) ? (
-                  <Image
+                  <WatermarkedImage
                     source={{ uri: fullUrl(s.image_url || s.photo_url || s.photo1_url) || '' }}
                     style={styles.submissionImg}
                     resizeMode="contain"
+                    watermarkSize="small"
                   />
                 ) : (
                   <View style={[styles.submissionImg, styles.submissionPlaceholder]}>

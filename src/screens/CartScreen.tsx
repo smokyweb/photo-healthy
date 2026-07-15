@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Alert, Tex
 import { useNavigation } from '@react-navigation/native';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { createCheckoutSession } from '../services/api';
+import { createCheckoutSession, getProducts, getSubscriptionStatus } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import AppFooter from '../components/AppFooter';
 import { C, borderRadius } from '../theme';
@@ -17,6 +17,9 @@ export default function CartScreen() {
   const [couponCode, setCouponCode] = useState('');
   const [giftCode, setGiftCode] = useState('');
   const [checkoutError, setCheckoutError] = useState('');
+  const [productAccess, setProductAccess] = useState<Record<number, boolean>>({});
+  const [verifiedPro, setVerifiedPro] = useState<boolean | null>(null);
+  const [accessChecking, setAccessChecking] = useState(!!user);
   const [showFreeOrderAddress, setShowFreeOrderAddress] = useState(false);
   const [shippingAddress, setShippingAddress] = useState({
     name: user?.name || '',
@@ -40,15 +43,62 @@ export default function CartScreen() {
     }));
   }, [user?.id]);
 
-  const handleBack = () => {
-    if (navigation.canGoBack?.()) {
-      navigation.goBack();
-      return;
+  useEffect(() => {
+    let active = true;
+    getProducts()
+      .then((data: any) => {
+        if (!active) return;
+        const products = data?.products || data || [];
+        const access: Record<number, boolean> = {};
+        products.forEach((product: any) => {
+          const value = product?.is_pro_only ?? product?.pro_only ?? product?.requires_pro;
+          access[Number(product.id)] = value === true || value === 1 || ['1', 'true', 'yes', 'pro', 'pro_only', 'pro-only'].includes(String(value ?? '').trim().toLowerCase());
+        });
+        setProductAccess(access);
+      })
+      .catch(() => {});
+
+    if (user) {
+      setAccessChecking(true);
+      getSubscriptionStatus()
+        .then((data: any) => {
+          if (active) setVerifiedPro(!!(data?.is_pro || data?.isPro || data?.status === 'active'));
+        })
+        .catch(() => { if (active) setVerifiedPro(null); })
+        .finally(() => { if (active) setAccessChecking(false); });
+    } else {
+      setVerifiedPro(false);
+      setAccessChecking(false);
     }
+    return () => { active = false; };
+  }, [user?.id]);
+
+  const localIsPro = user?.subscription_status === 'active' || String(user?.role || '') === 'pro' || !!user?.is_pro;
+  const isPro = verifiedPro ?? localIsPro;
+  const proOnlyItems = items.filter(item => item.is_pro_only || productAccess[Number(item.id)]);
+  const hasBlockedProItems = !accessChecking && !isPro && proOnlyItems.length > 0;
+
+  const goToSubscription = () => {
+    const params = { returnTo: '/cart' } as never;
+    const parent = navigation.getParent?.();
+    if (parent) parent.navigate('Subscription' as never, params);
+    else navigation.navigate('Subscription' as never, params);
+  };
+
+  const removeProOnlyItems = () => {
+    proOnlyItems.forEach(item => removeItem(item.id, item.size));
+    setCheckoutError('');
+  };
+
+  const handleBack = () => {
     navigation.navigate('Shop' as never);
   };
 
   const handleCheckout = async () => {
+    if (hasBlockedProItems) {
+      setCheckoutError('Your cart contains Pro-only items. Upgrade to Pro or remove those items before checkout.');
+      return;
+    }
     setLoading(true);
     setCheckoutError('');
     try {
@@ -65,12 +115,14 @@ export default function CartScreen() {
       if (data?.url) { (window as any).location.href = data.url; }
       else { clearCart(); navigation.navigate('CheckoutSuccess' as never, { freeOrder: true } as never); }
     } catch (e: any) {
-      const message = e.message || 'Something went wrong.';
+      const isProAccessError = e?.code === 'pro_required' || String(e?.message || '').toLowerCase().includes('pro subscription');
+      const message = isProAccessError
+        ? 'Your cart contains an item that requires an active Pro membership. Upgrade to Pro or remove the restricted item to continue.'
+        : e.message || 'Something went wrong.';
       setCheckoutError(message);
       if (message.toLowerCase().includes('shipping address required')) {
         setShowFreeOrderAddress(true);
       }
-      Alert.alert('Checkout Failed', message);
     }
     setLoading(false);
   };
@@ -78,8 +130,14 @@ export default function CartScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={{ flexGrow: 1 }}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack}>
-          <Text style={styles.back}>← Back</Text>
+        <TouchableOpacity
+          onPress={handleBack}
+          style={styles.backButton}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Back to Shop"
+        >
+          <Text style={styles.back}>← Back to Shop</Text>
         </TouchableOpacity>
         <Text style={styles.title}>🛒 Cart ({itemCount})</Text>
         {items.length > 0 && <TouchableOpacity onPress={() => Alert.alert('Clear Cart', 'Remove all?', [{ text: 'Cancel' }, { text: 'Clear All', style: 'destructive', onPress: clearCart }])}><Text style={styles.clearText}>Clear</Text></TouchableOpacity>}
@@ -112,6 +170,26 @@ export default function CartScreen() {
               </View>
             ))}
           </View>
+          {proOnlyItems.length > 0 ? (
+            <View style={[styles.proAccessCard, hasBlockedProItems ? styles.proAccessCardBlocked : styles.proAccessCardAllowed]}>
+              <View style={{ flex: 1, minWidth: 220 }}>
+                <Text style={[styles.proAccessTitle, { color: hasBlockedProItems ? C.ORANGE_MID : C.TEAL }]}>
+                  {accessChecking ? 'Checking Pro membership…' : hasBlockedProItems ? 'Pro membership required' : 'Pro access confirmed'}
+                </Text>
+                <Text style={styles.proAccessBody}>
+                  {hasBlockedProItems
+                    ? `${proOnlyItems.map(item => item.name).join(', ')} ${proOnlyItems.length === 1 ? 'is' : 'are'} available only to active Pro members.`
+                    : accessChecking ? 'Please wait while we verify access for the Pro-only items in your cart.' : 'Your Pro-only cart items are eligible for checkout.'}
+                </Text>
+              </View>
+              {hasBlockedProItems ? (
+                <View style={styles.proAccessActions}>
+                  <GradientButton label={user ? 'Upgrade to Pro' : 'View Pro Access'} variant="primary" size="sm" onPress={goToSubscription} />
+                  <GradientButton label="Remove Pro Items" variant="outline" size="sm" onPress={removeProOnlyItems} />
+                </View>
+              ) : null}
+            </View>
+          ) : null}
           <View style={[styles.checkoutGrid, isMobile && styles.checkoutGridMobile, isDesktop && styles.checkoutGridDesktop]}>
             <View style={[styles.checkoutInfo, isMobile && styles.cartPanelMobile]}>
               <Text style={styles.summaryTitle}>Checkout Details</Text>
@@ -184,10 +262,10 @@ export default function CartScreen() {
               </View>
             )}
             <GradientButton
-              label={loading ? 'Redirecting...' : 'Proceed to Checkout'}
+              label={loading ? 'Redirecting...' : accessChecking && proOnlyItems.length > 0 ? 'Checking Pro Access...' : 'Proceed to Checkout'}
               onPress={handleCheckout}
               loading={loading}
-              disabled={loading}
+              disabled={loading || (accessChecking && proOnlyItems.length > 0) || hasBlockedProItems}
               style={styles.checkoutButton as any}
               textStyle={styles.checkoutButtonText as any}
             />
@@ -204,7 +282,17 @@ export default function CartScreen() {
 const styles = StyleSheet.create({
   screen: { backgroundColor: 'transparent' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: C.DIVIDER, gap: 10 },
-  back: { color: C.ORANGE, fontSize: 14, fontWeight: '600' },
+  backButton: {
+    minHeight: 38,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: C.ORANGE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  back: { color: C.ORANGE, fontSize: 14, fontWeight: '800' },
   title: { color: C.TEXT, fontSize: 17, fontWeight: '700' },
   clearText: { color: '#ef4444', fontSize: 13 },
   empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80, paddingHorizontal: 32 },
@@ -226,6 +314,23 @@ const styles = StyleSheet.create({
   qty: { color: C.TEXT, fontSize: 16, fontWeight: '700', minWidth: 24, textAlign: 'center' },
   removeBtn: { marginLeft: 8, paddingVertical: 6 },
   removeBtnText: { color: '#ef4444', fontSize: 13, fontWeight: '600' },
+  proAccessCard: {
+    marginHorizontal: 16,
+    marginTop: 4,
+    padding: 16,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 14,
+  },
+  proAccessCardBlocked: { backgroundColor: 'rgba(245,91,9,0.1)', borderColor: 'rgba(245,91,9,0.55)' },
+  proAccessCardAllowed: { backgroundColor: 'rgba(84,223,182,0.08)', borderColor: 'rgba(84,223,182,0.45)' },
+  proAccessTitle: { fontSize: 15, fontWeight: '900', marginBottom: 4 },
+  proAccessBody: { color: C.TEXT_SECONDARY, fontSize: 13, lineHeight: 19 },
+  proAccessActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   checkoutGrid: { margin: 16, gap: 16, maxWidth: '100%' },
   checkoutGridMobile: { marginHorizontal: 12 },
   checkoutGridDesktop: { flexDirection: 'row', alignItems: 'stretch' },
