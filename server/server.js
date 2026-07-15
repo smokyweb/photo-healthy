@@ -7,7 +7,6 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const mysql = require('mysql2/promise');
-const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -173,85 +172,18 @@ async function getShippingOptionsFromSettings() {
   ].filter(Boolean);
 }
 
-const MIN_MOTIVATIONAL_QUOTES = 20;
-const DEFAULT_MOTIVATIONAL_QUOTES = [
-  { quote: 'Every photo tells a story. Make yours worth telling.', author: '' },
-  { quote: 'Movement is medicine. Capture yours.', author: '' },
-  { quote: 'Wellness is not a destination. It is a journey. Keep moving.', author: '' },
-  { quote: 'Small steps every day lead to big changes.', author: '' },
-  { quote: 'Your wellness journey is uniquely yours. Celebrate every step.', author: '' },
-  { quote: 'Progress begins the moment you decide to keep going.', author: '' },
-  { quote: 'Capture the moment. Celebrate the movement.', author: '' },
-  { quote: 'A healthier life is built one choice at a time.', author: '' },
-  { quote: 'Consistency turns ordinary effort into lasting change.', author: '' },
-  { quote: 'Every walk forward is a win worth remembering.', author: '' },
-  { quote: 'Celebrate what your body can do today.', author: '' },
-  { quote: 'Strong habits grow from small, repeatable actions.', author: '' },
-  { quote: 'You do not have to be perfect to make progress.', author: '' },
-  { quote: 'One healthy choice can change the direction of your day.', author: '' },
-  { quote: "Let today's effort become tomorrow's strength.", author: '' },
-  { quote: 'Breathe deeply, move freely, and notice the good around you.', author: '' },
-  { quote: 'Your future self is cheering for the step you take today.', author: '' },
-  { quote: 'Community turns motivation into momentum.', author: '' },
-  { quote: 'Keep showing up. Your progress is already taking shape.', author: '' },
-  { quote: 'The best view often comes after the hardest climb.', author: '' },
-];
-
-function parseMotivationalQuoteList(value) {
-  let rawItems = [];
-  if (Array.isArray(value)) {
-    rawItems = value;
-  } else if (typeof value === 'string' && value.trim()) {
-    try {
-      const parsed = JSON.parse(value);
-      rawItems = Array.isArray(parsed) ? parsed : [];
-    } catch {
-      rawItems = value.split('\n');
-    }
-  }
-
-  const seen = new Set();
-  return rawItems
-    .map(item => typeof item === 'string'
-      ? { quote: item.trim(), author: '' }
-      : {
-          quote: String(item?.quote || item?.text || item?.content || '').trim(),
-          author: String(item?.author || item?.name || '').trim(),
-        })
-    .filter(item => {
-      const key = item.quote.toLocaleLowerCase();
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-}
-
-function quoteListWithDefaults(value, legacyQuote, legacyAuthor) {
-  const quotes = parseMotivationalQuoteList(value);
-  const legacy = String(legacyQuote || '').trim();
-  if (legacy && !quotes.some(item => item.quote.toLocaleLowerCase() === legacy.toLocaleLowerCase())) {
-    quotes.unshift({ quote: legacy, author: String(legacyAuthor || '').trim() });
-  }
-
-  const seen = new Set(quotes.map(item => item.quote.toLocaleLowerCase()));
-  DEFAULT_MOTIVATIONAL_QUOTES.forEach(item => {
-    if (quotes.length >= MIN_MOTIVATIONAL_QUOTES) return;
-    const key = item.quote.toLocaleLowerCase();
-    if (seen.has(key)) return;
-    seen.add(key);
-    quotes.push(item);
-  });
-  return quotes;
-}
-
 function withSettingDefaults(settings = {}) {
   const next = { ...settings };
   next.site_name = next.site_name || 'Photo Healthy';
   next.tagline = next.tagline || 'Walking and Taking Pictures Challenges';
-  const quotes = quoteListWithDefaults(next.quotes_list, next.motivational_quote, next.motivational_quote_author);
-  next.quotes_list = JSON.stringify(quotes);
-  next.motivational_quote = next.motivational_quote || quotes[0].quote;
-  next.motivational_quote_author = next.motivational_quote_author || quotes[0].author || '';
+  next.motivational_quote = next.motivational_quote || 'Every photo tells a story. Make yours worth telling.';
+  next.quotes_list = next.quotes_list || JSON.stringify([
+    'Every photo tells a story. Make yours worth telling.',
+    'Movement is medicine. Capture yours.',
+    'Wellness is not a destination, it is a journey. Keep moving.',
+    'Small steps every day lead to big changes.',
+    'Your wellness journey is uniquely yours. Celebrate every step.',
+  ]);
   next.partner_notes_list = next.partner_notes_list || JSON.stringify([]);
   next.max_free_submissions = next.max_free_submissions || next.free_submission_limit || '50';
   next.free_submission_limit = next.free_submission_limit || next.max_free_submissions || '50';
@@ -263,14 +195,6 @@ function withSettingDefaults(settings = {}) {
   next.shipping_express_cents = next.shipping_express_cents || '1299';
   next.shipping_express_days_min = next.shipping_express_days_min || '2';
   next.shipping_express_days_max = next.shipping_express_days_max || '3';
-  next.community_guide_enabled = next.community_guide_enabled ?? '1';
-  next.community_guide_title = next.community_guide_title || 'Grow Together';
-  next.community_guide_text = next.community_guide_text || 'Support other members on their wellness journey with encouraging, positive comments. Open a photo to join the full conversation, celebrate progress, and build genuine friendship connections in a respectful community.';
-  next.community_guide_video_url = next.community_guide_video_url || '';
-  next.challenge_guide_enabled = next.challenge_guide_enabled ?? '1';
-  next.challenge_guide_title = next.challenge_guide_title || 'How to choose your challenge';
-  next.challenge_guide_text = next.challenge_guide_text || 'Use Pick your feeling to choose the emotional experience you want, then use Category to narrow the kind of wellness challenge you want to explore. Movement remains visible on each challenge so you know what activity is involved, but it is not part of the search.';
-  next.challenge_guide_video_url = next.challenge_guide_video_url || '';
   return next;
 }
 
@@ -404,24 +328,6 @@ async function safeAddColumn(table, column, definition) {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE
-      )`,
-      // Admin-authored posts shown in the community feed and, optionally, on Home
-      `CREATE TABLE IF NOT EXISTS community_posts (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        title VARCHAR(255) NOT NULL,
-        body TEXT NOT NULL,
-        image_url VARCHAR(500) NULL,
-        cta_label VARCHAR(100) NULL,
-        cta_url VARCHAR(500) NULL,
-        is_published TINYINT(1) NOT NULL DEFAULT 1,
-        show_on_home TINYINT(1) NOT NULL DEFAULT 1,
-        is_pinned TINYINT(1) NOT NULL DEFAULT 0,
-        created_by INT NULL,
-        published_at DATETIME NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_community_posts_public (is_published, show_on_home, is_pinned),
-        INDEX idx_community_posts_created_by (created_by)
       )`,
       // Partner inquiries table
       `CREATE TABLE IF NOT EXISTS partner_inquiries (
@@ -611,37 +517,6 @@ const adminAuth = (req, res, next) => {
       console.error('[AdminAuth] Failed to verify admin status:', err.message);
     }
     return res.status(403).json({ error: 'Admin access required' });
-  });
-};
-
-const submissionOwnerOrAdminAuth = (req, res, next) => {
-  auth(req, res, async () => {
-    try {
-      const submissionId = Number(req.params.id);
-      if (!submissionId) return res.status(400).json({ error: 'Submission ID required' });
-
-      const [[submission]] = await pool.query(
-        'SELECT id, user_id, challenge_id, photo1_url, photo2_url, photo3_url, photo4_url, miles_walked FROM submissions WHERE id = ?',
-        [submissionId]
-      );
-      if (!submission) return res.status(404).json({ error: 'Submission not found' });
-
-      const userId = Number(req.user?.id || req.user?.userId);
-      if (Number(submission.user_id) === userId || req.user?.is_admin || req.user?.role === 'admin') {
-        req.submission = submission;
-        return next();
-      }
-
-      const [[dbUser]] = await pool.query('SELECT is_admin, role FROM users WHERE id = ?', [userId]);
-      if (dbUser?.is_admin || dbUser?.role === 'admin') {
-        req.submission = submission;
-        return next();
-      }
-      return res.status(403).json({ error: 'You can only manage your own submission' });
-    } catch (err) {
-      console.error('[SubmissionAuth] Failed to verify submission access:', err.message);
-      return res.status(500).json({ error: 'Could not verify submission access' });
-    }
   });
 };
 
@@ -1094,12 +969,27 @@ app.get('/api/admin/users/:id/subscription-history', adminAuth, async (req, res)
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// GET /api/submissions/:id/download - explicit photo downloads are disabled.
+// GET /api/submissions/:id/download - serve a stored submission photo to Pro subscribers only.
 app.get('/api/submissions/:id/download', auth, async (req, res) => {
-  res.status(410).json({
-    error: 'photo_downloads_disabled',
-    message: 'Photo downloading is disabled.',
-  });
+  try {
+    await syncStripeSubscriptionForUser(req.user.id);
+    const photoNumber = ['1', '2', '3', '4'].includes(String(req.query.photo || '1'))
+      ? String(req.query.photo || '1')
+      : '1';
+    const photo = `photo${photoNumber}_url`;
+    const [[sub]] = await pool.query('SELECT user_id, photo1_url, photo2_url, photo3_url, photo4_url, title FROM submissions WHERE id = ?', [req.params.id]);
+    if (!sub) return res.status(404).json({ error: 'Submission not found' });
+    const [[u]] = await pool.query('SELECT subscription_status, role FROM users WHERE id = ?', [req.user.id]);
+    const isPro = u?.subscription_status === 'active' || u?.role === 'pro' || req.user.role === 'pro';
+    if (!isPro) {
+      return res.status(403).json({ error: 'pro_required', message: 'Upgrade to Pro to download original photos.' });
+    }
+    const url = sub[photo];
+    if (!url) return res.status(404).json({ error: 'Photo not found' });
+    res.redirect(url);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // GET /api/users/me/access â€” returns what the current user can access
@@ -1483,213 +1373,31 @@ app.get('/api/challenges/:id/enrollment', auth, async (req, res) => {
 });
 
 // Helper: send password reset / welcome email to a single user
-function safeResetBaseUrl(value) {
-  const fallback = process.env.APP_URL || 'https://photoai.betaplanets.com';
-  try {
-    const parsed = new URL(String(value || fallback));
-    const allowedHosts = new Set([
-      'photoai.betaplanets.com',
-      'photohealthy.htbluestone.com',
-      'localhost',
-      '127.0.0.1',
-    ]);
-    if (!allowedHosts.has(parsed.hostname)) return fallback;
-    return `${parsed.protocol}//${parsed.host}`;
-  } catch {
-    return fallback;
-  }
-}
-
-function shouldExposeResetLink(req, baseUrl) {
-  if (process.env.RESET_LINK_DEBUG === 'true') return true;
-  try {
-    const requestedHost = new URL(String(baseUrl || '')).hostname;
-    const requestHost = String(req.hostname || '').toLowerCase();
-    return ['localhost', '127.0.0.1', '::1'].includes(requestedHost) ||
-      ['localhost', '127.0.0.1', '::1'].includes(requestHost);
-  } catch {
-    return false;
-  }
-}
-
-const escapeHtml = (value) => String(value ?? '')
-  .replace(/&/g, '&amp;')
-  .replace(/</g, '&lt;')
-  .replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;')
-  .replace(/'/g, '&#039;');
-
-const escapeHeaderText = (value) => String(value || '')
-  .replace(/[\r\n]+/g, ' ')
-  .replace(/"/g, '\\"')
-  .trim();
-
-function smtpConfigured() {
-  return !!(process.env.MAIL_HOST && process.env.MAIL_USERNAME && process.env.MAIL_PASSWORD);
-}
-
-function createSmtpTransport() {
-  const port = Number(process.env.MAIL_PORT || 587);
-  const encryption = String(process.env.MAIL_ENCRYPTION || '').toLowerCase();
-  const secure = encryption === 'ssl' || port === 465;
-
-  return nodemailer.createTransport({
-    host: process.env.MAIL_HOST,
-    port,
-    secure,
-    requireTLS: encryption === 'tls' && !secure,
-    auth: {
-      user: process.env.MAIL_USERNAME,
-      pass: process.env.MAIL_PASSWORD,
-    },
-  });
-}
-
-async function sendSmtpEmail({ to, name, subject, html, text, fromEmail, fromName }) {
-  if (!smtpConfigured()) return { ok: false, skipped: true, error: 'SMTP is not configured' };
-
-  const transporter = createSmtpTransport();
-  const safeFromName = escapeHeaderText(fromName || process.env.MAIL_FROM_NAME || 'Photo Healthy') || 'Photo Healthy';
-  const safeToName = escapeHeaderText(name || '');
-  const from = `"${safeFromName}" <${fromEmail}>`;
-  const toAddress = safeToName ? `"${safeToName}" <${to}>` : to;
-  const info = await transporter.sendMail({ from, to: toAddress, subject, html, text });
-  return { ok: true, provider: 'smtp', messageId: info.messageId };
-}
-
-function buildResetEmail({ name, type, resetUrl }) {
-  const isNewUser = type === 'new_user';
-  const subject = isNewUser ? 'Set up your Photo Healthy password' : 'Reset your Photo Healthy password';
-  const headline = isNewUser ? 'Welcome to Photo Healthy' : 'Reset your password';
-  const intro = isNewUser
-    ? 'Your Photo Healthy account is ready. Use the button below to create your password.'
-    : 'We received a request to reset your Photo Healthy password. Use the button below to choose a new one.';
-  const safeName = escapeHtml(name || 'there');
-  const safeResetUrl = escapeHtml(resetUrl);
-  const html = '<!DOCTYPE html><html><body style="margin:0;padding:0;background:#202333;font-family:Arial,sans-serif">'
-    + '<div style="max-width:640px;margin:0 auto;padding:32px 20px">'
-    + '<div style="background:linear-gradient(135deg,#F55B09,#FFD000);border-radius:16px;padding:30px;text-align:center;margin-bottom:20px">'
-    + '<h1 style="color:#fff;margin:0;font-size:28px">' + headline + '</h1>'
-    + '</div>'
-    + '<div style="background:#3B3E4F;border-radius:16px;padding:24px">'
-    + '<p style="color:#EAECEF;margin:0 0 16px;font-size:16px">Hi ' + safeName + ',</p>'
-    + '<p style="color:#C0C7D1;margin:0 0 20px;line-height:1.5">' + intro + '</p>'
-    + '<div style="text-align:center;margin:28px 0">'
-    + '<a href="' + safeResetUrl + '" style="display:inline-block;background:linear-gradient(135deg,#F55B09,#FFD000);color:#fff;text-decoration:none;font-weight:700;border-radius:999px;padding:14px 24px">Create new password</a>'
-    + '</div>'
-    + '<p style="color:#A8B3C2;margin:20px 0 0;font-size:13px;line-height:1.5">This link expires in 72 hours. If you did not request this, you can ignore this email.</p>'
-    + '<p style="color:#A8B3C2;margin:14px 0 0;font-size:13px;line-height:1.5">If the button does not work, copy and paste this link into your browser:<br><span style="color:#54DFB6;word-break:break-all">' + safeResetUrl + '</span></p>'
-    + '</div>'
-    + '<p style="color:#6F7D8B;font-size:12px;text-align:center">Photo Healthy</p>'
-    + '</div></body></html>';
-  const text = `${headline}\n\nHi ${name || 'there'},\n\n${intro}\n\n${resetUrl}\n\nThis link expires in 72 hours.`;
-  return { subject, html, text };
-}
-
-async function notifyPasswordReset({ email, name, token, type, baseUrl: requestedBaseUrl }) {
-  const rawBaseUrl = safeResetBaseUrl(requestedBaseUrl);
-  const baseUrl = String(rawBaseUrl).replace(/\/+$/, '');
-  const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
-
+async function notifyPasswordReset({ email, name, token, type }) {
   try {
     const [[fromSetting]] = await pool.query("SELECT setting_value FROM app_settings WHERE setting_key = 'notification_from_email'").catch(() => [[]]);
-    const fromEmail = process.env.MAIL_FROM_ADDRESS || fromSetting?.setting_value || 'noreply@photoai.betaplanets.com';
-    const fromName = process.env.MAIL_FROM_NAME || 'Photo Healthy';
-    const emailContent = buildResetEmail({ name, type, resetUrl });
-
-    if (smtpConfigured()) {
-      try {
-        const smtpResult = await sendSmtpEmail({
-          to: email,
-          name,
-          fromEmail,
-          fromName,
-          ...emailContent,
-        });
-        console.log('[notify] Reset email SMTP result:', smtpResult.messageId || 'sent');
-        return { ...smtpResult, resetUrl };
-      } catch (smtpError) {
-        console.error('[notify] Reset email SMTP error:', smtpError.message);
-      }
-    }
-
-    const payload = JSON.stringify({ email, name, token, type, reset_url: resetUrl, from_email: fromEmail, from_name: fromName });
+    const fromEmail = fromSetting?.setting_value || 'noreply@photoai.betaplanets.com';
+    const resetUrl = `https://photoai.betaplanets.com/reset-password?token=${token}`;
+    const payload = JSON.stringify({ email, name, token, type, reset_url: resetUrl, from_email: fromEmail, from_name: 'Photo Healthy' });
 
     const http = require('http');
-    return await new Promise(resolve => {
-      const opts = {
-        hostname: 'localhost', port: 80,
-        path: '/notify-reset.php', method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
-      };
-      const phpReq = http.request(opts, phpRes => {
-        let body = '';
-        phpRes.on('data', d => body += d);
-        phpRes.on('end', () => {
-          console.log('[notify] Reset email result:', body.slice(0, 200));
-          let parsed = null;
-          try { parsed = body ? JSON.parse(body) : null; } catch {}
-          resolve({
-            ok: phpRes.statusCode >= 200 && phpRes.statusCode < 300 && parsed?.ok !== false,
-            statusCode: phpRes.statusCode,
-            body,
-            resetUrl,
-          });
-        });
-      });
-      phpReq.on('error', e => {
-        console.error('[notify] Reset email error:', e.message);
-        resolve({ ok: false, error: e.message, resetUrl });
-      });
-      phpReq.write(payload);
-      phpReq.end();
+    const opts = {
+      hostname: 'localhost', port: 80,
+      path: '/notify-reset.php', method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+    };
+    const phpReq = http.request(opts, phpRes => {
+      let body = '';
+      phpRes.on('data', d => body += d);
+      phpRes.on('end', () => { console.log('[notify] Reset email result:', body.slice(0, 200)); });
     });
+    phpReq.on('error', e => console.error('[notify] Reset email error:', e.message));
+    phpReq.write(payload);
+    phpReq.end();
   } catch (e) {
     console.error('[notify] notifyPasswordReset error:', e.message);
-    return { ok: false, error: e.message, resetUrl };
   }
 }
-
-// POST /api/auth/forgot-password — public reset-link request
-app.post('/api/auth/forgot-password', async (req, res) => {
-  try {
-    const email = String(req.body?.email || '').trim().toLowerCase();
-    if (!email) return res.status(400).json({ error: 'Email is required' });
-
-    await safeAddColumn('users', 'reset_token', 'VARCHAR(64) NULL');
-    await safeAddColumn('users', 'reset_token_expires', 'TIMESTAMP NULL');
-
-    const [[user]] = await pool.query(
-      'SELECT id, name, email FROM users WHERE LOWER(email) = ? AND COALESCE(is_deleted, 0) = 0 LIMIT 1',
-      [email]
-    );
-
-    // Always return success so this endpoint does not reveal which emails exist.
-    if (!user) return res.json({ success: true });
-
-    const token = require('crypto').randomBytes(32).toString('hex');
-    const expires = new Date(Date.now() + 72 * 3600 * 1000);
-    await pool.query(
-      'UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?',
-      [token, expires, user.id]
-    );
-
-    const baseUrl = req.body?.origin || req.headers.origin || process.env.APP_URL || 'https://photoai.betaplanets.com';
-    const mailResult = await notifyPasswordReset({ email: user.email, name: user.name, token, type: 'reset', baseUrl });
-    const response = {
-      success: true,
-      email_sent: !!mailResult?.ok,
-    };
-    if (shouldExposeResetLink(req, baseUrl)) {
-      response.reset_url = mailResult?.resetUrl || null;
-      if (!mailResult?.ok) response.delivery_error = mailResult?.error || mailResult?.body || 'Email sender unavailable';
-    }
-    res.json(response);
-  } catch (e) {
-    console.error('[forgot-password]', e.message);
-    res.status(500).json({ error: 'Could not send reset email' });
-  }
-});
 
 // Helper: blast challenge announcement email to all users
 // Helper: send subscription lifecycle email via notify-subscription.php
@@ -2112,139 +1820,6 @@ app.put('/api/admin/taxonomy', adminAuth, async (req, res) => {
   }
 });
 
-// ==================== COMMUNITY POSTS ====================
-
-const communityPostSelect = `
-  SELECT cp.*, COALESCE(u.name, 'Photo Healthy Team') AS author_name
-  FROM community_posts cp
-  LEFT JOIN users u ON u.id = cp.created_by
-`;
-
-const communityPostFlag = (value, fallback = false) => {
-  if (value === undefined || value === null || value === '') return fallback;
-  if (value === true || value === 1) return true;
-  return ['1', 'true', 'yes', 'on'].includes(String(value).trim().toLowerCase());
-};
-
-const communityPostText = (value, maxLength) => {
-  const next = String(value ?? '').trim();
-  return maxLength ? next.slice(0, maxLength) : next;
-};
-
-const getCommunityPostById = async (id) => {
-  const [rows] = await pool.query(`${communityPostSelect} WHERE cp.id = ?`, [id]);
-  return rows[0] || null;
-};
-
-app.get('/api/community-posts', async (req, res) => {
-  try {
-    const limit = Math.max(1, Math.min(Number.parseInt(req.query.limit, 10) || 20, 50));
-    const conditions = ['cp.is_published = 1'];
-    if (communityPostFlag(req.query.home, false)) conditions.push('cp.show_on_home = 1');
-    const [posts] = await pool.query(
-      `${communityPostSelect}
-       WHERE ${conditions.join(' AND ')}
-       ORDER BY cp.is_pinned DESC, COALESCE(cp.published_at, cp.created_at) DESC
-       LIMIT ?`,
-      [limit]
-    );
-    res.json({ posts });
-  } catch (e) {
-    console.error('[Community posts list]', e.message);
-    res.status(500).json({ error: 'Failed to load community posts' });
-  }
-});
-
-app.get('/api/admin/community-posts', adminAuth, async (req, res) => {
-  try {
-    const [posts] = await pool.query(`${communityPostSelect} ORDER BY cp.is_pinned DESC, cp.updated_at DESC`);
-    res.json({ posts });
-  } catch (e) {
-    console.error('[Admin community posts list]', e.message);
-    res.status(500).json({ error: 'Failed to load community posts' });
-  }
-});
-
-app.post('/api/admin/community-posts', adminAuth, async (req, res) => {
-  try {
-    const title = communityPostText(req.body.title, 255);
-    const body = communityPostText(req.body.body);
-    if (!title || !body) return res.status(400).json({ error: 'Title and message are required' });
-
-    const isPublished = communityPostFlag(req.body.is_published, true);
-    const [result] = await pool.query(
-      `INSERT INTO community_posts
-       (title, body, image_url, cta_label, cta_url, is_published, show_on_home, is_pinned, created_by, published_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        title,
-        body,
-        communityPostText(req.body.image_url, 500) || null,
-        communityPostText(req.body.cta_label, 100) || null,
-        communityPostText(req.body.cta_url, 500) || null,
-        isPublished ? 1 : 0,
-        communityPostFlag(req.body.show_on_home, true) ? 1 : 0,
-        communityPostFlag(req.body.is_pinned, false) ? 1 : 0,
-        req.user?.id || null,
-        isPublished ? new Date() : null,
-      ]
-    );
-    res.status(201).json({ post: await getCommunityPostById(result.insertId) });
-  } catch (e) {
-    console.error('[Admin community post create]', e.message);
-    res.status(500).json({ error: 'Failed to create community post' });
-  }
-});
-
-app.patch('/api/admin/community-posts/:id', adminAuth, async (req, res) => {
-  try {
-    const existing = await getCommunityPostById(req.params.id);
-    if (!existing) return res.status(404).json({ error: 'Community post not found' });
-
-    const title = communityPostText(req.body.title ?? existing.title, 255);
-    const body = communityPostText(req.body.body ?? existing.body);
-    if (!title || !body) return res.status(400).json({ error: 'Title and message are required' });
-    const isPublished = communityPostFlag(req.body.is_published, !!existing.is_published);
-    const publishedAt = isPublished && !existing.is_published ? new Date() : existing.published_at;
-
-    await pool.query(
-      `UPDATE community_posts SET
-       title = ?, body = ?, image_url = ?, cta_label = ?, cta_url = ?,
-       is_published = ?, show_on_home = ?, is_pinned = ?, published_at = ?
-       WHERE id = ?`,
-      [
-        title,
-        body,
-        communityPostText(req.body.image_url ?? existing.image_url, 500) || null,
-        communityPostText(req.body.cta_label ?? existing.cta_label, 100) || null,
-        communityPostText(req.body.cta_url ?? existing.cta_url, 500) || null,
-        isPublished ? 1 : 0,
-        communityPostFlag(req.body.show_on_home, !!existing.show_on_home) ? 1 : 0,
-        communityPostFlag(req.body.is_pinned, !!existing.is_pinned) ? 1 : 0,
-        publishedAt,
-        req.params.id,
-      ]
-    );
-    res.json({ post: await getCommunityPostById(req.params.id) });
-  } catch (e) {
-    console.error('[Admin community post update]', e.message);
-    res.status(500).json({ error: 'Failed to update community post' });
-  }
-});
-
-const handleDeleteCommunityPost = async (req, res) => {
-  try {
-    const [result] = await pool.query('DELETE FROM community_posts WHERE id = ?', [req.params.id]);
-    if (!result.affectedRows) return res.status(404).json({ error: 'Community post not found' });
-    res.json({ success: true });
-  } catch (e) {
-    console.error('[Admin community post delete]', e.message);
-    res.status(500).json({ error: 'Failed to delete community post' });
-  }
-};
-app.delete('/api/admin/community-posts/:id', adminAuth, handleDeleteCommunityPost);
-app.post('/api/admin/community-posts/:id/delete', adminAuth, handleDeleteCommunityPost);
-
 // ==================== SUBMISSIONS ROUTES ====================
 
 app.get('/api/submissions', async (req, res) => {
@@ -2434,16 +2009,12 @@ app.post('/api/submissions', auth, async (req, res) => {
   }
 });
 
-app.patch('/api/submissions/:id', submissionOwnerOrAdminAuth, async (req, res) => {
+app.patch('/api/submissions/:id', adminAuth, async (req, res) => {
   try {
     const allowed = ['title', 'description', 'photo1_url', 'photo2_url', 'photo3_url', 'photo4_url', 'miles_walked'];
     const fields = [];
     const values = [];
-    const hasPhotoChanges = ['photo1_url', 'photo2_url', 'photo3_url', 'photo4_url']
-      .some(key => Object.prototype.hasOwnProperty.call(req.body, key));
-
     for (const key of allowed) {
-      if (key.startsWith('photo') && hasPhotoChanges) continue;
       if (Object.prototype.hasOwnProperty.call(req.body, key)) {
         let value = req.body[key];
         if (key === 'title') {
@@ -2461,22 +2032,6 @@ app.patch('/api/submissions/:id', submissionOwnerOrAdminAuth, async (req, res) =
         values.push(value);
       }
     }
-
-    if (hasPhotoChanges) {
-      const compactPhotos = ['photo1_url', 'photo2_url', 'photo3_url', 'photo4_url']
-        .map(key => Object.prototype.hasOwnProperty.call(req.body, key) ? req.body[key] : req.submission[key])
-        .map(value => String(value || '').trim())
-        .filter(Boolean)
-        .slice(0, 4);
-      if (!compactPhotos.length) {
-        return res.status(400).json({ error: 'A submission must keep at least one photo. Delete the submission instead.' });
-      }
-      ['photo1_url', 'photo2_url', 'photo3_url', 'photo4_url'].forEach((key, index) => {
-        fields.push(`${key} = ?`);
-        values.push(compactPhotos[index] || null);
-      });
-    }
-
     if (!fields.length) return res.status(400).json({ error: 'No submission changes provided' });
     values.push(req.params.id);
     const [result] = await pool.query(`UPDATE submissions SET ${fields.join(', ')} WHERE id = ?`, values);
@@ -2489,28 +2044,12 @@ app.patch('/api/submissions/:id', submissionOwnerOrAdminAuth, async (req, res) =
 
 async function handleDeleteSubmission(req, res) {
   try {
-    const submission = req.submission;
     await pool.query('DELETE FROM submissions WHERE id = ?', [req.params.id]);
-    if (submission?.miles_walked) {
-      await pool.query(
-        'UPDATE users SET total_miles = GREATEST(0, COALESCE(total_miles, 0) - ?) WHERE id = ?',
-        [Number(submission.miles_walked) || 0, submission.user_id]
-      );
-    }
-    if (submission?.user_id && submission?.challenge_id) {
-      await pool.query(
-        `UPDATE user_challenges
-         SET status = 'active'
-         WHERE user_id = ? AND challenge_id = ?
-           AND (personal_end_date IS NULL OR personal_end_date >= CURDATE())`,
-        [submission.user_id, submission.challenge_id]
-      );
-    }
     res.json({ success: true });
   } catch { res.status(500).json({ error: 'Failed to delete submission' }); }
 }
-app.delete('/api/submissions/:id', submissionOwnerOrAdminAuth, handleDeleteSubmission);
-app.post('/api/submissions/:id/delete', submissionOwnerOrAdminAuth, handleDeleteSubmission);
+app.delete('/api/submissions/:id', adminAuth, handleDeleteSubmission);
+app.post('/api/submissions/:id/delete', adminAuth, handleDeleteSubmission);
 
 app.post('/api/submissions/:id/like', auth, async (req, res) => {
   try {
@@ -2736,36 +2275,7 @@ app.post('/api/admin/users/:id/reset-password', adminAuth, async (req, res) => {
     const expires = new Date(Date.now() + 72 * 3600 * 1000);
     await pool.query('UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?',
       [token, expires, user.id]);
-    const baseUrl = req.body?.origin || req.headers.origin || process.env.APP_URL || 'https://photoai.betaplanets.com';
-    const mailResult = await notifyPasswordReset({ email: user.email, name: user.name, token, type: 'reset', baseUrl });
-    res.json({
-      success: true,
-      email_sent: !!mailResult?.ok,
-      reset_url: mailResult?.resetUrl || null,
-      delivery_error: mailResult?.ok ? null : (mailResult?.error || mailResult?.body || 'Email sender unavailable'),
-    });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// POST /api/admin/users/:id/set-password - admin manually sets a user's password
-app.post('/api/admin/users/:id/set-password', adminAuth, async (req, res) => {
-  try {
-    const password = String(req.body?.password || '');
-    if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
-
-    const [[user]] = await pool.query('SELECT id, email FROM users WHERE id = ?', [req.params.id]);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    await safeAddColumn('users', 'reset_token', 'VARCHAR(64) NULL');
-    await safeAddColumn('users', 'reset_token_expires', 'TIMESTAMP NULL');
-    const bcrypt = require('bcryptjs');
-    const hash = await bcrypt.hash(password, 10);
-    await pool.query(
-      'UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?',
-      [hash, user.id]
-    );
+    notifyPasswordReset({ email: user.email, name: user.name, token, type: 'reset' }).catch(() => {});
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -2790,7 +2300,6 @@ app.post('/api/auth/reset-password', async (req, res) => {
   try {
     const { token, password } = req.body;
     if (!token || !password) return res.status(400).json({ error: 'token and password required' });
-    if (String(password).length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
     const [[user]] = await pool.query(
       'SELECT id FROM users WHERE reset_token = ? AND reset_token_expires > NOW()', [token]
     );
@@ -3152,30 +2661,13 @@ process.on('uncaughtException', (err) => {
 app.post('/api/reports', auth, async (req, res) => {
   try {
     const { type, target_id, reason } = req.body;
-    const targetId = Number(target_id);
-    if (!['submission', 'comment'].includes(type) || !Number.isInteger(targetId) || targetId < 1) {
-      return res.status(400).json({ error: 'A valid report type and target are required' });
-    }
-
-    const targetTable = type === 'submission' ? 'submissions' : 'comments';
-    const [[target]] = await pool.query(`SELECT id FROM ${targetTable} WHERE id = ?`, [targetId]);
-    if (!target) return res.status(404).json({ error: type === 'submission' ? 'Photo not found' : 'Comment not found' });
-
-    const [[existing]] = await pool.query(
-      "SELECT id FROM reports WHERE reporter_id = ? AND type = ? AND target_id = ? AND status = 'pending' LIMIT 1",
-      [req.user.id, type, targetId]
-    );
-    if (existing) return res.json({ success: true, duplicate: true, report_id: existing.id });
-
+    if (!type || !target_id) return res.status(400).json({ error: 'type and target_id required' });
     await pool.query(
       'INSERT INTO reports (reporter_id, type, target_id, reason) VALUES (?, ?, ?, ?)',
-      [req.user.id, type, targetId, String(reason || '').trim().slice(0, 500) || null]
+      [req.user.id, type, target_id, reason || null]
     );
-    res.status(201).json({ success: true, duplicate: false });
-  } catch (e) {
-    console.error('[Report submit]', e.message);
-    res.status(500).json({ error: 'Failed to submit report' });
-  }
+    res.json({ success: true });
+  } catch { res.status(500).json({ error: 'Failed to submit report' }); }
 });
 
 // â”€â”€ Reports: list (admin) â”€â”€
@@ -3192,12 +2684,7 @@ app.get('/api/admin/reports', adminAuth, async (req, res) => {
         CASE
           WHEN r.type = 'submission' THEN (SELECT photo1_url FROM submissions WHERE id = r.target_id)
           ELSE NULL
-        END AS target_photo,
-        CASE
-          WHEN r.type = 'submission' THEN r.target_id
-          WHEN r.type = 'comment' THEN (SELECT submission_id FROM comments WHERE id = r.target_id)
-          ELSE NULL
-        END AS target_submission_id
+        END AS target_photo
       FROM reports r
       JOIN users u ON r.reporter_id = u.id
       WHERE r.status = ?
@@ -3463,10 +2950,8 @@ app.post('/api/checkout/create-session', async (req, res) => {
         try {
           const jwt = require('jsonwebtoken');
           const decoded = jwt.verify(authHeader.replace('Bearer ', ''), process.env.JWT_SECRET || 'photohealthy_jwt_secret_2026');
-          const decodedUserId = decoded?.userId || decoded?.id;
-          if (decodedUserId) {
-            await syncStripeSubscriptionForUser(decodedUserId);
-            const [[u]] = await pool.query('SELECT subscription_status FROM users WHERE id = ?', [decodedUserId]);
+          if (decoded?.userId) {
+            const [[u]] = await pool.query('SELECT subscription_status FROM users WHERE id = ?', [decoded.userId]);
             isPro = u?.subscription_status === 'active';
           }
         } catch {}
@@ -4279,16 +3764,6 @@ app.get('/api/settings/public', async (req, res) => {
       'motivational_quote_author',
       'quotes_list',
       'partner_notes_list',
-      'how_it_works_content',
-      'about_page_content',
-      'community_guide_enabled',
-      'community_guide_title',
-      'community_guide_text',
-      'community_guide_video_url',
-      'challenge_guide_enabled',
-      'challenge_guide_title',
-      'challenge_guide_text',
-      'challenge_guide_video_url',
       'max_free_submissions',
       'free_submission_limit',
       'shipping_standard_name',
@@ -4323,19 +3798,11 @@ const saveAdminSettings = async (req, res) => {
     const body = req.body || {};
     const { key, value } = body;
     if (key) {
-      let normalizedValue = value;
-      if (key === 'quotes_list') {
-        const quotes = parseMotivationalQuoteList(value);
-        if (quotes.length < MIN_MOTIVATIONAL_QUOTES) {
-          return res.status(400).json({ error: `At least ${MIN_MOTIVATIONAL_QUOTES} unique motivational quotes are required.` });
-        }
-        normalizedValue = JSON.stringify(quotes);
-      }
       await pool.query(
         'INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?, updated_at = NOW()',
-        [key, normalizedValue, normalizedValue]
+        [key, value, value]
       );
-      return res.json({ ok: true, key, value: normalizedValue });
+      return res.json({ ok: true, key, value });
     }
 
     const settings = body.settings && typeof body.settings === 'object' ? body.settings : body;
@@ -4344,13 +3811,6 @@ const saveAdminSettings = async (req, res) => {
     }
     if (settings.free_submission_limit != null && settings.max_free_submissions == null) {
       settings.max_free_submissions = settings.free_submission_limit;
-    }
-    if (settings.quotes_list != null) {
-      const quotes = parseMotivationalQuoteList(settings.quotes_list);
-      if (quotes.length < MIN_MOTIVATIONAL_QUOTES) {
-        return res.status(400).json({ error: `At least ${MIN_MOTIVATIONAL_QUOTES} unique motivational quotes are required.` });
-      }
-      settings.quotes_list = JSON.stringify(quotes);
     }
     const entries = Object.entries(settings).filter(([settingKey]) => settingKey !== 'settings');
     if (!entries.length) return res.status(400).json({ error: 'settings required' });
@@ -4381,19 +3841,11 @@ app.put('/api/admin/settings/item', adminAuth, async (req, res) => {
   try {
     const { key, value } = req.body;
     if (!key) return res.status(400).json({ error: 'key required' });
-    let normalizedValue = value;
-    if (key === 'quotes_list') {
-      const quotes = parseMotivationalQuoteList(value);
-      if (quotes.length < MIN_MOTIVATIONAL_QUOTES) {
-        return res.status(400).json({ error: `At least ${MIN_MOTIVATIONAL_QUOTES} unique motivational quotes are required.` });
-      }
-      normalizedValue = JSON.stringify(quotes);
-    }
     await pool.query(
       'INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?, updated_at = NOW()',
-      [key, normalizedValue, normalizedValue]
+      [key, value, value]
     );
-    res.json({ ok: true, key, value: normalizedValue });
+    res.json({ ok: true, key, value });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -4521,7 +3973,6 @@ app.get('/api/admin/dashboard-stats', adminAuth, async (req, res) => {
       SUM(status = 'paid') as paid,
       SUM(status = 'processed') as processed
       FROM orders WHERE archived = 0`);
-    const [[reportQueue]]  = await pool.query(`SELECT COUNT(*) as pending FROM reports WHERE status = 'pending'`);
     const [[{ subsToday }]] = await pool.query(`SELECT COUNT(*) as subsToday FROM users WHERE DATE(subscription_started_at) = CURDATE() AND subscription_status = 'active'`);
     const [[{ subsMonth }]] = await pool.query(`SELECT COUNT(*) as subsMonth FROM users WHERE YEAR(subscription_started_at)=YEAR(NOW()) AND MONTH(subscription_started_at)=MONTH(NOW()) AND subscription_status='active'`);
     const [[{ activeSubs }]] = await pool.query(`SELECT COUNT(*) as activeSubs FROM users WHERE subscription_status = 'active'`);
@@ -4547,9 +3998,6 @@ app.get('/api/admin/dashboard-stats', adminAuth, async (req, res) => {
         pending: Number(orderQueue.pending || 0),
         paid: Number(orderQueue.paid || 0),
         processed: Number(orderQueue.processed || 0),
-      },
-      reports: {
-        pending: Number(reportQueue.pending || 0),
       },
     });
   } catch (e) {

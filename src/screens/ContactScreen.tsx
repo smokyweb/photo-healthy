@@ -174,14 +174,14 @@ export default function ContactScreen() {
             <View style={styles.socialRow}>
               <GradientButton
                 label="Facebook"
-                onPress={() => openLink('https://www.facebook.com/people/PhotoHealthy/61585001537891/')}
+                onPress={() => openLink('https://facebook.com/photohealthy')}
                 variant="outline"
                 size="sm"
                 style={styles.socialBtn}
               />
               <GradientButton
                 label="Instagram"
-                onPress={() => openLink('https://www.instagram.com/bephotohealthy/')}
+                onPress={() => openLink('https://instagram.com/photohealthy')}
                 variant="teal"
                 size="sm"
                 style={styles.socialBtn}

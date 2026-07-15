@@ -10,16 +10,13 @@ import {
   ImageBackground,
   ActivityIndicator,
   useWindowDimensions,
-  Linking,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { getAssetByID } from 'react-native-web/dist/modules/AssetRegistry';
 import { useAuth } from '../context/AuthContext';
 import * as api from '../services/api';
+import { getPublicSettings } from '../services/api';
 import AppFooter from '../components/AppFooter';
-import WatermarkedImage from '../components/WatermarkedImage';
-import CommunityPostCard from '../components/CommunityPostCard';
-import { openPageHelp } from '../components/ContextualHelp';
 import { C } from '../theme';
 import { normalizeChallengeCategory, normalizeFeelingCategory, normalizeMovementCategory } from '../constants/taxonomy';
 import { fullUrl as resolveUrl } from '../config/api';
@@ -35,6 +32,42 @@ const PHOTO9_CLOUDS = require('../../assets/photo9-mountain-clouds.png');
 
 const fullUrl = (url?: string | null) =>
   resolveUrl(url) || '';
+
+const DEFAULT_HOME_QUOTE = 'Every photo tells a story. Make yours worth telling.';
+
+const parseHomeQuoteLibrary = (value: any) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string' || !value.trim()) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return value.split('\n');
+  }
+};
+
+const getHomeQuoteFromSettings = (data: any) => {
+  const settings = data?.settings || data || {};
+  const library = parseHomeQuoteLibrary(settings.quotes_list)
+    .map((item: any) => {
+      if (typeof item === 'string') return { quote: item.trim(), author: '' };
+      return {
+        quote: String(item?.quote || item?.text || item?.content || '').trim(),
+        author: String(item?.author || item?.name || '').trim(),
+      };
+    })
+    .filter((item: any) => item.quote);
+
+  if (library.length > 0) {
+    return library[Math.floor(Math.random() * library.length)];
+  }
+
+  const selectedQuote = String(settings.motivational_quote || '').trim();
+  const selectedAuthor = String(settings.motivational_quote_author || '').trim();
+  if (selectedQuote) return { quote: selectedQuote, author: selectedAuthor };
+
+  return { quote: DEFAULT_HOME_QUOTE, author: '' };
+};
 
 const isJoinableChallenge = (challenge: any) => {
   if (!challenge) return false;
@@ -290,10 +323,6 @@ const FOOTER_NAV_MAP: Record<string, string | { screen: string; params?: any }> 
   'How It Works': 'HowItWorks',
   'Gallery': 'Gallery', 'Sign Up': 'Register', 'Log In': 'Login',
 };
-const SOCIAL_URLS: Record<string, string> = {
-  instagram: 'https://www.instagram.com/bephotohealthy/',
-  facebook: 'https://www.facebook.com/people/PhotoHealthy/61585001537891/',
-};
 let _footerNavFn: ((route: string, params?: any) => void) | null = null;
 const setFooterNav = (fn: (route: string, params?: any) => void) => { _footerNavFn = fn; };
 const goFooterLink = (label: string) => {
@@ -303,6 +332,8 @@ const goFooterLink = (label: string) => {
     else _footerNavFn(route.screen, route.params);
   }
 };
+const goPlaceholderLink = () => {};
+
 
 const FooterLink = ({ label }: { label: string }) => (
   <Pressable
@@ -325,10 +356,7 @@ const FooterSocialLink = ({ name, label }: { name: string; label: string }) => (
   <Pressable
     accessibilityRole="link"
     accessibilityLabel={label}
-    onPress={() => {
-      const url = SOCIAL_URLS[name];
-      if (url) Linking.openURL(url).catch(() => {});
-    }}
+    onPress={goPlaceholderLink}
     style={({ hovered }: any) => [
       bottom.socialLink,
       hovered && bottom.socialLinkHovered,
@@ -366,7 +394,7 @@ const HomeBottomSections = ({ isMobile, showHow = true, onHowItWorksLayout, onHo
           style={[bottom.howItWorks, isMobile && bottom.howItWorksMobile]}
           onLayout={onHowItWorksLayout}
         >
-          <TouchableOpacity style={[bottom.headingRow, isMobile && bottom.headingRowMobile]} onPress={onHowItWorksPress} activeOpacity={0.85}>
+          <TouchableOpacity style={bottom.headingRow} onPress={onHowItWorksPress} activeOpacity={0.85}>
             <View style={bottom.headingLine} />
             <Text style={bottom.heading}>How It Works</Text>
             <View style={bottom.headingLine} />
@@ -425,113 +453,7 @@ const HomeBottomSections = ({ isMobile, showHow = true, onHowItWorksLayout, onHo
   );
 };
 
-const HomeCommunityUpdates = ({ posts, compact = false }: { posts: any[]; compact?: boolean }) => {
-  if (!posts?.length) return null;
-  return (
-    <View style={{ width: '100%', maxWidth: PAGE_MAX_WIDTH, alignSelf: 'center', paddingHorizontal: compact ? 16 : 28, paddingTop: 24, paddingBottom: 4 }}>
-      <Text style={{ color: C.ORANGE_MID, fontSize: 10, fontWeight: '900', letterSpacing: 1, marginBottom: 3 }}>FROM PHOTO HEALTHY</Text>
-      <Text style={{ ...type.heading, color: C.TEXT, fontSize: compact ? 22 : 26, marginBottom: 13 }}>Community updates</Text>
-      {posts.slice(0, 2).map(post => <CommunityPostCard key={post.id} post={post} compact />)}
-    </View>
-  );
-};
-
-const SubmissionCardPhoto = ({
-  submission,
-  style,
-  resizeMode,
-  watermarkSize,
-}: {
-  submission: any;
-  style: any;
-  resizeMode: 'cover' | 'contain';
-  watermarkSize: 'small' | 'medium';
-}) => {
-  const remotePhotos = [
-    submission.photo1_url || submission.image_url || submission.photo_url,
-    submission.photo2_url,
-    submission.photo3_url,
-    submission.photo4_url,
-  ].filter(Boolean).map((url: string) => ({ uri: fullUrl(url) }));
-  const photos = submission._localPhoto
-    ? [submission._localPhoto, ...remotePhotos.slice(1)]
-    : remotePhotos;
-  const [photoIndex, setPhotoIndex] = useState(0);
-
-  useEffect(() => { setPhotoIndex(0); }, [submission.id]);
-
-  const showPhoto = (event: any, direction: number) => {
-    event?.stopPropagation?.();
-    setPhotoIndex(current => (current + direction + photos.length) % photos.length);
-  };
-
-  return (
-    <View style={style}>
-      {photos.length > 0 && (
-        <WatermarkedImage
-          source={photos[Math.min(photoIndex, photos.length - 1)]}
-          style={StyleSheet.absoluteFillObject as any}
-          resizeMode={resizeMode}
-          watermarkSize={watermarkSize}
-        />
-      )}
-      {photos.length > 1 && (
-        <>
-          <TouchableOpacity
-            style={[homePhotoNav.arrow, homePhotoNav.arrowLeft]}
-            onPress={(event) => showPhoto(event, -1)}
-            accessibilityLabel="Previous submission photo"
-          >
-            <Text style={homePhotoNav.arrowText}>‹</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[homePhotoNav.arrow, homePhotoNav.arrowRight]}
-            onPress={(event) => showPhoto(event, 1)}
-            accessibilityLabel="Next submission photo"
-          >
-            <Text style={homePhotoNav.arrowText}>›</Text>
-          </TouchableOpacity>
-          <View style={homePhotoNav.countPill} pointerEvents="none">
-            <Text style={homePhotoNav.countText}>{photoIndex + 1} / {photos.length}</Text>
-          </View>
-        </>
-      )}
-    </View>
-  );
-};
-
-const homePhotoNav = StyleSheet.create({
-  arrow: {
-    position: 'absolute',
-    top: '50%',
-    marginTop: -18,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(7, 11, 22, 0.78)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.38)',
-    zIndex: 4,
-  },
-  arrowLeft: { left: 8 },
-  arrowRight: { right: 8 },
-  arrowText: { color: '#FFFFFF', fontSize: 28, lineHeight: 30, fontWeight: '700' },
-  countPill: {
-    position: 'absolute',
-    right: 8,
-    bottom: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: 'rgba(7, 11, 22, 0.82)',
-    zIndex: 4,
-  },
-  countText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
-});
-
-const LoggedInHome = ({ user, featured, challenges, submissions, userSubmissions, userStats, daysLeft, navigation, recent, streak, communityPosts }: any) => {
+const LoggedInHome = ({ user, featured, challenges, submissions, userSubmissions, userStats, daysLeft, navigation, recent, streak, motivationalQuote, quoteAuthor }: any) => {
   const firstName = (user.name || 'User').split(' ')[0];
   const today = formatDate(new Date());
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -639,6 +561,14 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userSubmissions
       </View>
     )}
 
+    {/* Motivation Quote Banner */}
+    <View style={li.quoteBanner}>
+      <Text style={li.quoteText}>
+        {motivationalQuote}
+      </Text>
+      {quoteAuthor ? <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 8, fontStyle: 'normal' }}>� {quoteAuthor}</Text> : null}
+    </View>
+
     {/* Stats Row (3 cards) */}
     <View style={li.section}>
       <View style={li.statsRow}>
@@ -691,8 +621,6 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userSubmissions
       </View>
     )}
 
-    <HomeCommunityUpdates posts={communityPosts} />
-
     {/* Recent Community Submissions (full-width cards) */}
     <View style={li.section}>
       <Text style={li.sectionTitle}>Recent Community Submissions</Text>
@@ -708,12 +636,7 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userSubmissions
             style={li.communityCard}
             onPress={() => sub.id && navigation.navigate('SubmissionDetail', { submissionId: sub.id, id: sub.id })}
           >
-            <SubmissionCardPhoto
-              submission={sub}
-              style={li.communityImageWrap}
-              resizeMode="contain"
-              watermarkSize="medium"
-            />
+            <Image source={sub._localPhoto || { uri: fullUrl(sub.photo1_url) }} style={li.communityImg} resizeMode="contain" />
             <View style={li.communityInfo}>
               <Text style={li.communityUser}>@{sub.user_name || 'unknown'}</Text>
               <Text style={li.communityTitle}>{sub.title || 'Untitled'}</Text>
@@ -757,12 +680,12 @@ const LoggedInHome = ({ user, featured, challenges, submissions, userSubmissions
       </View>
     </View>
 
-    <HomeBottomSections isMobile={false} onHowItWorksPress={() => openPageHelp('home')} />
+    <HomeBottomSections isMobile={false} />
   </>
   );
 };
 
-const MobileLoggedInHome = ({ user, featured, challenges, submissions, userSubmissions, userStats, daysLeft, navigation, recent, streak, communityPosts }: any) => {
+const MobileLoggedInHome = ({ user, featured, challenges, submissions, userSubmissions, userStats, daysLeft, navigation, recent, streak, motivationalQuote }: any) => {
   const firstName = (user?.name || 'User').split(' ')[0];
   const [notifications, setNotifications] = useState<any[]>([]);
   useEffect(() => {
@@ -860,6 +783,10 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, userSubmi
         </View>
       )}
 
+      <ImageBackground source={PHOTO9_CLOUDS} style={pm.quote} imageStyle={pm.quoteImage}>
+        <Text style={pm.quoteText}>{motivationalQuote}</Text>
+      </ImageBackground>
+
       <View style={pm.statRow}>
         {[
           { icon: '?', value: String(photosSubmitted), label: 'Photos Submitted' },
@@ -899,45 +826,34 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, userSubmi
         </>
       )}
 
-      <HomeCommunityUpdates posts={communityPosts} compact />
-
       <Text style={pm.sectionTitle}>Recent Community Submissions</Text>
       {cards.length === 0 ? (
         <View style={pm.emptyShareState}>
           <Text style={pm.emptyShareText}>No community submissions yet.</Text>
         </View>
-      ) : (
-        <View style={pm.submissionGrid}>
-          {cards.slice(0, 4).map((sub: any) => (
-            <TouchableOpacity
-              key={sub.id}
-              style={pm.submission}
-              onPress={() => sub.id && navigation.navigate('SubmissionDetail', { submissionId: sub.id, id: sub.id })}
-            >
-              <SubmissionCardPhoto
-                submission={sub}
-                style={pm.submissionImageWrap}
-                resizeMode="cover"
-                watermarkSize="small"
-              />
-              <View style={pm.submissionBody}>
-                <Text style={pm.userName} numberOfLines={1}>@{sub.user_name}</Text>
-                <Text style={pm.subTitle} numberOfLines={1}>{sub.title}</Text>
-                <View style={pm.subStats}>
-                  <View style={pm.subStat}>
-                    <IconGlyph name="heart" color="#FF5A5F" size={11} />
-                    <Text style={pm.subStatText}>{sub.like_count || 0}</Text>
-                  </View>
-                  <View style={pm.subStat}>
-                    <IconGlyph name="chat" color="#C8CEDA" size={11} />
-                    <Text style={pm.subStatText}>{sub.comment_count || 0}</Text>
-                  </View>
-                </View>
+      ) : cards.slice(0, 2).map((sub: any) => (
+        <TouchableOpacity
+          key={sub.id}
+          style={pm.submission}
+          onPress={() => sub.id && navigation.navigate('SubmissionDetail', { submissionId: sub.id, id: sub.id })}
+        >
+          <Image source={sub._localPhoto || { uri: fullUrl(sub.photo1_url) }} style={pm.submissionImg} resizeMode="contain" />
+          <View style={pm.submissionBody}>
+            <Text style={pm.userName}>@{sub.user_name}</Text>
+            <Text style={pm.subTitle}>{sub.title}</Text>
+            <View style={pm.subStats}>
+              <View style={pm.subStat}>
+                <IconGlyph name="heart" color="#FF5A5F" size={11} />
+                <Text style={pm.subStatText}>{sub.like_count || 0}</Text>
               </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+              <View style={pm.subStat}>
+                <IconGlyph name="chat" color="#C8CEDA" size={11} />
+                <Text style={pm.subStatText}>{sub.comment_count || 0}</Text>
+              </View>
+            </View>
+          </View>
+        </TouchableOpacity>
+      ))}
 
       <Text style={pm.sectionTitle}>Quick Actions</Text>
       <View style={pm.quickGrid}>
@@ -954,7 +870,7 @@ const MobileLoggedInHome = ({ user, featured, challenges, submissions, userSubmi
           </TouchableOpacity>
         ))}
       </View>
-      <HomeBottomSections isMobile onHowItWorksPress={() => openPageHelp('home')} />
+      <HomeBottomSections isMobile showHow={false} />
     </View>
   );
 };
@@ -1006,17 +922,9 @@ const SkySection = ({ children, style, alt = false, bgPosition = 'center', bgSiz
   );
 };
 
-const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation, isMobile, communityPosts }: any) => {
+const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation, isMobile }: any) => {
   const featuredStats = getChallengeStats(featured, submissions, daysLeft);
   const featuredCategory = displayTag(normalizeChallengeCategory(featured?.category), featured?.category || 'Photo Challenge');
-  const featuredFeeling = displayTag(
-    normalizeFeelingCategory(featured?.feeling_category || featured?.feeling_tag || featured?.challenge_feeling_category),
-    featured?.feeling_category || featured?.feeling_tag || featured?.challenge_feeling_category
-  );
-  const featuredMovement = displayTag(
-    normalizeMovementCategory(featured?.movement_category || featured?.movement_tag || featured?.challenge_movement_category),
-    featured?.movement_category || featured?.movement_tag || featured?.challenge_movement_category
-  );
   const shareItems = recent.slice(0, 4);
   const openShareItem = (item: any) => {
     if (item?.id && !String(item.id).startsWith('local-')) {
@@ -1050,13 +958,10 @@ const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation
             </Text>
             <View style={[landing.heroActions, isMobile && landing.heroActionsMobile]}>
               <TouchableOpacity style={landing.primaryBtn} onPress={() => navigation.navigate('Register')}>
-                <Text style={landing.primaryBtnText}>Join Now</Text>
+                <Text style={landing.primaryBtnText}>Get Started</Text>
               </TouchableOpacity>
               <TouchableOpacity style={landing.secondaryBtn} onPress={() => navigation.navigate('HowItWorks')}>
                 <Text style={landing.secondaryBtnText}>Learn More</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={landing.secondaryBtn} onPress={() => navigation.navigate('Partners')}>
-                <Text style={landing.secondaryBtnText}>Partners</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1072,7 +977,7 @@ const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation
             <View style={landing.challengePanel}>
               <View style={landing.challengeHeaderRow}>
                 <AssetView source={LOGO_IMG} style={landing.challengeIcon} resizeMode="contain" />
-                <Text style={landing.challengeKicker}>Current Challenge</Text>
+                <Text style={landing.challengeKicker}>Photo Challenge</Text>
                 {isProOnlyChallenge(featured) && (
                   <View style={landing.proOnlyBadge}><Text style={landing.proOnlyText}>Pro Only</Text></View>
                 )}
@@ -1082,14 +987,12 @@ const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation
               <Text style={landing.challengeTitle}>{featured.title || 'Current Photo Challenge'}</Text>
               <View style={[landing.metaRow, isMobile && landing.metaRowMobile]}>
               <Text style={landing.metaText}>Category: {featuredCategory}</Text>
-              <Text style={landing.metaText}>Feeling: {featuredFeeling}</Text>
-              <Text style={landing.metaText}>Movement: {featuredMovement}</Text>
               <Text style={landing.metaText}>Submissions: {featuredStats.submissionCount}</Text>
               <Text style={landing.metaText}>Participants: {featuredStats.participantCount}</Text>
                 <Text style={landing.metaText}>Ends: {featuredStats.daysLeft}d</Text>
                   </View>
                   <TouchableOpacity style={landing.submitBtn} onPress={() => navigation.navigate('Register')}>
-                    <Text style={landing.submitBtnText}>Join now to participate</Text>
+                    <Text style={landing.submitBtnText}>Submit Your Photo</Text>
                   </TouchableOpacity>
                 </View>
                 <AssetView
@@ -1102,8 +1005,6 @@ const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation
         </SkySection>
       )}
 
-      <HomeCommunityUpdates posts={communityPosts} compact={isMobile} />
-
       <SkySection style={isMobile && landing.skySectionMobile} bgPosition="center 108%" bgSize="135% auto">
         <View style={landing.shareSection}>
           <Text style={landing.sectionTitle}>Here's what people are sharing NOW</Text>
@@ -1114,14 +1015,13 @@ const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation
           ) : (
           <View style={[landing.shareGrid, isMobile && landing.shareGridMobile]}>
             {shareItems.map((item: any) => (
-              <TouchableOpacity key={item.id} style={[landing.shareCard, isMobile && landing.shareCardMobile]} onPress={() => openShareItem(item)}>
-                <WatermarkedImage
+              <TouchableOpacity key={item.id} style={landing.shareCard} onPress={() => openShareItem(item)}>
+                <AssetView
                   source={item._localPhoto || (item.photo1_url ? { uri: fullUrl(item.photo1_url) } : PHOTO2_MOUNTAIN)}
-                  style={[landing.shareImageWrap, isMobile && landing.shareImageWrapMobile]}
+                  style={landing.shareImage}
                   resizeMode="cover"
-                  watermarkSize={isMobile ? 'tiny' : 'small'}
                 />
-                <View style={[landing.shareInfo, isMobile && landing.shareInfoMobile]}>
+                <View style={landing.shareInfo}>
                   <View style={landing.shareUserRow}>
                     <View style={landing.shareAvatar}>
                       <Text style={landing.shareAvatarText}>{(item.user_name || 'P')[0]}</Text>
@@ -1146,18 +1046,11 @@ const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation
           <Text style={landing.sectionTitle}>What this becomes over time</Text>
           <View style={[landing.benefitGrid, isMobile && landing.benefitGridMobile]}>
             {benefits.map((item) => (
-              <TouchableOpacity
-                key={item.title}
-                style={[landing.benefitItem, isMobile && landing.benefitItemMobile]}
-                onPress={() => navigation.navigate('HowItWorks')}
-                activeOpacity={0.82}
-                accessibilityRole="link"
-                accessibilityLabel={`${item.title}. Open How It Works`}
-              >
+              <View key={item.title} style={[landing.benefitItem, isMobile && landing.benefitItemMobile]}>
                 <AssetView source={LOGO_IMG} style={landing.benefitIcon} resizeMode="contain" />
                 <Text style={landing.benefitTitle}>{item.title}</Text>
                 <Text style={landing.benefitBody}>{item.body}</Text>
-              </TouchableOpacity>
+              </View>
             ))}
           </View>
         </View>
@@ -1170,13 +1063,27 @@ const PublicLandingHome = ({ featured, submissions, recent, daysLeft, navigation
 /* ========== MAIN HOME SCREEN ========== */
 const HomeScreen = () => {
   const navigation = useNavigation<any>();
+
+  const [motivationalQuote, setMotivationalQuote] = useState('The secret of getting ahead is getting started. � Mark Twain');
+  const [quoteAuthor, setQuoteAuthor] = useState('');
+  React.useEffect(() => {
+    let mounted = true;
+    getPublicSettings()
+      .then((data: any) => {
+        if (!mounted) return;
+        const picked = getHomeQuoteFromSettings(data);
+        setMotivationalQuote(picked.quote);
+        setQuoteAuthor(picked.author || '');
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
   setFooterNav((r: string, params?: any) => navigation.navigate(r as never, params as never));
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const [challenges, setChallenges] = useState<any[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
-  const [communityPosts, setCommunityPosts] = useState<any[]>([]);
   const [userSubmissions, setUserSubmissions] = useState<any[]>([]);
   const [userStats, setUserStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -1188,12 +1095,11 @@ const HomeScreen = () => {
       let active = true;
       const load = async () => {
         setLoading(true);
-        const [cResult, sResult, mySubsResult, statsResult, postsResult] = await Promise.allSettled([
+        const [cResult, sResult, mySubsResult, statsResult] = await Promise.allSettled([
           api.getChallenges(),
           api.getSubmissions(),
           user ? api.getSubmissions({ user_id: String(user.id), userId: String(user.id), limit: '100' }) : Promise.resolve(null),
           user ? api.getUserStats() : Promise.resolve(null),
-          api.getCommunityPosts({ home: '1', limit: '3' }),
         ]);
         if (!active) return;
 
@@ -1211,7 +1117,6 @@ const HomeScreen = () => {
         setSubmissions(nextSubmissions);
         setUserSubmissions(nextUserSubmissions);
         setUserStats(statsResult.status === 'fulfilled' ? statsResult.value : null);
-        setCommunityPosts(postsResult.status === 'fulfilled' ? normalizeList(postsResult.value, 'posts') : []);
         setLoading(false);
       };
       load();
@@ -1294,7 +1199,8 @@ const HomeScreen = () => {
           navigation={navigation}
           recent={recent}
           streak={calcStreak(submissions, user?.id || 0)}
-          communityPosts={communityPosts}
+          motivationalQuote={motivationalQuote}
+          quoteAuthor={quoteAuthor}
         />
       ) : user ? (
         /* ===== LOGGED-IN CONTENT ===== */
@@ -1309,7 +1215,8 @@ const HomeScreen = () => {
           navigation={navigation}
           recent={recent}
           streak={calcStreak(submissions, user?.id || 0)}
-          communityPosts={communityPosts}
+          motivationalQuote={motivationalQuote}
+          quoteAuthor={quoteAuthor}
         />
       ) : (
         <PublicLandingHome
@@ -1319,7 +1226,6 @@ const HomeScreen = () => {
           daysLeft={daysLeft}
           navigation={navigation}
           isMobile={isMobile}
-          communityPosts={communityPosts}
         />
       )}
     </ScrollView>
@@ -1437,45 +1343,9 @@ const landing = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    flexWrap: 'wrap',
   },
   heroActionsMobile: {
     justifyContent: 'center',
-  },
-  quoteSky: {
-    minHeight: 112,
-    width: '100%' as any,
-    backgroundColor: C.NAV_BG,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: C.CARD_BORDER,
-    justifyContent: 'center',
-  },
-  quoteSkyMobile: {
-    minHeight: 128,
-  },
-  quoteMini: {
-    width: '100%',
-    maxWidth: 980,
-    alignSelf: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 28,
-    paddingVertical: 24,
-  },
-  quoteMiniText: {
-    ...type.subtext,
-    color: '#FFE9B3',
-    fontSize: 21,
-    lineHeight: 31,
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  quoteMiniAuthor: {
-    ...type.subtext,
-    color: 'rgba(255,255,255,0.72)',
-    fontSize: 14,
-    marginTop: 8,
-    textAlign: 'center',
   },
   primaryBtn: {
     minWidth: 170,
@@ -1543,7 +1413,6 @@ const landing = StyleSheet.create({
   challengeHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 10,
     marginBottom: 14,
   },
@@ -1564,7 +1433,6 @@ const landing = StyleSheet.create({
     ...type.heading,
     color: '#FFFFFF',
     fontSize: 24,
-    textAlign: 'center',
   },
   challengeBody: {
     flexDirection: 'row',
@@ -1646,8 +1514,6 @@ const landing = StyleSheet.create({
   shareGridMobile: {
     flexWrap: 'wrap',
     gap: 12,
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
   },
   emptyShareState: {
     width: '100%' as any,
@@ -1668,30 +1534,13 @@ const landing = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
   },
-  shareCardMobile: {
-    width: '47.8%' as any,
-    minWidth: 0,
-  },
-  shareImageWrap: {
-    width: '100%' as any,
-    height: 164,
-    position: 'relative',
-    overflow: 'hidden',
-    backgroundColor: '#111827',
-  },
-  shareImageWrapMobile: {
-    height: 112,
-  },
   shareImage: {
     width: '100%' as any,
-    height: '100%' as any,
+    height: 164,
     backgroundColor: '#111827',
   },
   shareInfo: {
     padding: 14,
-  },
-  shareInfoMobile: {
-    padding: 9,
   },
   shareUserRow: {
     flexDirection: 'row',
@@ -1772,8 +1621,7 @@ const landing = StyleSheet.create({
     flex: 1,
     maxWidth: 320,
     alignItems: 'center',
-    cursor: 'pointer',
-  } as any,
+  },
   benefitItemMobile: {
     flex: 0,
     width: '100%' as any,
@@ -2407,9 +2255,9 @@ const bottom = StyleSheet.create({
     paddingBottom: 38,
   },
   howItWorksMobile: {
-    paddingHorizontal: 18,
-    paddingTop: 28,
-    paddingBottom: 30,
+    paddingHorizontal: 22,
+    paddingTop: 34,
+    paddingBottom: 34,
   },
   headingRow: {
     flexDirection: 'row',
@@ -2417,9 +2265,6 @@ const bottom = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 36,
     gap: 16,
-  },
-  headingRowMobile: {
-    marginBottom: 24,
   },
   headingLine: {
     flex: 1,
@@ -2446,7 +2291,7 @@ const bottom = StyleSheet.create({
   },
   howGridMobile: {
     flexDirection: 'column',
-    gap: 18,
+    gap: 28,
   },
   howItem: {
     flex: 1,
@@ -2455,9 +2300,6 @@ const bottom = StyleSheet.create({
   },
   howItemMobile: {
     width: '100%' as any,
-    minHeight: 0,
-    paddingVertical: 4,
-    alignItems: 'center',
   },
   iconCircle: {
     width: 70,
@@ -2798,25 +2640,16 @@ const pm = StyleSheet.create({
     alignItems: 'center',
   },
   emptyShareText: { ...type.subtext, color: '#C8CEDA', fontSize: 11, textAlign: 'center' },
-  submissionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 10,
-    marginBottom: 12,
-  },
   submission: {
-    width: '48%' as any,
     backgroundColor: '#272B40',
     borderRadius: 8,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#363B55',
-    marginBottom: 0,
+    marginBottom: 12,
   },
-  submissionImageWrap: { width: '100%', height: 96, position: 'relative', overflow: 'hidden', backgroundColor: '#1A1E30' },
-  submissionImg: { width: '100%', height: '100%' as any, backgroundColor: '#1A1E30' },
-  submissionBody: { padding: 8 },
+  submissionImg: { width: '100%', height: 134, backgroundColor: '#1A1E30' },
+  submissionBody: { padding: 10 },
   userName: { ...type.label, color: C.TEAL, fontSize: 10, marginBottom: 3 },
   subTitle: { ...type.subtext, color: '#FFFFFF', fontSize: 10, marginBottom: 7 },
   subStats: { flexDirection: 'row', gap: 12, alignItems: 'center' },
@@ -3073,8 +2906,7 @@ const li = StyleSheet.create({
     borderColor: C.CARD_BORDER,
     marginBottom: 16,
   },
-  communityImageWrap: { width: '100%' as any, height: 220, position: 'relative', overflow: 'hidden', backgroundColor: '#1A1E30' },
-  communityImg: { width: '100%' as any, height: '100%' as any, backgroundColor: '#1A1E30' },
+  communityImg: { width: '100%' as any, height: 220, backgroundColor: '#1A1E30' },
   communityInfo: { padding: 14 },
   communityUser: { ...type.label, color: C.TEAL, fontSize: 15, marginBottom: 3 },
   communityTitle: { ...type.label, color: C.TEXT, fontSize: 17, marginBottom: 9 },

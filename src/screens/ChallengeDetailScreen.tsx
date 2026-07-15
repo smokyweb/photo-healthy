@@ -6,18 +6,25 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { getChallenge, getSubmissions, getUserAccess, getChallengeEnrollment, enterChallenge } from '../services/api';
+import { getChallenge, getSubmissions, getUserAccess, getChallengeEnrollment, enterChallenge, downloadSubmissionPhoto } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
 import PhotoLightbox from '../components/PhotoLightbox';
-import MasonryGrid from '../components/MasonryGrid';
-import PhotoWatermark from '../components/PhotoWatermark';
 import { C, borderRadius } from '../theme';
 import { normalizeChallengeCategory, normalizeFeelingCategory, normalizeMovementCategory } from '../constants/taxonomy';
 import { fullUrl as resolveUrl } from '../config/api';
+import { addWatermark } from '../utils/watermark';
 
 const fullUrl = (url?: string | null) => resolveUrl(url) || null;
+
+const blobToDataUrl = (blob: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 
 const isEnabledFlag = (value: any) => {
   if (value === true || value === 1) return true;
@@ -39,7 +46,7 @@ function formatDate(dateStr?: string) {
 export default function ChallengeDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { challengeId: _cid, id: _id, tagFilter: initialTagFilter, returnToSubmissionId } = route.params || {};
+  const { challengeId: _cid, id: _id, tagFilter: initialTagFilter } = route.params || {};
   const rawChallengeId = _cid || _id;
   const challengeId = typeof rawChallengeId === 'object'
     ? rawChallengeId?.challengeId || rawChallengeId?.id
@@ -47,7 +54,6 @@ export default function ChallengeDetailScreen() {
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
-  const submissionCols = width >= 1100 ? 4 : width >= 760 ? 3 : 2;
   const currentReturnTo = () => (
     typeof window !== 'undefined'
       ? `${window.location.pathname}${window.location.search}`
@@ -58,17 +64,6 @@ export default function ChallengeDetailScreen() {
     const params = { returnTo: currentReturnTo() };
     if (parent) parent.navigate('Subscription', params);
     else navigation.navigate('Subscription', params);
-  };
-  const handleBack = () => {
-    if (returnToSubmissionId) {
-      navigation.navigate('SubmissionDetail' as never, { submissionId: returnToSubmissionId, id: returnToSubmissionId } as never);
-      return;
-    }
-    if (navigation.canGoBack?.()) {
-      navigation.goBack();
-      return;
-    }
-    navigation.navigate('Main' as never, { screen: 'ChallengesTab' } as never);
   };
 
   const [challenge, setChallenge] = useState<any>(null);
@@ -81,6 +76,7 @@ export default function ChallengeDetailScreen() {
   const [subSearch, setSubSearch] = useState('');
   const [activeTagFilter, setActiveTagFilter] = useState<{ type: 'category' | 'feeling' | 'movement'; value: string } | null>(null);
   const [lightboxPhoto, setLightboxPhoto] = useState<{ uri: string; title?: string; submissionId?: number | string; photoIndex?: number } | null>(null);
+  const [downloadingPhoto, setDownloadingPhoto] = useState(false);
 
   useEffect(() => {
     if (
@@ -174,6 +170,31 @@ export default function ChallengeDetailScreen() {
     navigation.navigate('SubmitPhoto', { challengeId });
   };
 
+  const safeFileName = (value: string) =>
+    String(value || 'photo-healthy-photo').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'photo-healthy-photo';
+
+  const handleLightboxDownload = async () => {
+    if (!lightboxPhoto?.uri || !lightboxPhoto.submissionId || downloadingPhoto) return;
+    setDownloadingPhoto(true);
+    try {
+      const blob = await downloadSubmissionPhoto(lightboxPhoto.submissionId, lightboxPhoto.photoIndex || 1);
+      const watermarkedDataUrl = await addWatermark(await blobToDataUrl(blob));
+      const watermarkedBlob = await fetch(watermarkedDataUrl).then(res => res.blob());
+      const objectUrl = URL.createObjectURL(watermarkedBlob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = `${safeFileName(lightboxPhoto.title || challenge?.title)}-${lightboxPhoto.photoIndex || 1}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (e: any) {
+      Alert.alert('Download failed', e.message || 'Could not download this photo.');
+    } finally {
+      setDownloadingPhoto(false);
+    }
+  };
+
   if (loading) return <LoadingSpinner fullScreen />;
   if (!challenge) {
     return (
@@ -260,7 +281,9 @@ export default function ChallengeDetailScreen() {
       }
     >
       {/* Back button */}
-      <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
+      <TouchableOpacity onPress={() => {
+          navigation.navigate('Main' as never, { screen: 'ChallengesTab' } as never);
+        }} style={styles.backBtn}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
 
@@ -339,8 +362,8 @@ export default function ChallengeDetailScreen() {
           {/* Enrollment / Submit flow */}
           {isActive && !isEnrolled && (
             <GradientButton
-              label={!user ? 'Join now to participate' : enrolling ? 'Joining...' : isProOnly && !isPro ? 'Pro Members Only' : 'Join Challenge'}
-              variant={user && isProOnly && !isPro ? 'outline' : 'primary'}
+              label={enrolling ? 'Joining...' : isProOnly && !isPro ? 'Pro Members Only' : 'Join Challenge'}
+              variant={isProOnly && !isPro ? 'outline' : 'primary'}
               onPress={handleEnterChallenge}
               loading={enrolling}
               disabled={enrolling}
@@ -397,7 +420,7 @@ export default function ChallengeDetailScreen() {
             />
           )}
 
-          {!!user && !isEnrolled && isProOnly && !isPro && (
+          {!isEnrolled && isProOnly && !isPro && (
             <GradientButton
               label="Become a PRO"
               variant="outline" pill={false}
@@ -460,39 +483,33 @@ export default function ChallengeDetailScreen() {
           </View>
         )}
 
-        {/* Submissions masonry grid */}
+        {/* Submissions 3-col grid */}
         {filteredSubs.length > 0 ? (
-          <MasonryGrid
-            items={filteredSubs}
-            numColumns={submissionCols}
-            gap={10}
-            estimatedContentHeight={142}
-            getKey={(sub) => sub.id}
-            getImageUri={(sub) => fullUrl(sub.photo1_url || sub.image_url || sub.photo_url)}
-            renderItem={(sub: any, { aspectRatio }) => {
-              const imgUrl = fullUrl(sub.photo1_url || sub.image_url || sub.photo_url);
+          <View style={styles.subGrid}>
+            {filteredSubs.map((sub: any) => {
+              const imgUrl = fullUrl(sub.photo1_url || sub.image_url);
               const subTags = [
                 { type: 'category' as const, label: 'Category', value: getSubmissionTag(sub, 'category') },
                 { type: 'feeling' as const, label: 'Feeling', value: getSubmissionTag(sub, 'feeling') },
                 { type: 'movement' as const, label: 'Movement', value: getSubmissionTag(sub, 'movement') },
               ].filter(tag => tag.value && tag.value !== '-');
               return (
-                <View style={styles.subCard}>
+                <View
+                  key={sub.id}
+                  style={styles.subCard}
+                >
                   <View style={styles.subImageWrap}>
                     {imgUrl ? (
                       <TouchableOpacity
-                        style={styles.subImageBtn}
                         onPress={() => setLightboxPhoto({ uri: imgUrl, title: sub.title || challenge.title, submissionId: sub.id, photoIndex: 1 })}
                         activeOpacity={0.9}
                         accessibilityLabel="Open photo larger"
                       >
-                        <View style={[styles.subImageFrame, { aspectRatio }]}>
-                          <Image source={{ uri: imgUrl }} style={styles.subImg} resizeMode="cover" />
-                          <PhotoWatermark size="small" />
-                        </View>
+                        <Image source={{ uri: imgUrl }} style={styles.subImg} resizeMode="contain" />
+                        <Text style={styles.subWatermark}>Photo Healthy</Text>
                       </TouchableOpacity>
                     ) : (
-                      <View style={[styles.subImgPlaceholder, { aspectRatio }]}>
+                      <View style={[styles.subImg, styles.subImgPlaceholder]}>
                         <Text style={{ fontSize: 24 }}>📷</Text>
                       </View>
                     )}
@@ -545,8 +562,8 @@ export default function ChallengeDetailScreen() {
                   </View>
                 </View>
               );
-            }}
-          />
+            })}
+          </View>
         ) : (
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyIcon}>📷</Text>
@@ -561,6 +578,9 @@ export default function ChallengeDetailScreen() {
         uri={lightboxPhoto?.uri}
         title={lightboxPhoto?.title}
         onClose={() => setLightboxPhoto(null)}
+        onDownload={lightboxPhoto?.submissionId && isPro ? handleLightboxDownload : undefined}
+        downloading={downloadingPhoto}
+        downloadLabel="Download"
       />
     </ScrollView>
   );
@@ -803,25 +823,41 @@ const styles = StyleSheet.create({
   },
   clearFilterText: { color: C.ORANGE, fontSize: 12, fontWeight: '800' },
 
+  // Submissions 3-col grid
+  subGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
   subCard: {
-    backgroundColor: 'transparent',
+    width: '31%',
+    backgroundColor: C.CARD_BG,
     borderRadius: borderRadius.md,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
   },
   subImageWrap: { position: 'relative' },
-  subImageBtn: { width: '100%' },
-  subImageFrame: { width: '100%', position: 'relative', overflow: 'hidden' },
-  subImg: { width: '100%', height: '100%', backgroundColor: 'transparent' },
+  subImg: { width: '100%', aspectRatio: 1, backgroundColor: C.CARD_BG2 },
+  subWatermark: {
+    position: 'absolute',
+    right: 8,
+    bottom: 8,
+    color: 'rgba(255,255,255,0.56)',
+    backgroundColor: 'rgba(8,12,24,0.32)',
+    borderRadius: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    fontSize: 10,
+    fontWeight: '900',
+  },
   subImgPlaceholder: {
-    width: '100%',
     backgroundColor: C.CARD_BG2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  subInfo: { padding: 8, paddingBottom: 4, backgroundColor: 'rgba(59, 62, 79, 0.82)' },
-  subInfoTags: { paddingHorizontal: 8, paddingBottom: 8, backgroundColor: 'rgba(59, 62, 79, 0.82)' },
+  subInfo: { padding: 8, paddingBottom: 4 },
+  subInfoTags: { paddingHorizontal: 8, paddingBottom: 8 },
   subUser: { color: C.TEXT_SECONDARY, fontSize: 13 },
   subTitle: {
     color: C.TEXT,

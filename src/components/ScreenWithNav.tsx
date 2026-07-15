@@ -7,12 +7,9 @@ import { View, StyleSheet, Platform } from 'react-native';
 import TopNavBar from './TopNavBar';
 import { C } from '../theme';
 import AppBackground from './AppBackground';
-import MotivationalQuoteBanner from './MotivationalQuoteBanner';
-import ContextualHelp from './ContextualHelp';
 
 interface Props {
   children: React.ReactNode;
-  helpContext?: string;
 }
 
 // Inject global CSS once to fix React Navigation's overflow:hidden on web
@@ -37,18 +34,16 @@ function injectScrollFix() {
   document.head.appendChild(style);
 }
 
-export default function ScreenWithNav({ children, helpContext }: Props) {
+export default function ScreenWithNav({ children }: Props) {
   useEffect(() => { injectScrollFix(); }, []);
 
   return (
     <View style={s.root}>
       <AppBackground />
       {Platform.OS === 'web' && <TopNavBar />}
-      <MotivationalQuoteBanner />
       <View style={s.content}>
         {children}
       </View>
-      {helpContext ? <ContextualHelp context={helpContext} /> : null}
     </View>
   );
 }

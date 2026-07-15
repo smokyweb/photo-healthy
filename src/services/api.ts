@@ -61,16 +61,11 @@ async function request<T = any>(
 
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
-    let errorData: any = null;
     try {
-      errorData = await res.json();
-      msg = errorData.message || errorData.error || msg;
+      const err = await res.json();
+      msg = err.error || err.message || msg;
     } catch {}
-    const error: any = new Error(msg);
-    error.code = errorData?.error || null;
-    error.status = res.status;
-    error.data = errorData;
-    throw error;
+    throw new Error(msg);
   }
 
   const text = await res.text();
@@ -120,16 +115,7 @@ export const register = (name: string, email: string, password: string) =>
 export const getMe = () => request('GET', '/api/auth/me');
 
 export const resetPassword = (email: string) =>
-  request('POST', '/api/auth/forgot-password', {
-    email,
-    origin: typeof window !== 'undefined' ? window.location.origin : undefined,
-  });
-
-export const validateResetPasswordToken = (token: string) =>
-  request('GET', `/api/auth/reset-password?token=${encodeURIComponent(token)}`);
-
-export const completeResetPassword = (token: string, password: string) =>
-  request('POST', '/api/auth/reset-password', { token, password });
+  request('POST', '/admin-api-proxy.php?path=/api/auth/forgot-password&method=POST', { email });
 
 export const changePassword = (currentPassword: string, newPassword: string) =>
   request('POST', '/admin-api-proxy.php?path=/api/auth/change-password&method=PATCH', { currentPassword, newPassword });
@@ -141,12 +127,7 @@ export const updateUser = (id: number, data: any) =>
   request('POST', `/admin-api-proxy.php?path=/api/users/${id}&method=PUT`, data);
 
 export const adminResetPassword = (id: number) =>
-  request('POST', '/admin-api-proxy.php?path=/api/admin/users/' + id + '/reset-password&method=POST', {
-    origin: typeof window !== 'undefined' ? window.location.origin : undefined,
-  });
-
-export const adminSetPassword = (id: number, password: string) =>
-  request('POST', '/admin-api-proxy.php?path=/api/admin/users/' + id + '/set-password&method=POST', { password });
+  request('POST', '/admin-api-proxy.php?path=/api/admin/users/' + id + '/reset-password&method=POST', {});
 
 export const adminGrantPro = (id: number, data: { days?: number; note?: string }) =>
   request('POST', `/admin-api-proxy.php?path=/api/admin/users/${id}/grant-pro&method=POST`, data);
@@ -202,23 +183,6 @@ export const getMyChallenges = () =>
 export const getChallengeEnrollment = (challengeId: number) =>
   request('GET', `/api/challenges/${challengeId}/enrollment`);
 
-// Admin-authored community announcements
-export const getCommunityPosts = (params?: Record<string, string>) => {
-  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-  return request('GET', `/api/community-posts${qs}`);
-};
-
-export const adminGetCommunityPosts = () => adminGet('/api/admin/community-posts');
-
-export const createCommunityPost = (data: any) =>
-  request('POST', '/admin-api-proxy.php?path=/api/admin/community-posts&method=POST', data);
-
-export const updateCommunityPost = (id: number, data: any) =>
-  request('POST', `/admin-api-proxy.php?path=/api/admin/community-posts/${id}&method=PATCH`, data);
-
-export const deleteCommunityPost = (id: number) =>
-  request('POST', `/admin-api-proxy.php?path=/api/admin/community-posts/${id}/delete&method=POST`);
-
 // â”€â”€ Submissions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const getSubmissions = (params?: Record<string, string>) => {
   const qs = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -228,14 +192,29 @@ export const getSubmissions = (params?: Record<string, string>) => {
 export const getSubmission = (id: number) =>
   request('GET', `/api/submissions/${id}`);
 
+export const downloadSubmissionPhoto = async (id: number | string, photo = 1): Promise<Blob> => {
+  const res = await fetch(`${API_BASE_URL}/api/submissions/${id}/download?photo=${photo}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try {
+      const err = await res.json();
+      msg = err.error || err.message || msg;
+    } catch {}
+    throw new Error(msg);
+  }
+  return res.blob();
+};
+
 export const createSubmission = (data: any) =>
   request('POST', '/api/submissions', data);
 
 export const updateSubmission = (id: number, data: any) =>
-  request('PATCH', `/api/submissions/${id}`, data);
+  request('POST', `/admin-api-proxy.php?path=/api/submissions/${id}&method=PATCH`, data);
 
 export const deleteSubmission = (id: number) =>
-  request('DELETE', `/api/submissions/${id}`);
+  request('POST', `/admin-api-proxy.php?path=/api/submissions/${id}/delete&method=POST`);
 
 export const likeSubmission = (id: number) =>
   request('POST', `/api/submissions/${id}/like`);
@@ -259,12 +238,6 @@ export const adminSuspendUser = (id: number, suspended: boolean, reason?: string
 // â”€â”€ Reports â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const createReport = (data: any) =>
   request('POST', '/api/reports', data);
-
-export const adminGetReports = (status: string = 'pending') =>
-  adminGet('/api/admin/reports?status=' + encodeURIComponent(status));
-
-export const adminUpdateReport = (id: number, data: any) =>
-  request('POST', `/admin-api-proxy.php?path=/api/admin/reports/${id}&method=PATCH`, data);
 
 // â”€â”€ Products / Shop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const getProducts = () => request('GET', '/api/products');

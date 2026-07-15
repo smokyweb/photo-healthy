@@ -40,8 +40,6 @@ interface Challenge {
 interface Props {
   challenge: Challenge;
   onPress: () => void;
-  onFilterPress?: (filter: { type: 'name' | 'category' | 'feeling'; value: string; challenge: Challenge }) => void;
-  activeFilters?: Array<{ type: 'category' | 'feeling'; value: string }>;
 }
 
 function getDaysLeft(endDate?: string): number | null {
@@ -62,7 +60,7 @@ const isEnabledFlag = (value: any) => {
   return ['1', 'true', 'yes', 'y', 'pro', 'pro_only', 'pro-only'].includes(normalized);
 };
 
-export default function ChallengeCard({ challenge, onPress, onFilterPress, activeFilters = [] }: Props) {
+export default function ChallengeCard({ challenge, onPress }: Props) {
   const daysLeft = getDaysLeft(challenge.end_date);
   const hardStopExpired = !!challenge.end_date && new Date(challenge.end_date).getTime() < Date.now();
   const isGloballyArchived = challenge.status === 'archived' || isInactiveFlag(challenge.is_active) || hardStopExpired;
@@ -109,17 +107,6 @@ export default function ChallengeCard({ challenge, onPress, onFilterPress, activ
           ? `${daysLeft} days until hard stop`
           : `${challenge.duration_days || 30} days after joining`;
   const buttonLabel = isCompleted ? 'Completed' : isActive ? 'Complete Challenge' : isArchived ? 'Archived' : 'Join Challenge';
-  const pressFilter = (type: 'name' | 'category' | 'feeling', value: string, event?: any) => {
-    event?.stopPropagation?.();
-    if (type === 'name') {
-      onPress();
-      return;
-    }
-    if (!value || value === 'Not set') return;
-    onFilterPress?.({ type, value, challenge });
-  };
-  const isTagActive = (type: 'category' | 'feeling', value: string) =>
-    activeFilters.some(filter => filter.type === type && filter.value === value);
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
@@ -153,13 +140,7 @@ export default function ChallengeCard({ challenge, onPress, onFilterPress, activ
       </View>
 
       <View style={styles.body}>
-        <TouchableOpacity
-          onPress={(event) => pressFilter('name', challenge.title, event)}
-          activeOpacity={0.75}
-          accessibilityLabel={`Open challenge ${challenge.title}`}
-        >
-          <Text style={styles.title} numberOfLines={2}>{challenge.title}</Text>
-        </TouchableOpacity>
+        <Text style={styles.title} numberOfLines={2}>{challenge.title}</Text>
 
         {(expiringSoon || newSubmissionCount > 0) && (
           <View style={styles.noticeRow}>
@@ -181,25 +162,15 @@ export default function ChallengeCard({ challenge, onPress, onFilterPress, activ
         <View style={styles.challengeInfoList}>
           <View style={styles.infoLine}>
             <Text style={styles.infoLabel}>Category</Text>
-            <TouchableOpacity
-              style={[styles.tag, styles.tagCategory, isTagActive('category', category) && styles.tagActive]}
-              onPress={(event) => pressFilter('category', category, event)}
-              activeOpacity={0.75}
-              accessibilityLabel={`Filter challenges by category ${category}`}
-            >
-              <Text style={[styles.tagText, styles.tagCategoryText, isTagActive('category', category) && styles.tagTextActive]} numberOfLines={1}>{category}</Text>
-            </TouchableOpacity>
+            <View style={[styles.tag, styles.tagCategory]}>
+              <Text style={[styles.tagText, styles.tagCategoryText]} numberOfLines={1}>{category}</Text>
+            </View>
           </View>
           <View style={styles.infoLine}>
             <Text style={styles.infoLabel}>Feeling</Text>
-            <TouchableOpacity
-              style={[styles.tag, isTagActive('feeling', feeling) && styles.tagActive]}
-              onPress={(event) => pressFilter('feeling', feeling, event)}
-              activeOpacity={0.75}
-              accessibilityLabel={`Filter challenges by feeling ${feeling}`}
-            >
-              <Text style={[styles.tagText, isTagActive('feeling', feeling) && styles.tagTextActive]} numberOfLines={1}>{feeling}</Text>
-            </TouchableOpacity>
+            <View style={styles.tag}>
+              <Text style={styles.tagText} numberOfLines={1}>{feeling}</Text>
+            </View>
           </View>
           <View style={styles.infoLine}>
             <Text style={styles.infoLabel}>Movement</Text>
@@ -308,8 +279,6 @@ const styles = StyleSheet.create({
   tagCategory: { backgroundColor: C.ORANGE + '18', borderColor: C.ORANGE + '55' },
   tagText: { color: C.TEXT_SECONDARY, fontSize: 12, fontWeight: '700' },
   tagCategoryText: { color: C.ORANGE_MID },
-  tagActive: { backgroundColor: C.TEAL + '22', borderColor: C.TEAL },
-  tagTextActive: { color: C.TEAL },
   metaLine: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 22 },
   personIcon: { width: 16, height: 16, alignItems: 'center', position: 'relative' },
   personHead: { width: 7, height: 7, borderRadius: 4, backgroundColor: C.TEXT_MUTED, marginTop: 1 },

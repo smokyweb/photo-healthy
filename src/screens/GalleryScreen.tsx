@@ -7,7 +7,6 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { getSubmissions } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AppFooter from '../components/AppFooter';
-import WatermarkedImage from '../components/WatermarkedImage';
 import { C, borderRadius } from '../theme';
 import { fullUrl } from '../config/api';
 
@@ -71,9 +70,9 @@ export default function GalleryScreen() {
                     activeOpacity={0.85}
                   >
                     {imgUri ? (
-                      <WatermarkedImage source={{ uri: imgUri }} style={styles.imageFrame} resizeMode="contain" watermarkSize="tiny" />
+                      <Image source={{ uri: imgUri }} style={styles.img} resizeMode="contain" />
                     ) : (
-                      <View style={styles.placeholder}>
+                      <View style={[styles.img, styles.placeholder]}>
                         <Text style={{ fontSize: 28 }}>📷</Text>
                       </View>
                     )}
@@ -108,8 +107,8 @@ const styles = StyleSheet.create({
   grid: { padding: 4 },
   row: { flexDirection: 'row', gap: 4, marginBottom: 4 },
   item: { overflow: 'hidden', borderRadius: borderRadius.md },
-  imageFrame: { width: '100%', aspectRatio: 1, position: 'relative', overflow: 'hidden' },
-  placeholder: { width: '100%', aspectRatio: 1, backgroundColor: C.CARD_BG2, alignItems: 'center', justifyContent: 'center', minHeight: 100 },
+  img: { width: '100%', aspectRatio: 1 },
+  placeholder: { backgroundColor: C.CARD_BG2, alignItems: 'center', justifyContent: 'center', minHeight: 100 },
   empty: { alignItems: 'center', paddingTop: 60, paddingBottom: 40 },
   emptyText: { color: C.TEXT_MUTED, fontSize: 16 },
 });

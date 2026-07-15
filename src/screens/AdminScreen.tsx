@@ -7,11 +7,6 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import {
-  DEFAULT_MOTIVATIONAL_QUOTES,
-  MIN_MOTIVATIONAL_QUOTES,
-  useMotivationalQuotes,
-} from '../context/MotivationalQuoteContext';
-import {
   adminGetDashboardStats, adminGetUsers, adminGetSettings, adminUpdateSettings,
   adminGetProducts, createProduct, updateProduct, deleteProduct,
   adminGetDiscountCodes, createDiscountCode, updateDiscountCode, deleteDiscountCode,
@@ -19,26 +14,20 @@ import {
   deleteSubmission, updateSubmission, deleteComment, updateComment, getComments, getSubmissions,
   adminGetOrders, adminMarkOrderPaid, adminProcessOrder, adminFulfillOrder, adminUpdateTracking, adminArchiveOrder, deleteUser, restoreUser, updateUser, adminSuspendUser,
   adminGetTaxonomy, adminUpdateTaxonomy,
-  adminGetActivity, adminGetUserSubmissions, adminGetUserComments, adminGetUserOrders, adminCreateUser, adminResetPassword, adminSetPassword,
+  adminGetActivity, adminGetUserSubmissions, adminGetUserComments, adminGetUserOrders, adminCreateUser, adminResetPassword,
   adminGrantPro,
-  adminGetReports, adminUpdateReport,
-  adminGetCommunityPosts, createCommunityPost, updateCommunityPost, deleteCommunityPost,
   uploadPhoto,
 } from '../services/api';
 import GradientButton from '../components/GradientButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Input from '../components/Input';
 import PhotoLightbox from '../components/PhotoLightbox';
-import WatermarkedImage from '../components/WatermarkedImage';
 import { C, borderRadius } from '../theme';
 import { DEFAULT_TAXONOMY } from '../constants/taxonomy';
-import { HowItWorksContent, normalizeHowItWorksContent } from '../content/howItWorks';
-import { AboutPageContent, normalizeAboutPageContent } from '../content/aboutPage';
+import { addWatermark } from '../utils/watermark';
 import { fullUrl } from '../config/api';
 
-const TABS = ['Dashboard', 'Challenges', 'Users', 'Feed', 'Reports', 'Products', 'Discounts', 'Orders', 'Settings', 'Taxonomy'];
-
-type ReportStatus = 'pending' | 'resolved' | 'dismissed';
+const TABS = ['Dashboard', 'Challenges', 'Users', 'Feed', 'Products', 'Discounts', 'Orders', 'Settings', 'Taxonomy'];
 
 const isEnabledFlag = (value: any) => {
   if (value === true || value === 1) return true;
@@ -65,7 +54,11 @@ const loadAdminChallenges = async () => {
 
 type QuoteLibraryItem = { quote: string; author?: string };
 
-const DEFAULT_QUOTE_LIBRARY: QuoteLibraryItem[] = DEFAULT_MOTIVATIONAL_QUOTES;
+const DEFAULT_QUOTE_LIBRARY: QuoteLibraryItem[] = [
+  { quote: 'Every photo tells a story. Make yours worth telling.' },
+  { quote: 'Movement is medicine. Capture yours.' },
+  { quote: 'Small steps every day lead to big changes.' },
+];
 
 const normalizeQuoteLibrary = (
   value: any,
@@ -91,40 +84,26 @@ const normalizeQuoteLibrary = (
         quote: String(item?.quote || item?.text || item?.content || '').trim(),
         author: String(item?.author || item?.name || '').trim(),
       };
-    });
+    })
+    .filter((item: QuoteLibraryItem) => item.quote);
 
   const current = String(selectedQuote || '').trim();
   if (current && !items.some(item => item.quote === current)) {
     items.unshift({ quote: current, author: String(selectedAuthor || '').trim() });
   }
 
-  const nextItems = items.length ? [...items] : [];
-  const seen = new Set(nextItems.filter(item => item.quote).map(item => item.quote.toLocaleLowerCase()));
-  DEFAULT_QUOTE_LIBRARY.forEach(item => {
-    if (seen.size >= MIN_MOTIVATIONAL_QUOTES) return;
-    const key = item.quote.toLocaleLowerCase();
-    if (seen.has(key)) return;
-    seen.add(key);
-    nextItems.push(item);
-  });
-
-  return nextItems;
+  return items.length ? items : DEFAULT_QUOTE_LIBRARY;
 };
 
 const stringifyQuoteLibrary = (items: QuoteLibraryItem[]) =>
   JSON.stringify(items.map(item => ({
     quote: String(item.quote || '').trim(),
     author: String(item.author || '').trim(),
-  })));
+  })).filter(item => item.quote));
 
 const stopModalKeyboardBubble = (e: any) => {
   e?.stopPropagation?.();
 };
-
-const emptyCommunityPostForm = () => ({
-  title: '', body: '', image_url: '', cta_label: '', cta_url: '',
-  is_published: true, show_on_home: true, is_pinned: false,
-});
 
 const AdminModal = ({ visible, onClose, children }: { visible: boolean; onClose: () => void; children: React.ReactNode }) => (
   <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -165,7 +144,6 @@ const AdminModal = ({ visible, onClose, children }: { visible: boolean; onClose:
 export default function AdminScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
-  const { refreshQuotes } = useMotivationalQuotes();
   const isAdmin = !!(user?.is_admin || user?.role === 'admin');
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [loading, setLoading] = useState(false);
@@ -192,19 +170,10 @@ export default function AdminScreen() {
   const [userActivity, setUserActivity] = useState<{submissions: any[], orders: any[], comments: any[]}>({ submissions: [], orders: [], comments: [] });
   const [userDetailTab, setUserDetailTab] = useState<'Submissions'|'Orders'|'Comments'>('Submissions');
   const [userDetailLoading, setUserDetailLoading] = useState(false);
-  const [resettingPasswordUserId, setResettingPasswordUserId] = useState<number | null>(null);
-  const [userResetMsg, setUserResetMsg] = useState<{ type: 'success' | 'error'; text: string; link?: string } | null>(null);
-  const [manualPasswordForm, setManualPasswordForm] = useState<{ userId: number; userName: string; password: string; confirm: string } | null>(null);
-  const [manualPasswordSaving, setManualPasswordSaving] = useState(false);
   const [challenges, setChallenges] = useState<any[]>([]);
 
   // Submissions timeline state
   const [activityItems, setActivityItems] = useState<any[]>([]);
-  const [communityPosts, setCommunityPosts] = useState<any[]>([]);
-  const [communityPostForm, setCommunityPostForm] = useState<any>(emptyCommunityPostForm());
-  const [editingCommunityPostId, setEditingCommunityPostId] = useState<number | null>(null);
-  const [showCommunityPostForm, setShowCommunityPostForm] = useState(false);
-  const [savingCommunityPost, setSavingCommunityPost] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   const [lightboxPhoto, setLightboxPhoto] = useState<{ uri: string; title?: string } | null>(null);
@@ -216,9 +185,6 @@ export default function AdminScreen() {
   const [submissionSearch, setSubmissionSearch] = useState('');
   const [submissionFilter, setSubmissionFilter] = useState<'All'|'Photos'|'Comments'>('All');
   const [feedLoadError, setFeedLoadError] = useState('');
-  const [reports, setReports] = useState<any[]>([]);
-  const [reportStatusFilter, setReportStatusFilter] = useState<ReportStatus>('pending');
-  const [reportLoadError, setReportLoadError] = useState('');
 
   const [products, setProducts] = useState<any[]>([]);
   const [productSearch, setProductSearch] = useState('');
@@ -244,8 +210,6 @@ export default function AdminScreen() {
 
   const [settings, setSettings] = useState<any>({});
   const [settingsSaveStatus, setSettingsSaveStatus] = useState('');
-  const [uploadingHowItWorksStep, setUploadingHowItWorksStep] = useState<number | null>(null);
-  const [uploadingAboutSection, setUploadingAboutSection] = useState<string | null>(null);
 
   // Taxonomy state
   const [taxonomy, setTaxonomy] = useState<{
@@ -274,7 +238,6 @@ export default function AdminScreen() {
     return {
       Orders: orderCount,
       Feed: Number(stats.today?.submissions || 0),
-      Reports: reports.filter(report => report.status === 'pending').length || Number(stats.reports?.pending || 0),
     } as Record<string, number>;
   };
 
@@ -346,8 +309,6 @@ export default function AdminScreen() {
         case 'Feed': {
           setFeedLoadError('');
           try {
-            const postData = await adminGetCommunityPosts().catch(() => ({ posts: [] }));
-            setCommunityPosts(postData?.posts || postData || []);
             const data = await adminGetActivity().catch(() => ({ items: [] }));
             let items = Array.isArray(data?.items) ? data.items : [];
             if (items.length === 0) {
@@ -402,17 +363,6 @@ export default function AdminScreen() {
           }
           break;
         }
-        case 'Reports': {
-          setReportLoadError('');
-          try {
-            const data = await adminGetReports(reportStatusFilter);
-            setReports(data?.reports || data || []);
-          } catch (reportErr: any) {
-            setReportLoadError(reportErr.message || 'Could not load reports');
-            setReports([]);
-          }
-          break;
-        }
         case 'Products': {
           const data = await adminGetProducts();
           setProducts(data?.products || data || []);
@@ -455,13 +405,9 @@ export default function AdminScreen() {
   }, [orderSort, isAdmin]);
 
   useEffect(() => {
-    if (isAdmin && activeTab === 'Reports') loadTab('Reports');
-  }, [reportStatusFilter, isAdmin]);
-
-  useEffect(() => {
     if (!isAdmin) return;
     markAdminTabSeen(activeTab);
-  }, [activeTab, isAdmin, stats.today?.submissions, stats.orders?.active, stats.reports?.pending, orders.length, reports.length]);
+  }, [activeTab, isAdmin, stats.today?.submissions, stats.orders?.active, orders.length]);
 
   // Load user detail data when selectedUser changes
   useEffect(() => {
@@ -890,7 +836,7 @@ export default function AdminScreen() {
 
     return (
       <View style={styles.section}>
-        <TouchableOpacity onPress={() => { setUserResetMsg(null); setSelectedUser(null); }} style={{ marginBottom: 16 }}>
+        <TouchableOpacity onPress={() => setSelectedUser(null)} style={{ marginBottom: 16 }}>
           <Text style={{ color: C.ORANGE, fontSize: 14 }}>Back to Users</Text>
         </TouchableOpacity>
         <Text style={styles.formTitle}>User Profile</Text>
@@ -962,44 +908,16 @@ export default function AdminScreen() {
           </AdminModal>
         ) : (
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 16, marginTop: 12 }}>
-            <GradientButton label="✏ Edit" variant="outline" size="sm" onPress={() => { setUserResetMsg(null); setEditingUserForm({ name: u.name, subscription_status: u.subscription_status || 'free', is_admin: !!u.is_admin }); }} />
+            <GradientButton label="✏ Edit" variant="outline" size="sm" onPress={() => setEditingUserForm({ name: u.name, subscription_status: u.subscription_status || 'free', is_admin: !!u.is_admin })} />
             <GradientButton
-              label={resettingPasswordUserId === u.id ? 'Sending Reset...' : 'Reset Password'}
+              label="🔒 Reset Password"
               variant="outline"
               size="sm"
-              loading={resettingPasswordUserId === u.id}
               onPress={async () => {
-                setUserResetMsg({ type: 'success', text: 'Creating reset link and sending email...' });
-                setResettingPasswordUserId(u.id);
                 try {
-                  const result = await adminResetPassword(u.id);
-                  if (result.email_sent !== false) {
-                    setUserResetMsg({
-                      type: 'success',
-                      text: 'Password reset email sent to ' + u.email + '. Link valid for 72 hours.',
-                      link: result.reset_url,
-                    });
-                  } else {
-                    setUserResetMsg({
-                      type: 'error',
-                      text: 'Reset link was created, but the email could not be sent. Link is valid for 72 hours.',
-                      link: result.reset_url,
-                    });
-                  }
-                } catch (e) {
-                  setUserResetMsg({ type: 'error', text: e.message || 'Could not reset password.' });
-                } finally {
-                  setResettingPasswordUserId(null);
-                }
-              }}
-            />
-            <GradientButton
-              label="Set Password"
-              variant="outline"
-              size="sm"
-              onPress={() => {
-                setUserResetMsg(null);
-                setManualPasswordForm({ userId: u.id, userName: u.name || u.email, password: '', confirm: '' });
+                  await adminResetPassword(u.id);
+                  Alert.alert('Done', 'Password reset email sent to ' + u.email + '. Link valid for 72 hours.');
+                } catch (e) { Alert.alert('Error', e.message); }
               }}
             />
             {!u.is_admin && <GradientButton label="👑 Make Admin" variant="outline" size="sm" onPress={() => handlePromoteAdmin(u.id, u.name)} />}
@@ -1007,69 +925,6 @@ export default function AdminScreen() {
             <GradientButton label="🗑 Delete" variant="danger" size="sm" onPress={() => handleDeleteUser(u.id, u.name)} />
           </View>
         )}
-        <AdminModal visible={!!manualPasswordForm} onClose={() => { if (!manualPasswordSaving) setManualPasswordForm(null); }}>
-          <View style={[styles.formCard, styles.modalFormCard]}>
-            <Text style={styles.formTitle}>Set Password</Text>
-            <Text style={styles.helperText}>
-              Manually set a new password for {manualPasswordForm?.userName || 'this user'}. This does not send an email.
-            </Text>
-            <Input
-              label="New Password"
-              value={manualPasswordForm?.password || ''}
-              onChangeText={v => setManualPasswordForm(f => f ? ({ ...f, password: v }) : f)}
-              secureTextEntry
-            />
-            <Input
-              label="Confirm Password"
-              value={manualPasswordForm?.confirm || ''}
-              onChangeText={v => setManualPasswordForm(f => f ? ({ ...f, confirm: v }) : f)}
-              secureTextEntry
-            />
-            <View style={[styles.formBtns, { marginTop: 12 }]}>
-              <GradientButton
-                label={manualPasswordSaving ? 'Saving...' : 'Save Password'}
-                loading={manualPasswordSaving}
-                variant="primary"
-                style={{ flex: 1, marginRight: 8 }}
-                onPress={async () => {
-                  if (!manualPasswordForm) return;
-                  if (manualPasswordForm.password.length < 6) {
-                    setUserResetMsg({ type: 'error', text: 'Password must be at least 6 characters.' });
-                    return;
-                  }
-                  if (manualPasswordForm.password !== manualPasswordForm.confirm) {
-                    setUserResetMsg({ type: 'error', text: 'Passwords do not match.' });
-                    return;
-                  }
-                  setManualPasswordSaving(true);
-                  try {
-                    await adminSetPassword(manualPasswordForm.userId, manualPasswordForm.password);
-                    setUserResetMsg({ type: 'success', text: 'Password was manually updated.' });
-                    setManualPasswordForm(null);
-                  } catch (e) {
-                    setUserResetMsg({ type: 'error', text: e.message || 'Could not update password.' });
-                  } finally {
-                    setManualPasswordSaving(false);
-                  }
-                }}
-              />
-              <GradientButton
-                label="Cancel"
-                variant="outline"
-                style={{ flex: 1 }}
-                onPress={() => setManualPasswordForm(null)}
-              />
-            </View>
-          </View>
-        </AdminModal>
-        {userResetMsg ? (
-          <View style={[styles.inlineNotice, userResetMsg.type === 'error' ? styles.inlineNoticeError : styles.inlineNoticeSuccess]}>
-            <Text style={styles.inlineNoticeText}>{userResetMsg.text}</Text>
-            {userResetMsg.link ? (
-              <Text selectable style={styles.inlineNoticeLink}>{userResetMsg.link}</Text>
-            ) : null}
-          </View>
-        ) : null}
 
         {/* Detail tabs */}
         <View style={{ flexDirection: 'row', gap: 6, marginBottom: 14 }}>
@@ -1106,7 +961,7 @@ export default function AdminScreen() {
               }}
             >
               {s.photo1_url ? (
-                <WatermarkedImage source={{ uri: fullUrl(s.photo1_url) }} style={styles.thumbImageFrame} resizeMode="contain" watermarkSize="tiny" />
+                <Image source={{ uri: fullUrl(s.photo1_url) }} style={styles.thumbImage} resizeMode="contain" />
               ) : (
                 <View style={[styles.thumbImage, styles.thumbPlaceholder]}>
                   <Text style={{ fontSize: 20 }}>📷</Text>
@@ -1474,129 +1329,29 @@ export default function AdminScreen() {
     } catch (e: any) { console.error('Delete failed:', e.message); }
   };
 
-  const openCommunityPostForm = (post?: any) => {
-    if (post) {
-      setEditingCommunityPostId(Number(post.id));
-      setCommunityPostForm({
-        title: post.title || '',
-        body: post.body || '',
-        image_url: post.image_url || '',
-        cta_label: post.cta_label || '',
-        cta_url: post.cta_url || '',
-        is_published: !!post.is_published,
-        show_on_home: !!post.show_on_home,
-        is_pinned: !!post.is_pinned,
+  const downloadAdminPhoto = async (url: string, filename: string) => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    try {
+      const response = await fetch(url, { mode: 'cors' });
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('Could not read photo'));
+        reader.readAsDataURL(blob);
       });
-    } else {
-      setEditingCommunityPostId(null);
-      setCommunityPostForm(emptyCommunityPostForm());
-    }
-    setShowCommunityPostForm(true);
-  };
-
-  const handleSaveCommunityPost = async () => {
-    if (!String(communityPostForm.title || '').trim() || !String(communityPostForm.body || '').trim()) {
-      Alert.alert('Missing content', 'A title and message are required.');
-      return;
-    }
-    setSavingCommunityPost(true);
-    try {
-      const result = editingCommunityPostId
-        ? await updateCommunityPost(editingCommunityPostId, communityPostForm)
-        : await createCommunityPost(communityPostForm);
-      const saved = result?.post;
-      if (saved) {
-        setCommunityPosts(current => {
-          const next = editingCommunityPostId
-            ? current.map(item => Number(item.id) === editingCommunityPostId ? saved : item)
-            : [saved, ...current];
-          return next.sort((a, b) => Number(b.is_pinned) - Number(a.is_pinned) || new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime());
-        });
-      } else {
-        const refreshed = await adminGetCommunityPosts();
-        setCommunityPosts(refreshed?.posts || refreshed || []);
-      }
-      setShowCommunityPostForm(false);
-      setEditingCommunityPostId(null);
-      setCommunityPostForm(emptyCommunityPostForm());
+      const watermarked = await addWatermark(dataUrl);
+      const anchor = document.createElement('a');
+      anchor.href = watermarked;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
     } catch (e: any) {
-      Alert.alert('Post not saved', e.message || 'Could not save this community post.');
-    }
-    setSavingCommunityPost(false);
-  };
-
-  const handleDeleteCommunityPost = async (post: any) => {
-    const confirmed = typeof window === 'undefined' || window.confirm(`Delete “${post.title || 'this post'}”? This cannot be undone.`);
-    if (!confirmed) return;
-    try {
-      await deleteCommunityPost(post.id);
-      setCommunityPosts(current => current.filter(item => Number(item.id) !== Number(post.id)));
-    } catch (e: any) {
-      Alert.alert('Post not deleted', e.message || 'Could not delete this community post.');
+      Alert.alert('Download failed', e?.message || 'Could not prepare a watermarked photo download.');
     }
   };
-
-  const renderCommunityPostManager = () => (
-    <View style={{ marginBottom: 28, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: C.DIVIDER }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
-        <View style={{ flex: 1, minWidth: 220 }}>
-          <Text style={styles.sectionTitle}>Community Posts ({communityPosts.length})</Text>
-          <Text style={styles.listItemSub}>Publish official updates to the Community feed and choose whether each post also appears on Home.</Text>
-        </View>
-        <GradientButton label="New Community Post" variant="primary" size="sm" onPress={() => openCommunityPostForm()} />
-      </View>
-
-      <AdminModal visible={showCommunityPostForm} onClose={() => setShowCommunityPostForm(false)}>
-        <View style={[styles.formCard, styles.modalFormCard]}>
-          <Text style={styles.formTitle}>{editingCommunityPostId ? 'Edit Community Post' : 'New Community Post'}</Text>
-          <Input label="Title *" value={communityPostForm.title} onChangeText={value => setCommunityPostForm((form: any) => ({ ...form, title: value }))} />
-          <Input label="Message *" value={communityPostForm.body} onChangeText={value => setCommunityPostForm((form: any) => ({ ...form, body: value }))} multiline numberOfLines={6} />
-          <Input label="Image URL (optional)" value={communityPostForm.image_url} onChangeText={value => setCommunityPostForm((form: any) => ({ ...form, image_url: value }))} />
-          <Input label="Button label (optional)" value={communityPostForm.cta_label} onChangeText={value => setCommunityPostForm((form: any) => ({ ...form, cta_label: value }))} />
-          <Input label="Button link (optional)" value={communityPostForm.cta_url} onChangeText={value => setCommunityPostForm((form: any) => ({ ...form, cta_url: value }))} />
-          {[
-            ['is_published', 'Published', 'Visible in the Community feed'],
-            ['show_on_home', 'Show on Home', 'Also surface this post on the home page'],
-            ['is_pinned', 'Pin to top', 'Keep this post ahead of newer updates'],
-          ].map(([key, label, description]) => (
-            <View key={key} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.DIVIDER }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: C.TEXT, fontSize: 14, fontWeight: '700' }}>{label}</Text>
-                <Text style={styles.listItemMeta}>{description}</Text>
-              </View>
-              <Switch value={!!communityPostForm[key]} onValueChange={value => setCommunityPostForm((form: any) => ({ ...form, [key]: value }))} trackColor={{ false: C.MED_DARK, true: C.ORANGE }} />
-            </View>
-          ))}
-          <View style={[styles.formBtns, { marginTop: 18 }]}>
-            <GradientButton label={savingCommunityPost ? 'Saving...' : (editingCommunityPostId ? 'Save Changes' : 'Create Post')} variant="primary" loading={savingCommunityPost} style={{ flex: 1, marginRight: 8 } as any} onPress={handleSaveCommunityPost} />
-            <GradientButton label="Cancel" variant="outline" style={{ flex: 1 } as any} onPress={() => setShowCommunityPostForm(false)} />
-          </View>
-        </View>
-      </AdminModal>
-
-      {communityPosts.length === 0 ? (
-        <View style={[styles.formCard, { marginTop: 14 }]}><Text style={styles.emptyText}>No official community posts yet.</Text></View>
-      ) : communityPosts.map(post => (
-        <View key={post.id} style={[styles.formCard, { marginTop: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 14 }]}>
-          {post.image_url ? <Image source={{ uri: fullUrl(post.image_url) }} style={{ width: 84, height: 68, borderRadius: 8, backgroundColor: C.CARD_BG2 }} resizeMode="cover" /> : null}
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 4 }}>
-              <Text style={styles.listItemTitle}>{post.title}</Text>
-              <Text style={{ color: post.is_published ? C.SUCCESS : C.TEXT_MUTED, fontSize: 10, fontWeight: '800' }}>{post.is_published ? 'PUBLISHED' : 'DRAFT'}</Text>
-              {post.show_on_home ? <Text style={{ color: C.ORANGE_MID, fontSize: 10, fontWeight: '800' }}>HOME</Text> : null}
-              {post.is_pinned ? <Text style={{ color: C.TEAL, fontSize: 10, fontWeight: '800' }}>PINNED</Text> : null}
-            </View>
-            <Text style={styles.listItemSub} numberOfLines={2}>{post.body}</Text>
-            <Text style={[styles.listItemMeta, { marginTop: 5 }]}>{post.updated_at ? new Date(post.updated_at).toLocaleString() : ''}</Text>
-          </View>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity style={styles.iconBtn} onPress={() => openCommunityPostForm(post)}><Text style={styles.editIcon}>✏</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtn} onPress={() => handleDeleteCommunityPost(post)}><Text style={styles.deleteIcon}>🗑</Text></TouchableOpacity>
-          </View>
-        </View>
-      ))}
-    </View>
-  );
 
   const renderSubmissions = () => {
     const filtered = activityItems.filter(item => {
@@ -1655,7 +1410,7 @@ export default function AdminScreen() {
                     activeOpacity={0.9}
                     accessibilityLabel="Open photo larger"
                   >
-                    <WatermarkedImage source={{ uri: activePhotoUrl }} style={styles.activePhotoFrame} resizeMode="contain" watermarkSize="large" />
+                    <Image source={{ uri: activePhotoUrl }} style={{ width: '100%', height: 380, borderRadius: 12, backgroundColor: C.CARD_BG2, objectFit: 'contain' } as any} resizeMode="contain" />
                   </TouchableOpacity>
                   {photoUrls.length > 1 ? (
                     <>
@@ -1694,6 +1449,13 @@ export default function AdminScreen() {
                         ))}
                       </View>
                     ) : null}
+                    <TouchableOpacity
+                      style={styles.photoDownloadIconBtn}
+                      onPress={() => downloadAdminPhoto(activePhotoUrl, 'submission-' + sub.id + '-photo-' + (activeIndex + 1) + '.jpg')}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.photoDownloadIconText}>↓</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
                 <TouchableOpacity
@@ -1861,7 +1623,6 @@ export default function AdminScreen() {
 
     return (
       <View style={styles.section}>
-        {renderCommunityPostManager()}
         <Text style={styles.sectionTitle}>Feed ({filtered.length})</Text>
         <Text style={[styles.listItemSub, { marginBottom: 12 }]}>
           Review photo submissions and comments here. Open a photo to edit/delete comments, or use Users to block an account.
@@ -1908,7 +1669,11 @@ export default function AdminScreen() {
               activeOpacity={0.8}
             >
               {item.image_url ? (
-                <WatermarkedImage source={{ uri: fullUrl(item.image_url) }} style={styles.thumbImageFrame} resizeMode="contain" watermarkSize="tiny" />
+                <Image
+                  source={{ uri: fullUrl(item.image_url) }}
+                  style={styles.thumbImage}
+                  resizeMode="contain"
+                />
               ) : (
                 <View style={[styles.thumbImage, styles.thumbPlaceholder]}>
                   <Text style={{ fontSize: 20 }}>📷</Text>
@@ -1963,146 +1728,6 @@ export default function AdminScreen() {
       </View>
     );
   };
-
-  const reportStatusOptions: Array<{ label: string; value: ReportStatus }> = [
-    { label: 'Open', value: 'pending' },
-    { label: 'Reviewed', value: 'resolved' },
-    { label: 'Dismissed', value: 'dismissed' },
-  ];
-
-  const reportStatusLabel = (status: string) =>
-    reportStatusOptions.find(option => option.value === status)?.label || status;
-
-  const openReportedContent = (report: any) => {
-    const submissionId = report.type === 'submission'
-      ? report.target_id
-      : report.target_submission_id || report.submission_id;
-    if (submissionId) {
-      navigation.navigate('SubmissionDetail' as never, { submissionId, id: submissionId } as never);
-      return;
-    }
-    setActiveTab('Feed');
-    setSubmissionSearch(String(report.target_preview || report.target_id || ''));
-  };
-
-  const handleUpdateReportStatus = async (report: any, status: ReportStatus) => {
-    try {
-      await adminUpdateReport(report.id, { status });
-      setReports(current => current.filter(item => item.id !== report.id));
-      if (report.status === 'pending' && status !== 'pending') {
-        setStats((current: any) => ({
-          ...current,
-          reports: {
-            ...(current.reports || {}),
-            pending: Math.max(0, Number(current.reports?.pending || 0) - 1),
-          },
-        }));
-      }
-    } catch (e: any) {
-      Alert.alert('Report update failed', e.message || 'Could not update this report.');
-    }
-  };
-
-  const renderReports = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Reports ({reports.length})</Text>
-      <Text style={[styles.listItemSub, { marginBottom: 12 }]}>
-        Reports are photos or comments that users flagged for moderation. Open the content to review it, then mark the report reviewed or dismissed.
-      </Text>
-
-      <View style={styles.segmentRow}>
-        {reportStatusOptions.map(option => (
-          <TouchableOpacity
-            key={option.value}
-            style={[styles.segmentBtn, reportStatusFilter === option.value && styles.segmentBtnActive]}
-            onPress={() => setReportStatusFilter(option.value)}
-          >
-            <Text style={[styles.segmentText, reportStatusFilter === option.value && styles.segmentTextActive]}>
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {reportLoadError ? (
-        <Text style={{ color: C.DANGER, fontSize: 13, fontWeight: '800', marginBottom: 12 }}>
-          Report load error: {reportLoadError}
-        </Text>
-      ) : null}
-
-      {reports.length === 0 ? (
-        <Text style={styles.emptyText}>No {reportStatusLabel(reportStatusFilter).toLowerCase()} reports.</Text>
-      ) : (
-        reports.map(report => {
-          const isPending = report.status === 'pending';
-          const targetLabel = report.type === 'comment' ? 'Comment' : 'Photo';
-          return (
-            <View key={report.id} style={styles.reportCard}>
-              <View style={styles.reportHeaderRow}>
-                {report.target_photo ? (
-                  <WatermarkedImage source={{ uri: fullUrl(report.target_photo) }} style={styles.reportThumbFrame} resizeMode="cover" watermarkSize="tiny" />
-                ) : (
-                  <View style={[styles.reportThumb, styles.thumbPlaceholder]}>
-                    <Text style={styles.reportThumbText}>{report.type === 'comment' ? 'C' : 'P'}</Text>
-                  </View>
-                )}
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-                    <Text style={styles.listItemTitle}>{targetLabel} report</Text>
-                    <View style={[styles.reportStatusBadge, report.status === 'pending' ? styles.reportStatusOpen : report.status === 'resolved' ? styles.reportStatusResolved : styles.reportStatusDismissed]}>
-                      <Text style={styles.reportStatusText}>{reportStatusLabel(report.status)}</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.listItemSub}>Reported by {report.reporter_name || 'Unknown user'}</Text>
-                  <Text style={styles.listItemMeta}>
-                    {report.created_at ? new Date(report.created_at).toLocaleString() : ''}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.reportPreviewBox}>
-                <Text style={styles.reportLabel}>Reason</Text>
-                <Text style={styles.reportText}>{report.reason || 'No reason provided.'}</Text>
-              </View>
-
-              <View style={styles.reportPreviewBox}>
-                <Text style={styles.reportLabel}>{targetLabel}</Text>
-                <Text style={styles.reportText}>{report.target_preview || 'No preview available.'}</Text>
-              </View>
-
-              <View style={styles.reportActions}>
-                <GradientButton
-                  label="Open Content"
-                  variant="outline"
-                  size="sm"
-                  style={{ flex: 1, minWidth: 150 } as any}
-                  onPress={() => openReportedContent(report)}
-                />
-                {isPending ? (
-                  <>
-                    <GradientButton
-                      label="Mark Reviewed"
-                      variant="primary"
-                      size="sm"
-                      style={{ flex: 1, minWidth: 150 } as any}
-                      onPress={() => handleUpdateReportStatus(report, 'resolved')}
-                    />
-                    <GradientButton
-                      label="Dismiss"
-                      variant="outline"
-                      size="sm"
-                      style={{ flex: 1, minWidth: 120 } as any}
-                      onPress={() => handleUpdateReportStatus(report, 'dismissed')}
-                    />
-                  </>
-                ) : null}
-              </View>
-            </View>
-          );
-        })
-      )}
-    </View>
-  );
 
   const productTitle = (product: any) => product?.title || product?.name || '';
   const productPriceText = (price: any) => {
@@ -2975,68 +2600,6 @@ export default function AdminScreen() {
       settings.motivational_quote,
       settings.motivational_quote_author
     );
-    const activeQuoteCount = new Set(
-      quoteLibrary.map(item => item.quote.trim().toLocaleLowerCase()).filter(Boolean)
-    ).size;
-    const communityGuideEnabled = !['0', 'false', 'no', 'off'].includes(
-      String(settings.community_guide_enabled ?? '1').trim().toLowerCase()
-    );
-    const challengeGuideEnabled = !['0', 'false', 'no', 'off'].includes(
-      String(settings.challenge_guide_enabled ?? '1').trim().toLowerCase()
-    );
-    const howItWorksContent = normalizeHowItWorksContent(settings.how_it_works_content);
-
-    const saveHowItWorksContent = (content: HowItWorksContent) => {
-      setSettings((current: any) => ({
-        ...current,
-        how_it_works_content: JSON.stringify(content),
-      }));
-    };
-
-    const updateHowItWorksContent = (patch: Partial<HowItWorksContent>) => {
-      saveHowItWorksContent({ ...howItWorksContent, ...patch });
-    };
-
-    const updateHowItWorksStep = (index: number, patch: Record<string, string>) => {
-      updateHowItWorksContent({
-        steps: howItWorksContent.steps.map((step, itemIndex) => itemIndex === index ? { ...step, ...patch } : step),
-      });
-    };
-
-    const moveHowItWorksStep = (index: number, direction: -1 | 1) => {
-      const target = index + direction;
-      if (target < 0 || target >= howItWorksContent.steps.length) return;
-      const steps = [...howItWorksContent.steps];
-      [steps[index], steps[target]] = [steps[target], steps[index]];
-      updateHowItWorksContent({ steps });
-    };
-
-    const aboutPageContent = normalizeAboutPageContent(settings.about_page_content);
-
-    const saveAboutPageContent = (content: AboutPageContent) => {
-      setSettings((current: any) => ({
-        ...current,
-        about_page_content: JSON.stringify(content),
-      }));
-    };
-
-    const updateAboutPageContent = (patch: Partial<AboutPageContent>) => {
-      saveAboutPageContent({ ...aboutPageContent, ...patch });
-    };
-
-    const updateAboutPageSection = (index: number, patch: Record<string, string>) => {
-      updateAboutPageContent({
-        sections: aboutPageContent.sections.map((section, itemIndex) => itemIndex === index ? { ...section, ...patch } : section),
-      });
-    };
-
-    const moveAboutPageSection = (index: number, direction: -1 | 1) => {
-      const target = index + direction;
-      if (target < 0 || target >= aboutPageContent.sections.length) return;
-      const sections = [...aboutPageContent.sections];
-      [sections[index], sections[target]] = [sections[target], sections[index]];
-      updateAboutPageContent({ sections });
-    };
 
     const saveQuoteLibrary = (items: QuoteLibraryItem[]) => {
       const cleanItems = items.map(item => ({
@@ -3084,123 +2647,15 @@ export default function AdminScreen() {
       />
 
       <View style={[styles.formCard, { marginTop: 8 }]}>
-        <View style={[styles.rowBetween, { alignItems: 'center', gap: 12, marginBottom: 8 }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.formTitle}>Community Welcome Modal</Text>
-            <Text style={{ color: C.TEXT_MUTED, fontSize: 12, lineHeight: 18, marginTop: 4 }}>
-              This guidance appears to signed-in members when they visit Community. Add the supplied video URL here when it is ready.
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={{
-              borderRadius: borderRadius.pill,
-              paddingHorizontal: 12,
-              paddingVertical: 7,
-              borderWidth: 1,
-              borderColor: communityGuideEnabled ? C.TEAL : C.CARD_BORDER,
-              backgroundColor: communityGuideEnabled ? C.TEAL + '18' : C.CARD_BG2,
-            }}
-            onPress={() => setSettings((current: any) => ({
-              ...current,
-              community_guide_enabled: communityGuideEnabled ? '0' : '1',
-            }))}
-          >
-            <Text style={{ color: communityGuideEnabled ? C.TEAL : C.TEXT_MUTED, fontSize: 12, fontWeight: '900' }}>
-              {communityGuideEnabled ? 'ENABLED' : 'DISABLED'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        <Input
-          label="Modal Title"
-          value={settings.community_guide_title || 'Grow Together'}
-          onChangeText={v => setSettings((current: any) => ({ ...current, community_guide_title: v }))}
-        />
-        <Input
-          label="Guidance Text"
-          value={settings.community_guide_text || ''}
-          onChangeText={v => setSettings((current: any) => ({ ...current, community_guide_text: v }))}
-          multiline
-          numberOfLines={4}
-        />
-        <Input
-          label="Video URL (optional: YouTube, Vimeo, or direct video)"
-          value={settings.community_guide_video_url || ''}
-          onChangeText={v => setSettings((current: any) => ({ ...current, community_guide_video_url: v }))}
-          autoCapitalize="none"
-        />
-      </View>
-
-      <View style={[styles.formCard, { marginTop: 8 }]}>
-        <View style={[styles.rowBetween, { alignItems: 'center', gap: 12, marginBottom: 8 }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.formTitle}>Challenge Filter Video Guide</Text>
-            <Text style={{ color: C.TEXT_MUTED, fontSize: 12, lineHeight: 18, marginTop: 4 }}>
-              This panel appears below the Challenges heading and explains Feeling, Movement, and Category selections.
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={{
-              borderRadius: borderRadius.pill,
-              paddingHorizontal: 12,
-              paddingVertical: 7,
-              borderWidth: 1,
-              borderColor: challengeGuideEnabled ? C.TEAL : C.CARD_BORDER,
-              backgroundColor: challengeGuideEnabled ? C.TEAL + '18' : C.CARD_BG2,
-            }}
-            onPress={() => setSettings((current: any) => ({
-              ...current,
-              challenge_guide_enabled: challengeGuideEnabled ? '0' : '1',
-            }))}
-          >
-            <Text style={{ color: challengeGuideEnabled ? C.TEAL : C.TEXT_MUTED, fontSize: 12, fontWeight: '900' }}>
-              {challengeGuideEnabled ? 'ENABLED' : 'DISABLED'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        <Input
-          label="Guide Title"
-          value={settings.challenge_guide_title || 'How to choose your challenge'}
-          onChangeText={v => setSettings((current: any) => ({ ...current, challenge_guide_title: v }))}
-        />
-        <Input
-          label="Guide Text"
-          value={settings.challenge_guide_text || ''}
-          onChangeText={v => setSettings((current: any) => ({ ...current, challenge_guide_text: v }))}
-          multiline
-          numberOfLines={4}
-        />
-        <Input
-          label="Video URL (optional: YouTube, Vimeo, or direct video)"
-          value={settings.challenge_guide_video_url || ''}
-          onChangeText={v => setSettings((current: any) => ({ ...current, challenge_guide_video_url: v }))}
-          autoCapitalize="none"
-        />
-      </View>
-
-      <View style={[styles.formCard, { marginTop: 8 }]}>
-        <View style={[styles.rowBetween, { alignItems: 'center', gap: 12, marginBottom: 8 }]}>
-          <Text style={styles.formTitle}>Motivational Quote Library</Text>
-          <View style={{ borderRadius: borderRadius.pill, backgroundColor: C.TEAL + '1A', paddingHorizontal: 10, paddingVertical: 5 }}>
-            <Text style={{ color: C.TEAL, fontSize: 11, fontWeight: '900' }}>
-              {activeQuoteCount} UNIQUE QUOTES
-            </Text>
-          </View>
-        </View>
+        <Text style={styles.formTitle}>Home Quote Library</Text>
         <Text style={{ color: C.TEXT_MUTED, fontSize: 12, marginBottom: 12 }}>
-          Add and edit the quotes shown throughout the app. A different quote is selected whenever a user changes pages. Keep at least {MIN_MOTIVATIONAL_QUOTES} active quotes.
+          Add quotes here. The home and challenge pages will randomly show one quote from this list.
         </Text>
 
         {quoteLibrary.map((item, index) => {
-          const remainingUniqueCount = new Set(
-            quoteLibrary
-              .filter((_, itemIndex) => itemIndex !== index)
-              .map(quoteItem => quoteItem.quote.trim().toLocaleLowerCase())
-              .filter(Boolean)
-          ).size;
-          const removeDisabled = remainingUniqueCount < MIN_MOTIVATIONAL_QUOTES;
           return (
             <View
-              key={`motivational-quote-${index}`}
+              key={`${item.quote}-${index}`}
               style={{
                 borderWidth: 1,
                 borderColor: C.CARD_BORDER,
@@ -3217,17 +2672,17 @@ export default function AdminScreen() {
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   <TouchableOpacity
                     onPress={() => saveQuoteLibrary(quoteLibrary.filter((_, i) => i !== index))}
-                    disabled={removeDisabled}
+                    disabled={quoteLibrary.length <= 1}
                     style={{
                       borderWidth: 1,
-                      borderColor: removeDisabled ? C.TEXT_DISABLED : C.DANGER,
+                      borderColor: quoteLibrary.length <= 1 ? C.TEXT_DISABLED : C.DANGER,
                       borderRadius: borderRadius.pill,
                       paddingHorizontal: 12,
                       paddingVertical: 6,
-                      opacity: removeDisabled ? 0.5 : 1,
+                      opacity: quoteLibrary.length <= 1 ? 0.5 : 1,
                     }}
                   >
-                    <Text style={{ color: removeDisabled ? C.TEXT_DISABLED : C.DANGER, fontSize: 12, fontWeight: '800' }}>
+                    <Text style={{ color: quoteLibrary.length <= 1 ? C.TEXT_DISABLED : C.DANGER, fontSize: 12, fontWeight: '800' }}>
                       Remove
                     </Text>
                   </TouchableOpacity>
@@ -3257,247 +2712,6 @@ export default function AdminScreen() {
           size="sm"
           onPress={() => saveQuoteLibrary([...quoteLibrary, { quote: 'New quote', author: '' }])}
         />
-      </View>
-
-      <View style={[styles.formCard, { marginTop: 20 }]}>
-        <Text style={styles.formTitle}>How It Works — Text & Photos</Text>
-        <Text style={{ color: C.TEXT_MUTED, fontSize: 12, lineHeight: 18, marginBottom: 14 }}>
-          Manage the content shown on the How It Works page. Add as many as 12 text-and-photo sections, arrange their order, and use the fields below for the page introduction and Pro message.
-        </Text>
-
-        <Input
-          label="Page Heading"
-          value={howItWorksContent.hero_title}
-          onChangeText={value => updateHowItWorksContent({ hero_title: value })}
-        />
-        <Input
-          label="Introduction"
-          value={howItWorksContent.hero_subtitle}
-          onChangeText={value => updateHowItWorksContent({ hero_subtitle: value })}
-          multiline
-          numberOfLines={3}
-        />
-
-        <View style={[styles.rowBetween, { alignItems: 'center', gap: 12, marginTop: 10, marginBottom: 10 }]}>
-          <Text style={styles.fieldGroupLabel}>Content Sections ({howItWorksContent.steps.length})</Text>
-          <GradientButton
-            label="+ Add Text/Photo Section"
-            variant="outline-teal"
-            size="sm"
-            disabled={howItWorksContent.steps.length >= 12}
-            onPress={() => updateHowItWorksContent({
-              steps: [...howItWorksContent.steps, {
-                id: `how-step-${Date.now()}`,
-                title: 'New section',
-                body: '',
-                image_url: '',
-                image_alt: '',
-              }],
-            })}
-          />
-        </View>
-
-        {howItWorksContent.steps.map((step, index) => (
-          <View
-            key={step.id}
-            style={{ borderWidth: 1, borderColor: C.CARD_BORDER, backgroundColor: C.CARD_BG2, borderRadius: borderRadius.md, padding: 12, marginBottom: 12 }}
-          >
-            <View style={[styles.rowBetween, { alignItems: 'center', gap: 10, marginBottom: 10 }]}>
-              <Text style={{ color: C.TEXT, fontSize: 14, fontWeight: '800' }}>Section {index + 1}</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
-                <TouchableOpacity disabled={index === 0} onPress={() => moveHowItWorksStep(index, -1)} style={{ opacity: index === 0 ? 0.35 : 1, borderWidth: 1, borderColor: C.CARD_BORDER, borderRadius: 7, paddingHorizontal: 9, paddingVertical: 6 }}>
-                  <Text style={{ color: C.TEXT_SECONDARY, fontSize: 12, fontWeight: '800' }}>Move up</Text>
-                </TouchableOpacity>
-                <TouchableOpacity disabled={index === howItWorksContent.steps.length - 1} onPress={() => moveHowItWorksStep(index, 1)} style={{ opacity: index === howItWorksContent.steps.length - 1 ? 0.35 : 1, borderWidth: 1, borderColor: C.CARD_BORDER, borderRadius: 7, paddingHorizontal: 9, paddingVertical: 6 }}>
-                  <Text style={{ color: C.TEXT_SECONDARY, fontSize: 12, fontWeight: '800' }}>Move down</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  disabled={howItWorksContent.steps.length === 1}
-                  onPress={() => updateHowItWorksContent({ steps: howItWorksContent.steps.filter((_, itemIndex) => itemIndex !== index) })}
-                  style={{ opacity: howItWorksContent.steps.length === 1 ? 0.35 : 1, borderWidth: 1, borderColor: C.DANGER, borderRadius: 7, paddingHorizontal: 9, paddingVertical: 6 }}
-                >
-                  <Text style={{ color: C.DANGER, fontSize: 12, fontWeight: '800' }}>Remove</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <Input label="Heading" value={step.title} onChangeText={value => updateHowItWorksStep(index, { title: value })} />
-            <Input label="Text" value={step.body} onChangeText={value => updateHowItWorksStep(index, { body: value })} multiline numberOfLines={5} />
-
-            <Text style={styles.fieldGroupLabel}>Photo</Text>
-            {step.image_url ? (
-              <View style={{ marginBottom: 10 }}>
-                <Image source={{ uri: fullUrl(step.image_url) }} style={{ width: '100%', height: 180, borderRadius: 10, backgroundColor: C.CARD_BG }} resizeMode="cover" />
-                <TouchableOpacity onPress={() => updateHowItWorksStep(index, { image_url: '', image_alt: '' })}>
-                  <Text style={{ color: C.DANGER, fontSize: 12, fontWeight: '700', marginTop: 6 }}>Remove photo</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
-            {typeof document !== 'undefined' ? (
-              <input
-                type="file"
-                accept="image/*"
-                disabled={uploadingHowItWorksStep !== null}
-                style={{ marginBottom: 8, color: '#fff' } as any}
-                onChange={async (event: any) => {
-                  const file = event.target.files?.[0];
-                  if (!file) return;
-                  setUploadingHowItWorksStep(index);
-                  try {
-                    const uploaded = await uploadPhoto(file);
-                    updateHowItWorksStep(index, { image_url: uploaded.url || '', image_alt: step.image_alt || step.title });
-                  } catch (error: any) {
-                    Alert.alert('Upload failed', error.message || 'Could not upload this photo.');
-                  }
-                  setUploadingHowItWorksStep(null);
-                }}
-              />
-            ) : null}
-            {uploadingHowItWorksStep === index ? <Text style={{ color: C.TEAL, fontSize: 12, fontWeight: '700', marginBottom: 8 }}>Uploading photo...</Text> : null}
-            <Input label="Or paste photo URL" value={step.image_url} onChangeText={value => updateHowItWorksStep(index, { image_url: value })} placeholder="https://..." />
-            <Input label="Photo description for accessibility" value={step.image_alt} onChangeText={value => updateHowItWorksStep(index, { image_alt: value })} placeholder="Describe what is shown in the photo" />
-          </View>
-        ))}
-
-        <Text style={[styles.fieldGroupLabel, { marginTop: 8 }]}>Pro Section</Text>
-        <Input label="Heading" value={howItWorksContent.pro_title} onChangeText={value => updateHowItWorksContent({ pro_title: value })} />
-        <Input label="Text" value={howItWorksContent.pro_body} onChangeText={value => updateHowItWorksContent({ pro_body: value })} multiline numberOfLines={3} />
-        <Input
-          label="Benefits (one per line)"
-          value={howItWorksContent.pro_benefits.join('\n')}
-          onChangeText={value => updateHowItWorksContent({ pro_benefits: value.split('\n') })}
-          multiline
-          numberOfLines={5}
-        />
-
-        <Text style={[styles.fieldGroupLabel, { marginTop: 8 }]}>Call to Action</Text>
-        <Input label="Heading" value={howItWorksContent.cta_title} onChangeText={value => updateHowItWorksContent({ cta_title: value })} />
-        <Input label="Supporting Text" value={howItWorksContent.cta_subtitle} onChangeText={value => updateHowItWorksContent({ cta_subtitle: value })} multiline numberOfLines={2} />
-      </View>
-
-      <View style={[styles.formCard, { marginTop: 20 }]}>
-        <Text style={styles.formTitle}>About Page — Text & Photos</Text>
-        <Text style={{ color: C.TEXT_MUTED, fontSize: 12, lineHeight: 18, marginBottom: 14 }}>
-          Edit the About page introduction and manage its ordered photo-and-text sections. The existing purpose and story artwork remains available until you upload replacements.
-        </Text>
-
-        <Input label="Page Heading" value={aboutPageContent.hero_title} onChangeText={value => updateAboutPageContent({ hero_title: value })} />
-        <Input label="Introduction" value={aboutPageContent.hero_body} onChangeText={value => updateAboutPageContent({ hero_body: value })} multiline numberOfLines={4} />
-
-        <Text style={styles.fieldGroupLabel}>Introduction Photo</Text>
-        {aboutPageContent.hero_image_url ? (
-          <View style={{ marginBottom: 10 }}>
-            <Image source={{ uri: fullUrl(aboutPageContent.hero_image_url) }} style={{ width: '100%', height: 190, borderRadius: 10, backgroundColor: C.CARD_BG }} resizeMode="cover" />
-            <TouchableOpacity onPress={() => updateAboutPageContent({ hero_image_url: '', hero_image_alt: '' })}>
-              <Text style={{ color: C.DANGER, fontSize: 12, fontWeight: '700', marginTop: 6 }}>Use default introduction image</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
-        {typeof document !== 'undefined' ? (
-          <input
-            type="file"
-            accept="image/*"
-            disabled={uploadingAboutSection !== null}
-            style={{ marginBottom: 8, color: '#fff' } as any}
-            onChange={async (event: any) => {
-              const file = event.target.files?.[0];
-              if (!file) return;
-              setUploadingAboutSection('hero');
-              try {
-                const uploaded = await uploadPhoto(file);
-                updateAboutPageContent({ hero_image_url: uploaded.url || '', hero_image_alt: aboutPageContent.hero_image_alt || aboutPageContent.hero_title });
-              } catch (error: any) {
-                Alert.alert('Upload failed', error.message || 'Could not upload this photo.');
-              }
-              setUploadingAboutSection(null);
-            }}
-          />
-        ) : null}
-        {uploadingAboutSection === 'hero' ? <Text style={{ color: C.TEAL, fontSize: 12, fontWeight: '700', marginBottom: 8 }}>Uploading introduction photo...</Text> : null}
-        <Input label="Or paste introduction photo URL" value={aboutPageContent.hero_image_url} onChangeText={value => updateAboutPageContent({ hero_image_url: value })} placeholder="https://..." />
-        <Input label="Introduction photo description" value={aboutPageContent.hero_image_alt} onChangeText={value => updateAboutPageContent({ hero_image_alt: value })} placeholder="Describe what is shown in the photo" />
-
-        <View style={[styles.rowBetween, { alignItems: 'center', gap: 12, marginTop: 10, marginBottom: 10 }]}>
-          <Text style={styles.fieldGroupLabel}>Content Sections ({aboutPageContent.sections.length})</Text>
-          <GradientButton
-            label="+ Add Text/Photo Section"
-            variant="outline-teal"
-            size="sm"
-            disabled={aboutPageContent.sections.length >= 12}
-            onPress={() => updateAboutPageContent({
-              sections: [...aboutPageContent.sections, {
-                id: `about-section-${Date.now()}`,
-                title: 'New section',
-                body: '',
-                image_url: '',
-                image_alt: '',
-              }],
-            })}
-          />
-        </View>
-
-        {aboutPageContent.sections.map((section, index) => (
-          <View key={section.id} style={{ borderWidth: 1, borderColor: C.CARD_BORDER, backgroundColor: C.CARD_BG2, borderRadius: borderRadius.md, padding: 12, marginBottom: 12 }}>
-            <View style={[styles.rowBetween, { alignItems: 'center', gap: 10, marginBottom: 10 }]}>
-              <Text style={{ color: C.TEXT, fontSize: 14, fontWeight: '800' }}>Section {index + 1}</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
-                <TouchableOpacity disabled={index === 0} onPress={() => moveAboutPageSection(index, -1)} style={{ opacity: index === 0 ? 0.35 : 1, borderWidth: 1, borderColor: C.CARD_BORDER, borderRadius: 7, paddingHorizontal: 9, paddingVertical: 6 }}>
-                  <Text style={{ color: C.TEXT_SECONDARY, fontSize: 12, fontWeight: '800' }}>Move up</Text>
-                </TouchableOpacity>
-                <TouchableOpacity disabled={index === aboutPageContent.sections.length - 1} onPress={() => moveAboutPageSection(index, 1)} style={{ opacity: index === aboutPageContent.sections.length - 1 ? 0.35 : 1, borderWidth: 1, borderColor: C.CARD_BORDER, borderRadius: 7, paddingHorizontal: 9, paddingVertical: 6 }}>
-                  <Text style={{ color: C.TEXT_SECONDARY, fontSize: 12, fontWeight: '800' }}>Move down</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  disabled={aboutPageContent.sections.length === 1}
-                  onPress={() => updateAboutPageContent({ sections: aboutPageContent.sections.filter((_, itemIndex) => itemIndex !== index) })}
-                  style={{ opacity: aboutPageContent.sections.length === 1 ? 0.35 : 1, borderWidth: 1, borderColor: C.DANGER, borderRadius: 7, paddingHorizontal: 9, paddingVertical: 6 }}
-                >
-                  <Text style={{ color: C.DANGER, fontSize: 12, fontWeight: '800' }}>Remove</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <Input label="Heading" value={section.title} onChangeText={value => updateAboutPageSection(index, { title: value })} />
-            <Input label="Text" value={section.body} onChangeText={value => updateAboutPageSection(index, { body: value })} multiline numberOfLines={6} />
-
-            <Text style={styles.fieldGroupLabel}>Photo (optional)</Text>
-            {section.image_url ? (
-              <View style={{ marginBottom: 10 }}>
-                <Image source={{ uri: fullUrl(section.image_url) }} style={{ width: '100%', height: 180, borderRadius: 10, backgroundColor: C.CARD_BG }} resizeMode="cover" />
-                <TouchableOpacity onPress={() => updateAboutPageSection(index, { image_url: '', image_alt: '' })}>
-                  <Text style={{ color: C.DANGER, fontSize: 12, fontWeight: '700', marginTop: 6 }}>{section.id === 'our-story' ? 'Use default story image' : 'Remove photo'}</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
-            {typeof document !== 'undefined' ? (
-              <input
-                type="file"
-                accept="image/*"
-                disabled={uploadingAboutSection !== null}
-                style={{ marginBottom: 8, color: '#fff' } as any}
-                onChange={async (event: any) => {
-                  const file = event.target.files?.[0];
-                  if (!file) return;
-                  setUploadingAboutSection(section.id);
-                  try {
-                    const uploaded = await uploadPhoto(file);
-                    updateAboutPageSection(index, { image_url: uploaded.url || '', image_alt: section.image_alt || section.title });
-                  } catch (error: any) {
-                    Alert.alert('Upload failed', error.message || 'Could not upload this photo.');
-                  }
-                  setUploadingAboutSection(null);
-                }}
-              />
-            ) : null}
-            {uploadingAboutSection === section.id ? <Text style={{ color: C.TEAL, fontSize: 12, fontWeight: '700', marginBottom: 8 }}>Uploading section photo...</Text> : null}
-            <Input label="Or paste photo URL" value={section.image_url} onChangeText={value => updateAboutPageSection(index, { image_url: value })} placeholder="https://..." />
-            <Input label="Photo description for accessibility" value={section.image_alt} onChangeText={value => updateAboutPageSection(index, { image_alt: value })} placeholder="Describe what is shown in the photo" />
-          </View>
-        ))}
-
-        <Text style={[styles.fieldGroupLabel, { marginTop: 8 }]}>Call to Action</Text>
-        <Input label="Heading" value={aboutPageContent.cta_title} onChangeText={value => updateAboutPageContent({ cta_title: value })} />
-        <Input label="Supporting Text" value={aboutPageContent.cta_subtitle} onChangeText={value => updateAboutPageContent({ cta_subtitle: value })} multiline numberOfLines={2} />
       </View>
 
       {/* Shipping Settings */}
@@ -3545,7 +2759,6 @@ export default function AdminScreen() {
           setSettingsSaveStatus('Saving settings...');
           try {
             await adminUpdateSettings(settings);
-            await refreshQuotes();
             setSettingsSaveStatus('Settings saved. Changes are active now; shipping changes apply on the next checkout.');
           } catch (e: any) {
             setSettingsSaveStatus(`Settings failed to save: ${e.message}`);
@@ -3623,7 +2836,6 @@ export default function AdminScreen() {
             {activeTab === 'Challenges' && renderChallenges()}
             {activeTab === 'Users' && renderUsers()}
             {activeTab === 'Feed' && renderSubmissions()}
-            {activeTab === 'Reports' && renderReports()}
             {activeTab === 'Products' && renderProducts()}
             {activeTab === 'Discounts' && renderDiscounts()}
             {activeTab === 'Orders' && renderOrders()}
@@ -3678,18 +2890,6 @@ const styles = StyleSheet.create({
   },
   highlightLabel: { color: C.TEAL, fontSize: 14, fontWeight: '700', marginBottom: 4 },
   highlightHint: { color: C.TEXT_MUTED, fontSize: 12, marginBottom: 8, lineHeight: 16 },
-  inlineNotice: {
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    padding: 12,
-    marginTop: -4,
-    marginBottom: 16,
-  },
-  inlineNoticeSuccess: { backgroundColor: C.TEAL + '14', borderColor: C.TEAL + '66' },
-  inlineNoticeError: { backgroundColor: C.DANGER + '14', borderColor: C.DANGER + '66' },
-  inlineNoticeText: { color: '#EAF0F8', fontSize: 13, lineHeight: 18, fontWeight: '700' },
-  inlineNoticeLink: { color: C.TEAL, fontSize: 12, lineHeight: 17, marginTop: 8, fontWeight: '700' },
-  helperText: { color: C.TEXT_MUTED, fontSize: 13, lineHeight: 19, marginBottom: 12 },
   fieldGroupLabel: { color: C.TEXT, fontSize: 13, fontWeight: '700', marginBottom: 4, marginTop: 8 },
   searchBar: {
     flexDirection: 'row', alignItems: 'center',
@@ -3911,31 +3111,10 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: C.CARD_BORDER,
   },
   adminChipText: { color: C.TEXT_MUTED, fontSize: 11, fontWeight: '600' },
-  thumbImageFrame: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.sm,
-    overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: (C as any).CARD_BG2 || C.CARD_BG,
-  },
   thumbImage: {
     width: 56, height: 56, borderRadius: borderRadius.sm,
     backgroundColor: (C as any).CARD_BG2 || C.CARD_BG,
   },
-  activePhotoFrame: {
-    width: '100%',
-    height: 380,
-    borderRadius: 12,
-    backgroundColor: C.CARD_BG2,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  activePhotoImage: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'contain',
-  } as any,
   photoNavBtn: {
     position: 'absolute',
     top: '50%',
@@ -3963,54 +3142,23 @@ const styles = StyleSheet.create({
   photoDotBtnActive: { backgroundColor: C.TEAL + '22', borderColor: C.TEAL },
   photoDotText: { color: C.TEXT_MUTED, fontSize: 12, fontWeight: '700' },
   photoDotTextActive: { color: C.TEAL },
+  photoDownloadIconBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: C.TEAL + '22',
+    borderWidth: 1,
+    borderColor: C.TEAL,
+  },
+  photoDownloadIconText: { color: C.TEAL, fontSize: 20, lineHeight: 22, fontWeight: '900' },
   thumbPlaceholder: { justifyContent: 'center', alignItems: 'center' },
   listItemInfo: { flex: 1 },
   listItemTitle: { color: C.TEXT, fontWeight: '800', marginBottom: 4, fontSize: 16 },
   listItemSub: { color: '#EAF0F8', fontSize: 15, marginBottom: 3, fontWeight: '700' },
   listItemMeta: { color: '#D6DEEA', fontSize: 13, fontWeight: '600' },
   actionBtns: { flexDirection: 'row', gap: 4, alignItems: 'center' },
-  reportCard: {
-    backgroundColor: C.CARD_BG,
-    borderRadius: borderRadius.lg,
-    padding: 14,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: C.CARD_BORDER,
-  },
-  reportHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  reportThumbFrame: {
-    width: 72,
-    height: 72,
-    borderRadius: borderRadius.md,
-    overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: (C as any).CARD_BG2 || C.CARD_BG,
-  },
-  reportThumb: {
-    width: 72,
-    height: 72,
-    borderRadius: borderRadius.md,
-    backgroundColor: (C as any).CARD_BG2 || C.CARD_BG,
-    borderWidth: 1,
-    borderColor: C.CARD_BORDER,
-  },
-  reportThumbText: { color: C.TEXT_MUTED, fontSize: 18, fontWeight: '900' },
-  reportPreviewBox: {
-    backgroundColor: (C as any).CARD_BG2 || C.CARD_BG,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    padding: 10,
-    marginTop: 8,
-  },
-  reportLabel: { color: C.TEXT_MUTED, fontSize: 11, fontWeight: '900', textTransform: 'uppercase' as any, marginBottom: 4 },
-  reportText: { color: '#EAF0F8', fontSize: 14, lineHeight: 20, fontWeight: '700' },
-  reportActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 },
-  reportStatusBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
-  reportStatusOpen: { backgroundColor: C.ORANGE + '22', borderColor: C.ORANGE },
-  reportStatusResolved: { backgroundColor: C.TEAL + '22', borderColor: C.TEAL },
-  reportStatusDismissed: { backgroundColor: '#94A3B822', borderColor: '#94A3B8' },
-  reportStatusText: { color: C.TEXT, fontSize: 11, fontWeight: '900' },
   iconBtn: { padding: 6 },
   editIcon: { fontSize: 16 },
   deleteIcon: { fontSize: 16 },

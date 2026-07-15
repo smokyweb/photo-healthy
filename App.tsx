@@ -6,14 +6,11 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useWindowDimensions } from 'react-native';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { CartProvider } from './src/context/CartContext';
-import { MotivationalQuoteProvider, useMotivationalQuotes } from './src/context/MotivationalQuoteContext';
 import { C } from './src/theme';
 import BottomNavBar from './src/components/BottomNavBar';
 import TopNavBar from './src/components/TopNavBar';
 import ScreenWithNav from './src/components/ScreenWithNav';
 import AppBackground from './src/components/AppBackground';
-import MotivationalQuoteBanner from './src/components/MotivationalQuoteBanner';
-import ContextualHelp from './src/components/ContextualHelp';
 
 // Screens
 import HomeScreen from './src/screens/HomeScreen';
@@ -143,20 +140,6 @@ function TabLineIcon({ name, color, size = 22 }: { name: TabIconName; color: str
   );
 }
 
-function HelpedTabScreen({ Screen, helpContext, screenProps }: { Screen: React.ComponentType<any>; helpContext: string; screenProps: any }) {
-  return (
-    <View style={{ flex: 1 }}>
-      <Screen {...screenProps} />
-      <ContextualHelp context={helpContext} />
-    </View>
-  );
-}
-
-const HomeTabWithHelp = (props: any) => <HelpedTabScreen Screen={HomeScreen} helpContext="home" screenProps={props} />;
-const ChallengesTabWithHelp = (props: any) => <HelpedTabScreen Screen={ChallengesScreen} helpContext="challenges" screenProps={props} />;
-const CommunityTabWithHelp = (props: any) => <HelpedTabScreen Screen={CommunityScreen} helpContext="community" screenProps={props} />;
-const ProfileTabWithHelp = (props: any) => <HelpedTabScreen Screen={ProfileScreen} helpContext="profile" screenProps={props} />;
-
 function MainTabs() {
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
@@ -166,7 +149,6 @@ function MainTabs() {
       <AppBackground />
       <View style={{ flex: 1 }}>
         <TopNavBar />
-        <MotivationalQuoteBanner />
       <Tab.Navigator
       sceneContainerStyle={{ backgroundColor: 'transparent' }}
       screenOptions={{
@@ -186,10 +168,10 @@ function MainTabs() {
         tabBarInactiveTintColor: C.MED,
       }}
     >
-      <Tab.Screen name="HomeTab" component={HomeTabWithHelp} options={{ title: 'Home', tabBarLabel: 'Home', tabBarIcon: ({ color, size }) => <TabLineIcon name="home" color={color} size={size || 22} /> }} />
-      <Tab.Screen name="ChallengesTab" component={ChallengesTabWithHelp} options={{ title: 'Challenges', tabBarLabel: 'Challenges', tabBarIcon: ({ color, size }) => <TabLineIcon name="challenge" color={color} size={size || 22} /> }} />
-      <Tab.Screen name="CommunityTab" component={CommunityTabWithHelp} options={{ title: 'Community', tabBarLabel: 'Community', tabBarIcon: ({ color, size }) => <TabLineIcon name="community" color={color} size={size || 22} /> }} />
-      <Tab.Screen name="ProfileTab" component={ProfileTabWithHelp} options={{ title: 'Profile', tabBarLabel: 'Profile', tabBarIcon: ({ color, size }) => <TabLineIcon name="profile" color={color} size={size || 22} /> }} />
+      <Tab.Screen name="HomeTab" component={HomeScreen} options={{ title: 'Home', tabBarLabel: 'Home', tabBarIcon: ({ color, size }) => <TabLineIcon name="home" color={color} size={size || 22} /> }} />
+      <Tab.Screen name="ChallengesTab" component={ChallengesScreen} options={{ title: 'Challenges', tabBarLabel: 'Challenges', tabBarIcon: ({ color, size }) => <TabLineIcon name="challenge" color={color} size={size || 22} /> }} />
+      <Tab.Screen name="CommunityTab" component={CommunityScreen} options={{ title: 'Community', tabBarLabel: 'Community', tabBarIcon: ({ color, size }) => <TabLineIcon name="community" color={color} size={size || 22} /> }} />
+      <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: 'Profile', tabBarLabel: 'Profile', tabBarIcon: ({ color, size }) => <TabLineIcon name="profile" color={color} size={size || 22} /> }} />
     </Tab.Navigator>
       </View>
     </View>
@@ -197,9 +179,9 @@ function MainTabs() {
 }
 
 // Wrapper for outer stack screens - adds TopNavBar + bottom nav
-function OuterScreenWrapper({ children, helpContext }: { children: React.ReactNode; helpContext?: string }) {
+function OuterScreenWrapper({ children }: { children: React.ReactNode }) {
   return (
-    <ScreenWithNav helpContext={helpContext}>
+    <ScreenWithNav>
       <View style={{ flex: 1 }}>{children}</View>
     </ScreenWithNav>
   );
@@ -207,7 +189,6 @@ function OuterScreenWrapper({ children, helpContext }: { children: React.ReactNo
 
 function AppNavigator() {
   const { loading } = useAuth();
-  const { rotateQuote } = useMotivationalQuotes();
 
   if (loading) {
     return (
@@ -218,13 +199,7 @@ function AppNavigator() {
   }
 
   return (
-    <NavigationContainer
-      linking={linking}
-      theme={navTheme}
-      fallback={<ActivityIndicator color={C.ORANGE} />}
-      onReady={rotateQuote}
-      onStateChange={rotateQuote}
-    >
+    <NavigationContainer linking={linking} theme={navTheme} fallback={<ActivityIndicator color={C.ORANGE} />}>
       <Stack.Navigator screenOptions={{
           headerShown: false,
           // On web: allow each screen to scroll naturally via the browser
@@ -237,28 +212,28 @@ function AppNavigator() {
         <Stack.Screen name="Login">{(p) => <OuterScreenWrapper><LoginScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="Register">{(p) => <OuterScreenWrapper><RegisterScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="ResetPassword">{(p) => <OuterScreenWrapper><ResetPasswordScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="ChallengeDetail">{(props) => <OuterScreenWrapper helpContext="challenge_detail"><ChallengeDetailScreen {...props} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="SubmitPhoto">{(props) => <OuterScreenWrapper helpContext="submit_photo"><SubmitPhotoScreen {...props} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="UserSubmissions">{(p) => <OuterScreenWrapper helpContext="gallery"><UserSubmissionsScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="SubmissionDetail">{(p) => <OuterScreenWrapper helpContext="submission"><SubmissionDetailScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="Shop">{(p) => <OuterScreenWrapper helpContext="shop"><ShopScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="ProductDetail">{(p) => <OuterScreenWrapper helpContext="shop"><ProductDetailScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="Cart">{(p) => <OuterScreenWrapper helpContext="cart"><CartScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="CheckoutSuccess">{(p) => <OuterScreenWrapper helpContext="orders"><CheckoutSuccessScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="StripeReturn">{(p) => <OuterScreenWrapper helpContext="orders"><CheckoutSuccessScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="ChallengeDetail">{(props) => <OuterScreenWrapper><ChallengeDetailScreen {...props} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="SubmitPhoto">{(props) => <OuterScreenWrapper><SubmitPhotoScreen {...props} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="UserSubmissions">{(p) => <OuterScreenWrapper><UserSubmissionsScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="SubmissionDetail">{(p) => <OuterScreenWrapper><SubmissionDetailScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="Shop">{(p) => <OuterScreenWrapper><ShopScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="ProductDetail">{(p) => <OuterScreenWrapper><ProductDetailScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="Cart">{(p) => <OuterScreenWrapper><CartScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="CheckoutSuccess">{(p) => <OuterScreenWrapper><CheckoutSuccessScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="StripeReturn">{(p) => <OuterScreenWrapper><CheckoutSuccessScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="Admin">{(p) => <OuterScreenWrapper><AdminScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="Gallery">{(p) => <OuterScreenWrapper helpContext="gallery"><GalleryScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="Subscription">{(p) => <OuterScreenWrapper helpContext="subscription"><SubscriptionScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="OrderHistory">{(p) => <OuterScreenWrapper helpContext="orders"><OrderHistoryScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="Notifications">{(p) => <OuterScreenWrapper helpContext="notifications"><NotificationsScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="Partners">{(p) => <OuterScreenWrapper helpContext="partners"><PartnersScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="Contact">{(p) => <OuterScreenWrapper helpContext="contact"><ContactScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="Gallery">{(p) => <OuterScreenWrapper><GalleryScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="Subscription">{(p) => <OuterScreenWrapper><SubscriptionScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="OrderHistory">{(p) => <OuterScreenWrapper><OrderHistoryScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="Notifications">{(p) => <OuterScreenWrapper><NotificationsScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="Partners">{(p) => <OuterScreenWrapper><PartnersScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="Contact">{(p) => <OuterScreenWrapper><ContactScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="About">{(p) => <OuterScreenWrapper><AboutScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="HowItWorks">{(p) => <OuterScreenWrapper><HowItWorksScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="FAQ">{(p) => <OuterScreenWrapper><FAQScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
         <Stack.Screen name="Legal">{(p) => <OuterScreenWrapper><LegalScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="EditProfile">{(p) => <OuterScreenWrapper helpContext="edit_profile"><EditProfileScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
-        <Stack.Screen name="MyProgress">{(p) => <OuterScreenWrapper helpContext="progress"><MyProgressScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="EditProfile">{(p) => <OuterScreenWrapper><EditProfileScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
+        <Stack.Screen name="MyProgress">{(p) => <OuterScreenWrapper><MyProgressScreen {...p} /></OuterScreenWrapper>}</Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -268,9 +243,7 @@ export default function App() {
   return (
     <AuthProvider>
       <CartProvider>
-        <MotivationalQuoteProvider>
-          <AppNavigator />
-        </MotivationalQuoteProvider>
+        <AppNavigator />
       </CartProvider>
     </AuthProvider>
   );

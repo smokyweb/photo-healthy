@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, useWindowDimensions, Linking } from 'react-native';
+import { View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { C } from '../theme';
 import { getPublicSettings } from '../services/api';
@@ -54,10 +54,6 @@ const FOOTER_ROUTES: Record<string, string | { screen: string; params?: any }> =
 
 const COMPANY_LINKS = ['About Us', 'FAQ', 'Shop', 'Partners', 'Contact'];
 const LEGAL_LINKS = ['Privacy Policy', 'Terms of Service', 'Community Guidelines'];
-const SOCIAL_URLS: Record<string, string> = {
-  instagram: 'https://www.instagram.com/bephotohealthy/',
-  facebook: 'https://www.facebook.com/people/PhotoHealthy/61585001537891/',
-};
 
 export default function AppFooter() {
   const nav = useNavigation<any>();
@@ -106,10 +102,7 @@ export default function AppFooter() {
     <Pressable
       accessibilityRole="link"
       accessibilityLabel={label}
-      onPress={() => {
-        const url = SOCIAL_URLS[name];
-        if (url) Linking.openURL(url).catch(() => {});
-      }}
+      onPress={() => {}}
       style={({ hovered }: any) => [
         styles.socialLink,
         hovered && styles.socialLinkHovered,

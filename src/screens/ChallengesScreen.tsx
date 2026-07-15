@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet,
+  View, Text, StyleSheet, TextInput, Modal,
   TouchableOpacity, ScrollView, RefreshControl, useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -16,49 +16,35 @@ import { fullUrl } from '../config/api';
 import {
   CHALLENGE_CATEGORIES,
   FEELING_CATEGORIES,
+  MOVEMENT_CATEGORIES,
   normalizeChallengeCategory,
   normalizeFeelingCategory,
+  normalizeMovementCategory,
 } from '../constants/taxonomy';
 
 const CHALLENGE_LOGO = require('../../assets/Pose_6-removebg-preview.png');
 
-type ChallengeGuide = {
-  enabled: boolean;
-  title: string;
-  text: string;
-  videoUrl: string;
-};
+const DEFAULT_CHALLENGE_QUOTE = 'Every photo tells a story. Make yours worth telling.';
 
-const DEFAULT_CHALLENGE_GUIDE: ChallengeGuide = {
-  enabled: true,
-  title: 'How to choose your challenge',
-  text: 'Use Pick your feeling to choose the emotional experience you want, then use Category to narrow the kind of wellness challenge you want to explore. Movement remains visible on each challenge so you know what activity is involved, but it is not part of the search.',
-  videoUrl: '',
-};
-
-const normalizeChallengeGuide = (data: any): ChallengeGuide => {
+const selectedSiteQuote = (data: any) => {
   const settings = data?.settings || data || {};
-  const enabledValue = String(settings.challenge_guide_enabled ?? '1').trim().toLowerCase();
-  return {
-    enabled: !['0', 'false', 'no', 'off'].includes(enabledValue),
-    title: String(settings.challenge_guide_title || DEFAULT_CHALLENGE_GUIDE.title).trim(),
-    text: String(settings.challenge_guide_text || DEFAULT_CHALLENGE_GUIDE.text).trim(),
-    videoUrl: String(settings.challenge_guide_video_url || '').trim(),
-  };
-};
+  try {
+    const list = JSON.parse(settings.quotes_list || '[]');
+    const items = Array.isArray(list)
+      ? list.map((item: any) => typeof item === 'string'
+        ? { quote: item.trim(), author: '' }
+        : { quote: String(item?.quote || '').trim(), author: String(item?.author || '').trim() })
+        .filter((item: any) => item.quote)
+      : [];
+    if (items.length > 0) return items[Math.floor(Math.random() * items.length)];
+  } catch {}
 
-const challengeVideoEmbedUrl = (videoUrl: string) => {
-  const value = String(videoUrl || '').trim();
-  if (!value) return '';
-  if (/youtube\.com\/embed\//i.test(value) || /player\.vimeo\.com\/video\//i.test(value)) return value;
-  const youtubeMatch = value.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/))([A-Za-z0-9_-]{6,})/i);
-  if (youtubeMatch) return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
-  const vimeoMatch = value.match(/vimeo\.com\/(?:video\/)?(\d+)/i);
-  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
-  return '';
-};
+  const selectedQuote = String(settings.motivational_quote || '').trim();
+  const selectedAuthor = String(settings.motivational_quote_author || '').trim();
+  if (selectedQuote) return { quote: selectedQuote, author: selectedAuthor };
 
-const FEELING_OPTIONS = FEELING_CATEGORIES;
+  return { quote: DEFAULT_CHALLENGE_QUOTE, author: '' };
+};
 
 const primaryValue = (value?: string) => (value || '').split(',')[0].trim();
 const tagDisplayValue = (normalized: string, fallback?: string) => {
@@ -120,6 +106,8 @@ const challengeCategoryValue = (challenge: any) =>
   tagDisplayValue(normalizeChallengeCategory(challenge.category || challenge.challenge_category), challenge.category || challenge.challenge_category);
 const challengeFeelingValue = (challenge: any) =>
   tagDisplayValue(normalizeFeelingCategory(challenge.feeling_category || challenge.feeling_tag || challenge.challenge_feeling_category), challenge.feeling_category || challenge.feeling_tag || challenge.challenge_feeling_category);
+const challengeMovementValue = (challenge: any) =>
+  tagDisplayValue(normalizeMovementCategory(challenge.movement_category || challenge.movement_tag || challenge.challenge_movement_category), challenge.movement_category || challenge.movement_tag || challenge.challenge_movement_category);
 const normalizeChallengeList = (data: any) => data?.challenges || data || [];
 const userChallengeId = (item: any) => Number(item?.challenge_id ?? item?.id);
 const userChallengeRows = (data: any) => {
@@ -184,17 +172,36 @@ const mergeChallengeEnrollments = async (list: any[]) => {
 export default function ChallengesScreen() {
   const navigation = useNavigation<any>();
   const { user, loading: authLoading } = useAuth();
+  const [motivationalQuote, setMotivationalQuote] = useState(DEFAULT_CHALLENGE_QUOTE);
+  const [quoteAuthor, setQuoteAuthor] = useState('');
   const [dismissSignupBanner, setDismissSignupBanner] = useState(false);
-  const [challengeGuide, setChallengeGuide] = useState<ChallengeGuide>(DEFAULT_CHALLENGE_GUIDE);
+  
+  React.useEffect(() => {
+    let mounted = true;
+    getPublicSettings()
+      .then((data: any) => {
+        if (!mounted) return;
+        const picked = selectedSiteQuote(data);
+        setMotivationalQuote(picked.quote);
+        setQuoteAuthor(picked.author || '');
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
 
   const [challenges, setChallenges] = useState<any[]>([]);
   const [filtered, setFiltered] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [moodFilter, setMoodFilter] = useState('');
-  const [moodDropdownOpen, setMoodDropdownOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState('All');
+  const [categoryOptions, setCategoryOptions] = useState<string[]>(['All', ...CHALLENGE_CATEGORIES]);
+  const [feelingFilter, setFeelingFilter] = useState('All');
+  const [movementFilter, setMovementFilter] = useState('All');
+  const [feelingOptions, setFeelingOptions] = useState<string[]>(['All', ...FEELING_CATEGORIES]);
+  const [movementOptions, setMovementOptions] = useState<string[]>(['All', ...MOVEMENT_CATEGORIES]);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
   const { width } = useWindowDimensions();
   const numCols = width >= 1100 ? 3 : width >= 700 ? 2 : 1;
   const cardHeight = width >= 1100 ? 580 : width >= 700 ? 560 : 580;
@@ -213,7 +220,7 @@ export default function ChallengesScreen() {
       list = await mergeChallengeEnrollments(list);
       setChallenges(list);
 
-      applyFilters(list, status, category, moodFilter);
+      applyFilters(list, search, status, category, feelingFilter, movementFilter);
     } catch (e) {
       console.error(e);
       try {
@@ -223,7 +230,7 @@ export default function ChallengesScreen() {
         if (myChallenges) list = mergeUserChallenges(list, myChallenges);
         list = await mergeChallengeEnrollments(list);
         setChallenges(list);
-        applyFilters(list, status, category, moodFilter);
+        applyFilters(list, search, status, category, feelingFilter, movementFilter);
       } catch (fallbackError) {
         console.error(fallbackError);
       }
@@ -233,16 +240,34 @@ export default function ChallengesScreen() {
   };
 
   const applyFilters = useCallback(
-    (list: any[], s: string, cat: string, mood: string) => {
+(list: any[], q: string, s: string, cat: string, feeling: string, movement: string) => {
       let result = [...list];
       result = statusFilteredChallenges(result, s);
-      if (cat) result = result.filter(c => filterMatches(challengeCategoryValue(c), cat));
-      if (mood) result = result.filter(c => filterMatches(challengeFeelingValue(c), mood));
+      if (cat !== 'All') result = result.filter(c => filterMatches(challengeCategoryValue(c), cat));
+      if (feeling !== 'All') result = result.filter(c =>
+        filterMatches(challengeFeelingValue(c), feeling)
+      );
+      if (movement !== 'All') result = result.filter(c =>
+        filterMatches(challengeMovementValue(c), movement)
+      );
+      if (q.trim()) {
+        const lq = q.toLowerCase();
+        result = result.filter(
+          c =>
+            c.title?.toLowerCase().includes(lq) ||
+            c.description?.toLowerCase().includes(lq) ||
+            challengeCategoryValue(c).toLowerCase().includes(lq) ||
+            challengeFeelingValue(c).toLowerCase().includes(lq) ||
+            challengeMovementValue(c).toLowerCase().includes(lq)
+        );
+      }
       if (
         result.length === 0 &&
         s === 'all' &&
-        !cat &&
-        !mood
+        cat === 'All' &&
+        feeling === 'All' &&
+        movement === 'All' &&
+        !q.trim()
       ) {
         result = list.filter(isAvailableChallenge);
         if (result.length === 0) result = [...list];
@@ -255,32 +280,21 @@ export default function ChallengesScreen() {
   useFocusEffect(useCallback(() => {
     if (!authLoading) load();
   }, [authLoading, user?.id]));
-  useEffect(() => {
-    let active = true;
-    getPublicSettings()
-      .then(data => { if (active) setChallengeGuide(normalizeChallengeGuide(data)); })
-      .catch(() => { if (active) setChallengeGuide(DEFAULT_CHALLENGE_GUIDE); });
-    return () => { active = false; };
-  }, []);
-  useEffect(() => { applyFilters(challenges, status, category, moodFilter); }, [status, category, moodFilter, challenges]);
+  useEffect(() => { applyFilters(challenges, search, status, category, feelingFilter, movementFilter); }, [search, status, category, feelingFilter, movementFilter, challenges]);
   useEffect(() => {
     const statusList = optionBaseChallenges(challenges, status);
-    if (category && !statusList.some(c => filterMatches(challengeCategoryValue(c), category))) setCategory('');
-    if (moodFilter && !statusList.some(c => filterMatches(challengeFeelingValue(c), moodFilter))) setMoodFilter('');
-  }, [challenges, status, category, moodFilter]);
+    const nextCategories = uniqueOptions(CHALLENGE_CATEGORIES, statusList.map(challengeCategoryValue));
+    const nextFeelings = uniqueOptions(FEELING_CATEGORIES, statusList.map(challengeFeelingValue));
+    const nextMovements = uniqueOptions(MOVEMENT_CATEGORIES, statusList.map(challengeMovementValue));
+    setCategoryOptions(nextCategories);
+    setFeelingOptions(nextFeelings);
+    setMovementOptions(nextMovements);
+    if (!nextCategories.includes(category)) setCategory('All');
+    if (!nextFeelings.includes(feelingFilter)) setFeelingFilter('All');
+    if (!nextMovements.includes(movementFilter)) setMovementFilter('All');
+  }, [challenges, status]);
 
   const onRefresh = () => { setRefreshing(true); load(); };
-  const handleChallengeCardFilter = useCallback((filter: { type: 'name' | 'category' | 'feeling'; value: string }) => {
-    if (!filter.value || filter.value === 'Not set') return;
-    if (filter.type === 'category') {
-      setCategory(filter.value);
-      return;
-    }
-    if (filter.type === 'feeling') {
-      setMoodFilter(filter.value);
-      setMoodDropdownOpen(false);
-    }
-  }, []);
 
   if (loading) return <LoadingSpinner fullScreen />;
 
@@ -304,11 +318,6 @@ export default function ChallengesScreen() {
     { key: 'completed', label: 'Completed (' + tabCounts.completed + ')' },
     { key: 'archived', label: 'Archived (' + tabCounts.archived + ')' },
   ];
-  const activeChallengeCardFilters = [
-    ...(category ? [{ type: 'category' as const, value: category }] : []),
-    ...(moodFilter ? [{ type: 'feeling' as const, value: moodFilter }] : []),
-  ];
-  const challengeGuideEmbedUrl = challengeVideoEmbedUrl(challengeGuide.videoUrl);
   return (
     <>
       <ScrollView
@@ -324,54 +333,13 @@ export default function ChallengesScreen() {
         <Text style={styles.logoTitle}>Challenges</Text>
       </View>
 
-      {challengeGuide.enabled && (
-        <View style={[styles.challengeGuide, width >= 900 && styles.challengeGuideDesktop]}>
-          <View style={styles.challengeGuideCopy}>
-            <Text style={styles.challengeGuideEyebrow}>CHALLENGE FILTER GUIDE</Text>
-            <Text style={styles.challengeGuideTitle}>{challengeGuide.title}</Text>
-            <Text style={styles.challengeGuideBody}>{challengeGuide.text}</Text>
-            <View style={styles.challengeGuideDefinitions}>
-              {[
-                ['Feeling', 'The emotional experience you want to support.'],
-                ['Movement', 'The activity shown on each challenge for context.'],
-                ['Category', 'The overall type of wellness challenge.'],
-              ].map(([label, description]) => (
-                <View key={label} style={styles.challengeGuideDefinition}>
-                  <Text style={styles.challengeGuideDefinitionLabel}>{label}</Text>
-                  <Text style={styles.challengeGuideDefinitionText}>{description}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-          <View style={[styles.challengeGuideMedia, width >= 900 && styles.challengeGuideMediaDesktop]}>
-            {challengeGuide.videoUrl ? (
-              challengeGuideEmbedUrl ? (
-                <iframe
-                  src={challengeGuideEmbedUrl}
-                  title="How challenge filters work"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  style={{ width: '100%', height: '100%', border: 0 } as any}
-                />
-              ) : (
-                <video
-                  src={challengeGuide.videoUrl}
-                  controls
-                  style={{ width: '100%', height: '100%', objectFit: 'contain' } as any}
-                />
-              )
-            ) : (
-              <View style={styles.challengeGuidePlaceholder}>
-                <View style={styles.challengeGuidePlayCircle}>
-                  <Text style={styles.challengeGuidePlayIcon}>▶</Text>
-                </View>
-                <Text style={styles.challengeGuidePlaceholderTitle}>Video guide coming soon</Text>
-                <Text style={styles.challengeGuidePlaceholderText}>Feeling • Movement • Category</Text>
-              </View>
-            )}
-          </View>
-        </View>
-      )}
+      {/* Motivational Quote Banner */}
+      <View style={styles.quoteBanner}>
+        <Text style={styles.quoteText}>
+          {motivationalQuote}
+        </Text>
+        {quoteAuthor ? <Text style={styles.quoteAuthor}>— {quoteAuthor}</Text> : null}
+      </View>
 
       {/* Featured Challenge Banner */}
       {/* {(() => {
@@ -418,50 +386,36 @@ export default function ChallengesScreen() {
         );
       })()} */}
 
-      {/* Feeling Picker */}
-      <View style={styles.searchArea}>
-        <TouchableOpacity
-          style={styles.searchWrap}
-          onPress={() => setMoodDropdownOpen(open => !open)}
-          activeOpacity={0.86}
-        >
-          <Text style={styles.searchIcon}>Search</Text>
-          <Text style={[styles.searchInput, !moodFilter && styles.searchPlaceholder]} numberOfLines={1}>
-            {moodFilter || 'Pick your feeling'}
-          </Text>
-          {moodFilter ? (
-            <TouchableOpacity
-              onPress={() => {
-                setMoodFilter('');
-                setMoodDropdownOpen(false);
-              }}
-              style={styles.clearBtn}
-            >
-              <Text style={styles.clearBtnText}>x</Text>
-            </TouchableOpacity>
-          ) : null}
-          <Text style={styles.dropdownCaret}>{moodDropdownOpen ? '^' : 'v'}</Text>
-        </TouchableOpacity>
-        {moodDropdownOpen && (
-          <View style={styles.dropdownPanel}>
-            {FEELING_OPTIONS.map(feeling => (
-              <TouchableOpacity
-                key={feeling}
-                style={[styles.dropdownOption, moodFilter === feeling && styles.dropdownOptionActive]}
-                onPress={() => {
-                  setMoodFilter(feeling);
-                  setMoodDropdownOpen(false);
-                }}
-                activeOpacity={0.82}
-              >
-                <Text style={styles.dropdownOptionType}>Feeling</Text>
-                <Text style={[styles.dropdownOptionText, moodFilter === feeling && styles.dropdownOptionTextActive]}>
-                  {feeling}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+      {/* Search Bar */}
+      <View style={styles.searchWrap}>
+        <Text style={styles.searchIcon}>🔍</Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search challenges..."
+          placeholderTextColor={C.TEXT_MUTED}
+          value={search}
+          onChangeText={setSearch}
+          returnKeyType="search"
+        />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch('')} style={styles.clearBtn}>
+            <Text style={styles.clearBtnText}>✕</Text>
+          </TouchableOpacity>
         )}
+        <TouchableOpacity onPress={() => setFilterModalVisible(true)} style={styles.filterBtn}>
+          <Text style={styles.filterBtnText}>⚙️ Filters</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.quickFilterRow}>
+        <TouchableOpacity onPress={() => setFilterModalVisible(true)} style={styles.quickFilterBtn}>
+          <Text style={styles.quickFilterLabel}>Feeling</Text>
+          <Text style={styles.quickFilterValue}>{feelingFilter}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setFilterModalVisible(true)} style={styles.quickFilterBtn}>
+          <Text style={styles.quickFilterLabel}>Movement</Text>
+          <Text style={styles.quickFilterValue}>{movementFilter}</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Category Filter Pills */}
@@ -472,11 +426,11 @@ export default function ChallengesScreen() {
         style={styles.categoryScroll}
         contentContainerStyle={styles.categoryContent}
       >
-        {CHALLENGE_CATEGORIES.map(cat => (
+        {categoryOptions.map(cat => (
           <TouchableOpacity
             key={cat}
             style={[styles.pill, category === cat && styles.pillActive]}
-            onPress={() => setCategory(current => current === cat ? '' : cat)}
+            onPress={() => setCategory(cat)}
             activeOpacity={0.8}
           >
             <Text style={[styles.pillText, category === cat && styles.pillTextActive]}>{cat}</Text>
@@ -507,7 +461,7 @@ export default function ChallengesScreen() {
         <View style={styles.emptyState}>
           <Text style={{ fontSize: 48, marginBottom: 12 }}>🏆</Text>
           <Text style={styles.emptyTitle}>No challenges found</Text>
-          <Text style={styles.emptyBody}>Try another status, category, or feeling.</Text>
+          <Text style={styles.emptyBody}>Try adjusting your filters or search terms.</Text>
         </View>
       ) : (
         <View style={styles.grid}>
@@ -518,8 +472,6 @@ export default function ChallengesScreen() {
                   <ChallengeCard
                     challenge={challenge}
                     onPress={() => navigation.navigate('ChallengeDetail', { challengeId: challenge.id, id: challenge.id })}
-                    onFilterPress={handleChallengeCardFilter}
-                    activeFilters={activeChallengeCardFilters}
                   />
                 </View>
               ))}
@@ -538,16 +490,16 @@ export default function ChallengesScreen() {
     {/* Sign Up Banner for non-logged-in users */}
     {!user && !dismissSignupBanner && (
       <View style={styles.signupBannerContainer}>
+        <TouchableOpacity onPress={() => setDismissSignupBanner(true)} style={styles.signupBannerClose}>
+          <Text style={styles.signupBannerCloseText}>✕</Text>
+        </TouchableOpacity>
         <View style={styles.signupBanner}>
-          <TouchableOpacity onPress={() => setDismissSignupBanner(true)} style={styles.signupBannerClose} accessibilityLabel="Close join now prompt">
-            <Text style={styles.signupBannerCloseText}>X</Text>
-          </TouchableOpacity>
-          <Text style={styles.signupTitle}>Join now to participate in challenges</Text>
+          <Text style={styles.signupTitle}>Sign up to participate in challenges</Text>
           <Text style={styles.signupSubtitle}>
             Be a part of our growing wellness community that encourages your every step. Connect and Share with people from around the world.
           </Text>
           <GradientButton
-            label="Join now"
+            label="Sign up now"
             variant="primary"
             size="md"
             onPress={() => navigation.navigate('Register')}
@@ -557,6 +509,88 @@ export default function ChallengesScreen() {
       </View>
     )}
 
+    {/* Filter Modal */}
+    <Modal
+      visible={filterModalVisible}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setFilterModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Filters</Text>
+            <TouchableOpacity onPress={() => setFilterModalVisible(false)} style={styles.modalCloseBtn}>
+              <Text style={styles.modalCloseText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalScroll}>
+            {/* Status Filter */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterLabel}>Status</Text>
+              <View style={styles.pillsRow}>
+                {STATUS_TABS.map(tab => (
+                  <TouchableOpacity
+                    key={tab.key}
+                    style={[styles.pill, status === tab.key && styles.pillActive]}
+                    onPress={() => { setStatus(tab.key); }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.pillText, status === tab.key && styles.pillTextActive]}>{tab.label.split(' (')[0]}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Feeling Filter */}
+            {feelingOptions.length > 1 && (
+              <View style={styles.filterSection}>
+                <Text style={styles.filterLabel}>Feeling</Text>
+                <View style={styles.pillsRow}>
+                  {feelingOptions.map(feeling => (
+                    <TouchableOpacity
+                      key={feeling}
+                      style={[styles.pill, feelingFilter === feeling && styles.pillActive]}
+                      onPress={() => setFeelingFilter(feeling)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.pillText, feelingFilter === feeling && styles.pillTextActive]}>{feeling}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Movement Filter */}
+            {movementOptions.length > 1 && (
+              <View style={styles.filterSection}>
+                <Text style={styles.filterLabel}>Movement</Text>
+                <View style={styles.pillsRow}>
+                  {movementOptions.map(movement => (
+                    <TouchableOpacity
+                      key={movement}
+                      style={[styles.pill, movementFilter === movement && styles.pillActive]}
+                      onPress={() => setMovementFilter(movement)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.pillText, movementFilter === movement && styles.pillTextActive]}>{movement}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+          </ScrollView>
+
+          <TouchableOpacity
+            onPress={() => setFilterModalVisible(false)}
+            style={styles.modalApplyBtn}
+          >
+            <Text style={styles.modalApplyText}>Apply Filters</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
     </>
   );
 }
@@ -597,68 +631,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginTop: 8,
   },
-  challengeGuide: {
-    width: 'calc(100% - 24px)' as any,
-    maxWidth: 1200,
-    alignSelf: 'center',
-    marginHorizontal: 12,
-    marginBottom: 18,
-    borderRadius: borderRadius.xl,
-    borderWidth: 1,
-    borderColor: C.TEAL + '55',
-    backgroundColor: C.CARD_BG,
-    overflow: 'hidden',
-  },
-  challengeGuideDesktop: { flexDirection: 'row' },
-  challengeGuideCopy: { flex: 1, padding: 20 },
-  challengeGuideEyebrow: { color: C.ORANGE, fontSize: 10, fontWeight: '900', letterSpacing: 1.1, marginBottom: 5 },
-  challengeGuideTitle: { color: C.TEXT, fontSize: 22, lineHeight: 28, fontWeight: '900', fontFamily: 'Lexend', marginBottom: 8 },
-  challengeGuideBody: { color: C.TEXT_SECONDARY, fontSize: 14, lineHeight: 21, marginBottom: 14 },
-  challengeGuideDefinitions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  challengeGuideDefinition: {
-    flex: 1,
-    minWidth: 145,
-    padding: 11,
-    borderRadius: borderRadius.lg,
-    backgroundColor: C.CARD_BG2,
-    borderWidth: 1,
-    borderColor: C.CARD_BORDER,
-  },
-  challengeGuideDefinitionLabel: { color: C.TEAL, fontSize: 12, fontWeight: '900', marginBottom: 3 },
-  challengeGuideDefinitionText: { color: C.TEXT_SECONDARY, fontSize: 11, lineHeight: 16 },
-  challengeGuideMedia: {
-    width: '100%',
-    aspectRatio: 16 / 9,
-    backgroundColor: '#090D18',
-    borderTopWidth: 1,
-    borderTopColor: C.CARD_BORDER,
-    overflow: 'hidden',
-  },
-  challengeGuideMediaDesktop: {
-    width: '42%' as any,
-    maxWidth: 500,
-    alignSelf: 'stretch',
-    aspectRatio: undefined,
-    minHeight: 270,
-    borderTopWidth: 0,
-    borderLeftWidth: 1,
-    borderLeftColor: C.CARD_BORDER,
-  },
-  challengeGuidePlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
-  challengeGuidePlayCircle: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: C.ORANGE + '22',
-    borderWidth: 1,
-    borderColor: C.ORANGE + '88',
-    marginBottom: 10,
-  },
-  challengeGuidePlayIcon: { color: C.ORANGE, fontSize: 20, marginLeft: 3 },
-  challengeGuidePlaceholderTitle: { color: C.TEXT, fontSize: 15, fontWeight: '800', marginBottom: 4, textAlign: 'center' },
-  challengeGuidePlaceholderText: { color: C.TEXT_MUTED, fontSize: 12, fontWeight: '700', textAlign: 'center' },
   quoteBanner: {
     marginHorizontal: 12,
     marginBottom: 12,
@@ -764,71 +736,61 @@ const styles = StyleSheet.create({
   featuredChipText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   featuredMetaText: { color: 'rgba(255,255,255,0.95)', fontSize: 13, fontWeight: '500' },
 
-  // Feeling picker
-  searchArea: {
-    marginHorizontal: 12,
-    marginBottom: 10,
-    zIndex: 5,
-  },
+  // Search
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
+    margin: 12,
+    marginBottom: 8,
     backgroundColor: C.INPUT_BG,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
     paddingHorizontal: 14,
-    paddingVertical: 14,
-    gap: 10,
+    paddingVertical: 10,
+    gap: 8,
   },
-  searchIcon: { color: C.TEXT_MUTED, fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
-  searchInput: { flex: 1, color: C.TEXT, fontSize: 15, fontWeight: '800', fontFamily: "'Inter', sans-serif" },
-  searchPlaceholder: { color: C.TEXT_MUTED, fontWeight: '700' },
+  searchIcon: { fontSize: 16 },
+  searchInput: { flex: 1, color: C.TEXT, fontSize: 15, fontFamily: "'Inter', sans-serif" },
   clearBtn: { paddingHorizontal: 8 },
   clearBtnText: { fontSize: 16, color: C.TEXT_MUTED },
-  dropdownCaret: { color: C.TEXT, fontSize: 16, fontWeight: '900', width: 18, textAlign: 'center' },
-  dropdownPanel: {
-    marginTop: 8,
+  filterBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     backgroundColor: C.CARD_BG,
-    borderRadius: borderRadius.lg,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
-    overflow: 'hidden',
+    marginLeft: 8,
   },
-  dropdownOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: C.CARD_BORDER,
-  },
-  dropdownOptionActive: {
-    backgroundColor: C.TEAL + '22',
-  },
-  dropdownOptionType: {
-    width: 72,
-    color: C.TEXT_MUTED,
-    fontSize: 11,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  dropdownOptionText: {
-    flex: 1,
+  filterBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
     color: C.TEXT,
-    fontSize: 14,
-    fontWeight: '800',
   },
-  dropdownOptionTextActive: {
-    color: C.TEAL,
+  quickFilterRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginHorizontal: 12,
+    marginBottom: 8,
   },
+  quickFilterBtn: {
+    flex: 1,
+    backgroundColor: C.CARD_BG,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: C.CARD_BORDER,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  quickFilterLabel: { color: C.TEXT_MUTED, fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+  quickFilterValue: { color: C.TEXT, fontSize: 13, fontWeight: '700', marginTop: 2 },
   statusSection: {
     paddingHorizontal: 18,
-    paddingTop: 14,
-    paddingBottom: 16,
-    marginBottom: 12,
-    backgroundColor: C.NAV_BG,
+    paddingTop: 10,
+    paddingBottom: 12,
+    marginBottom: 10,
+    backgroundColor: C.CARD_BG2,
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: C.CARD_BORDER,
@@ -843,18 +805,18 @@ const styles = StyleSheet.create({
   tabsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 8,
   },
   tab: {
-    paddingVertical: 13,
-    paddingHorizontal: 24,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: borderRadius.pill,
     backgroundColor: C.CARD_BG,
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
-    minWidth: 116,
+    minWidth: 78,
   },
   tabActive: {
     backgroundColor: C.ORANGE,
@@ -910,6 +872,13 @@ const styles = StyleSheet.create({
   emptyTitle: { color: C.TEXT, fontSize: 18, fontWeight: '700', marginBottom: 6 },
   emptyBody: { color: C.TEXT_MUTED, fontSize: 14, textAlign: 'center' },
   emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 32 },
+  pillsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginLeft: 12,
+    marginBottom: 12,
+  },
   pill: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -946,68 +915,110 @@ const styles = StyleSheet.create({
   challengeSlotPad: {
     opacity: 0,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: C.BG,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    paddingBottom: 34,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: C.CARD_BORDER,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: C.TEXT,
+  },
+  modalCloseBtn: {
+    padding: 8,
+  },
+  modalCloseText: {
+    fontSize: 20,
+    color: C.TEXT_MUTED,
+  },
+  modalScroll: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  filterSection: {
+    marginBottom: 20,
+  },
+  filterLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: C.TEXT,
+    marginBottom: 10,
+  },
+  modalApplyBtn: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    paddingVertical: 14,
+    backgroundColor: C.ORANGE,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+  },
+  modalApplyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
   signupBanner: {
-    width: '92%',
-    maxWidth: 520,
-    paddingHorizontal: 18,
-    paddingBottom: 14,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
     backgroundColor: C.CARD_BG,
-    borderRadius: 18,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: C.CARD_BORDER,
     alignItems: 'center',
-    paddingTop: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.22,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
+    paddingTop: 32,
   },
   signupTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: C.TEXT,
     textAlign: 'center',
-    marginBottom: 5,
+    marginBottom: 8,
   },
   signupSubtitle: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '400',
     color: C.TEXT_SECONDARY,
     textAlign: 'center',
-    lineHeight: 17,
-    marginBottom: 10,
+    lineHeight: 20,
+    marginBottom: 16,
   },
   signupButton: {
-    paddingHorizontal: 26,
-    minHeight: 42,
+    paddingHorizontal: 32,
   },
   signupBannerContainer: {
     position: 'absolute',
-    bottom: 16,
+    bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'transparent',
-    alignItems: 'center',
-    paddingHorizontal: 12,
+    backgroundColor: C.BG,
+    paddingTop: 12,
   },
   signupBannerClose: {
     position: 'absolute',
-    top: 8,
-    right: 10,
+    top: 12,
+    right: 12,
     zIndex: 1,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(10,14,26,0.72)',
-    borderWidth: 1,
-    borderColor: C.CARD_BORDER,
   },
   signupBannerCloseText: {
-    fontSize: 16,
-    lineHeight: 18,
+    fontSize: 20,
     color: C.ORANGE,
-    fontWeight: '900',
+    fontWeight: '600',
   },
 });
